@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useEditorStore } from "@/features/editor/state/editorStore";
@@ -45,6 +45,7 @@ describe("useExternalReconciler", () => {
   it("reloads a clean active buffer after an external change", async () => {
     useEditorStore.getState().openBuffer({ noteId: "n1", file: note });
     render(<Harness />);
+    await waitFor(() => expect(fileChanged).toBeDefined());
 
     await fileChanged?.({ path: "note.md", kind: "modified", source: "external", mtime: 2, size: 20 });
 
@@ -56,6 +57,7 @@ describe("useExternalReconciler", () => {
     useEditorStore.getState().openBuffer({ noteId: "n1", file: note });
     useEditorStore.getState().updateBody("n1", "Mine");
     render(<Harness />);
+    await waitFor(() => expect(fileChanged).toBeDefined());
 
     await fileChanged?.({ path: "note.md", kind: "modified", source: "external", mtime: 3, size: 20 });
 

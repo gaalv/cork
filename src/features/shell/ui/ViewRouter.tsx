@@ -1,5 +1,11 @@
 import { useEffect } from "react";
 
+import { EditorPreviewSplit } from "@/features/editor/ui/EditorPreviewSplit";
+import { useAutoSave } from "@/features/editor/hooks/useAutoSave";
+import { useExternalReconciler } from "@/features/editor/hooks/useExternalReconciler";
+import { useEditorStore } from "@/features/editor/state/editorStore";
+import { client } from "@/shared/ipc/client";
+
 import { useBulkSelection } from "@/features/folder-ops/hooks/useBulkSelection";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
@@ -71,11 +77,36 @@ function HomeView() {
 }
 
 function NoteView({ noteId, title }: { noteId: string; title: string }) {
+  const note = useVaultStore((state) => state.notes.find((candidate) => candidate.id === noteId));
+  const openBuffer = useEditorStore((state) => state.openBuffer);
+  useAutoSave();
+  useExternalReconciler();
+
+  useEffect(() => {
+    if (!note) {
+      return;
+    }
+    let cancelled = false;
+    void client.notes
+      .read(note.path)
+      .catch(() => ({ path: note.path, frontmatter: {}, body: `# ${note.title}\n`, mtime: note.mtime }))
+      .then((file) => {
+        if (!cancelled) {
+          openBuffer({ noteId, file });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [note, noteId, openBuffer]);
+
   return (
-    <main className="flex-1 overflow-y-auto p-10" data-testid="note-view">
+    <main className="flex flex-1 flex-col overflow-hidden p-10" data-testid="note-view">
       <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Note</p>
       <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
-      <p className="mt-3 text-sm text-[var(--color-noxe-muted)]">Note ID: {noteId}</p>
+      <div className="mt-4 min-h-0 flex-1">
+        <EditorPreviewSplit />
+      </div>
     </main>
   );
 }
