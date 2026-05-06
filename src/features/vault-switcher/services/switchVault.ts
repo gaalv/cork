@@ -1,6 +1,7 @@
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { useIndexStore } from "@/features/index/state/indexStore";
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
@@ -19,6 +20,7 @@ export async function switchVault(options: SwitchVaultOptions = {}): Promise<voi
     await client.vault.close();
     resetStoresForSwitch();
     const opened = await client.vault.open(options.path);
+    await useAppSettingsStore.getState().loadVaultSettings();
     const notes = await client.vault.list();
     useVaultStore.setState({ path: opened.path, notes, isLoading: false, error: null });
     await Promise.all([
@@ -49,6 +51,7 @@ async function restorePreviousVault(previousPath: string | null) {
   }
   try {
     const opened = await client.vault.open(previousPath);
+    await useAppSettingsStore.getState().loadVaultSettings();
     const notes = await client.vault.list();
     useVaultStore.setState({ path: opened.path, notes, isLoading: false, error: null });
     await Promise.all([

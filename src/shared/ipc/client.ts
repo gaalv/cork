@@ -29,6 +29,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "vault.close": "vault_close",
   "vault.recent": "vault_recent",
   "vault.removeRecent": "vault_remove_recent",
+  "vault.settings": "vault_settings",
   "assets.setScope": "assets_set_scope",
   "assets.writeAttachment": "assets_write_attachment",
   "folders.create": "folders_create",
@@ -79,6 +80,7 @@ export const client = {
     close: () => invokeCommand("vault.close", undefined),
     recent: () => invokeCommand("vault.recent", undefined),
     removeRecent: (path: string) => invokeCommand("vault.removeRecent", { path }),
+    settings: () => invokeCommand("vault.settings", undefined),
   },
   assets: {
     setScope: (vaultRoot: string) => invokeCommand("assets.setScope", { vaultRoot }),
@@ -139,6 +141,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "vault.watcherStop":
     case "vault.close":
     case "vault.recent":
+    case "vault.settings":
     case "tags.list":
     case "index.status":
     case "index.rebuild":

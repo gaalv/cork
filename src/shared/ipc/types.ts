@@ -20,6 +20,13 @@ export type RecentVault = {
   missing: boolean;
 };
 
+export type VaultSettings = {
+  dailyPathPattern?: string;
+  attachmentsFolder?: string;
+  offlineMode?: boolean;
+  autoRewriteLinksOnRename?: boolean;
+};
+
 export type NoteEntry = {
   id: string;
   path: string;

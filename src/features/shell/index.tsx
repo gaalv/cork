@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { useIndexStore } from "@/features/index/state/indexStore";
 import { useShortcuts } from "@/features/shell/hooks/useShortcuts";
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { BulkActionsBar } from "@/features/folder-ops/ui/BulkActionsBar";
 import { CommandPalette } from "@/features/shell/ui/CommandPalette";
 import { DrawerHost } from "@/features/shell/ui/DrawerHost";
@@ -20,12 +21,14 @@ export function Shell() {
   const loadNotes = useVaultStore((state) => state.loadNotes);
   const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration);
   const startIndexIntegration = useIndexStore((state) => state.startIndexIntegration);
+  const loadVaultSettings = useAppSettingsStore((state) => state.loadVaultSettings);
 
   useEffect(() => {
     void loadNotes()
+      .then(() => (useVaultStore.getState().path ? loadVaultSettings() : undefined))
       .then(() => Promise.all([startWatcherIntegration(), startIndexIntegration()]))
       .catch(() => undefined);
-  }, [loadNotes, startIndexIntegration, startWatcherIntegration]);
+  }, [loadNotes, loadVaultSettings, startIndexIntegration, startWatcherIntegration]);
 
   if (!vaultPath) {
     return (

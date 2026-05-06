@@ -21,6 +21,7 @@ import type {
   VaultFolderChangedEvent,
   VaultOpenedEvent,
   VaultPath,
+  VaultSettings,
 } from "./types";
 
 export type TagCount = {
@@ -96,6 +97,10 @@ export type IpcCommandMap = {
   "vault.removeRecent": {
     args: { path: string };
     result: void;
+  };
+  "vault.settings": {
+    args: undefined;
+    result: VaultSettings;
   };
   // === F11 Assets ===
   "assets.setScope": {

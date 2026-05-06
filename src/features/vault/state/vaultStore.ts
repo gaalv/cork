@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { client } from "@/shared/ipc/client";
 
 import type { NoteEntry, VaultFileChangedEvent } from "@/shared/ipc/types";
@@ -44,6 +45,7 @@ export const useVaultStore = create<VaultStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const opened = await client.vault.open();
+      await useAppSettingsStore.getState().loadVaultSettings();
       const notes = await client.vault.list();
       set({ path: opened.path, notes, isLoading: false });
       await get().startWatcherIntegration();

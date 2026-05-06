@@ -1,5 +1,6 @@
 import builtinDailyTemplate from "../templates/builtinDaily.md?raw";
 
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
@@ -29,9 +30,10 @@ export function renderTemplate(template: string, vars: DailyTemplateVars): strin
   return template.replace(/\{\{(date|time|weekday|vault)\}\}/g, (_match, key: keyof DailyTemplateVars) => vars[key]);
 }
 
-export async function openOrCreateToday(now = new Date(), pattern = DEFAULT_DAILY_PATH_PATTERN): Promise<void> {
+export async function openOrCreateToday(now = new Date(), pattern?: string): Promise<void> {
   const vaultPath = useVaultStore.getState().path;
-  const relativePath = computeDailyPath(now, pattern);
+  const configuredPattern = pattern ?? useAppSettingsStore.getState().dailyPathPattern ?? DEFAULT_DAILY_PATH_PATTERN;
+  const relativePath = computeDailyPath(now, configuredPattern);
   const existing = findNoteByRelativePath(relativePath);
   if (existing) {
     useShellStore.getState().navigate({ kind: "note", id: existing.id });

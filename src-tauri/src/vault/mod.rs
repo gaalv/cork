@@ -5,6 +5,7 @@ pub mod frontmatter;
 pub mod io;
 pub mod list;
 pub mod rename_propagation;
+pub mod settings;
 pub mod watcher;
 
 use std::fs;
@@ -22,6 +23,7 @@ pub use folders::{
 
 use crate::vault::fingerprint::FingerprintCache;
 use crate::vault::io::CreateNoteInput;
+use crate::vault::settings::{load_vault_settings, VaultSettings};
 use crate::vault::watcher::{
     FileChangeKind, FileChangeSource, VaultEventSink, VaultFileChangedEvent, WatcherController,
 };
@@ -348,6 +350,12 @@ pub fn vault_remove_recent(
     path: PathBuf,
 ) -> Result<(), IpcError> {
     state.remove_recent(&path)
+}
+
+#[tauri::command]
+pub fn vault_settings(state: tauri::State<'_, VaultState>) -> Result<VaultSettings, IpcError> {
+    let root = state.current_path().ok_or(IpcError::NotFound)?;
+    load_vault_settings(&root)
 }
 
 #[tauri::command]

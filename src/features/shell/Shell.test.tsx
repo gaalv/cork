@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useIndexStore } from "@/features/index/state/indexStore";
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
@@ -18,6 +19,7 @@ beforeEach(() => {
     startWatcherIntegration: vi.fn().mockResolvedValue(undefined),
   });
   useIndexStore.setState({ startIndexIntegration: vi.fn().mockResolvedValue(undefined) });
+  useAppSettingsStore.setState({ loadVaultSettings: vi.fn().mockResolvedValue(undefined) });
 });
 
 describe("Shell", () => {

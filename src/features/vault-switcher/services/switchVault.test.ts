@@ -18,6 +18,7 @@ const { clientMock } = vi.hoisted(() => ({
       watcherStop: vi.fn(),
       recent: vi.fn(),
       removeRecent: vi.fn(),
+      settings: vi.fn(),
     },
     events: {
       on: vi.fn(),
@@ -48,6 +49,7 @@ describe("switchVault", () => {
     clientMock.vault.watcherStart.mockResolvedValue(undefined);
     clientMock.vault.watcherStop.mockResolvedValue(undefined);
     clientMock.vault.recent.mockResolvedValue([]);
+    clientMock.vault.settings.mockResolvedValue({});
     clientMock.events.on.mockResolvedValue(vi.fn());
     clientMock.index.status.mockResolvedValue({ ready: true, vaultPath: "/vault-b", indexedNotes: 0, pendingJobs: 0 });
     clientMock.notes.recent.mockResolvedValue([]);

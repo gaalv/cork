@@ -70,6 +70,7 @@ pub fn run() {
             vault::vault_close,
             vault::vault_recent,
             vault::vault_remove_recent,
+            vault::vault_settings,
             // === F11 Assets ===
             assets::assets_set_scope,
             assets::assets_write_attachment,
