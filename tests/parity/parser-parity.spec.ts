@@ -11,12 +11,13 @@ type NormalizedAst = {
   tags: string[];
   links: Array<{ targetText: string; alias: string | null; position: number }>;
   headings: Array<{ level: number; text: string; position: number }>;
+  markdownExtensions: Array<{ kind: string; value: string; position: number }>;
 };
 
 describe("parser parity fixtures", () => {
   it("matches the committed AST snapshot", () => {
     const output = collectFixtureAsts();
-    expect(output).toHaveLength(10);
+    expect(output).toHaveLength(18);
     expect(output).toMatchSnapshot();
     if (process.env.NOXE_PARITY_EXPORT === "1") {
       const path = join(process.cwd(), "target", "parser-parity-ts.json");
@@ -40,6 +41,7 @@ function collectFixtureAsts(): NormalizedAst[] {
         tags: parsed.tags,
         links: parsed.links,
         headings: parsed.headings,
+        markdownExtensions: parsed.markdownExtensions,
       };
     });
 }

@@ -10,6 +10,12 @@ export type ParsedLink = {
   position: number;
 };
 
+export type ParsedMarkdownExtension = {
+  kind: string;
+  value: string;
+  position: number;
+};
+
 export type ParsedNote = {
   title: string;
   body: string;
@@ -17,6 +23,7 @@ export type ParsedNote = {
   tags: string[];
   links: ParsedLink[];
   headings: ParsedHeading[];
+  markdownExtensions: ParsedMarkdownExtension[];
   frontmatter: Record<string, unknown>;
 };
 
@@ -24,6 +31,9 @@ type Range = { start: number; end: number };
 
 const tagRegex = /(^|[^A-Za-z0-9/_-])#([A-Za-z0-9][A-Za-z0-9/_-]{0,63})/g;
 const linkRegex = new RegExp("\\[\\[([^\\]\\[|]+?)(?:\\|([^\\]\\[]+?))?\\]\\]", "g");
+const calloutRegex = /^(?:>\s*)+\[!([A-Za-z][\w-]*)\]\s*([^\r\n]*)/gm;
+const footnoteDefinitionRegex = /^\[\^([A-Za-z0-9_-]+)\]:\s*([^\r\n]*)/gm;
+const footnoteReferenceRegex = /\[\^([A-Za-z0-9_-]+)\]/g;
 
 export function parse(markdown: string, filename: string): ParsedNote {
   const { frontmatter, body } = stripFrontmatter(markdown);
@@ -33,6 +43,7 @@ export function parse(markdown: string, filename: string): ParsedNote {
   collectTags(body, skipRanges, tags);
   const links = collectLinks(body, skipRanges);
   const headings = collectHeadings(body);
+  const markdownExtensions = collectMarkdownExtensions(body, skipRanges);
 
   return {
     title: headings.find((heading) => heading.level === 1)?.text ?? fallbackTitle(filename),
@@ -41,6 +52,7 @@ export function parse(markdown: string, filename: string): ParsedNote {
     tags: [...tags].sort((a, b) => a.localeCompare(b)),
     links,
     headings,
+    markdownExtensions,
     frontmatter,
   };
 }
@@ -173,6 +185,94 @@ function collectHeadings(body: string): ParsedHeading[] {
     offset += line.length;
   }
   return headings;
+}
+
+function collectMarkdownExtensions(body: string, skipRanges: Range[]): ParsedMarkdownExtension[] {
+  const extensions: ParsedMarkdownExtension[] = [];
+  collectCallouts(body, skipRanges, extensions);
+  collectFootnotes(body, skipRanges, extensions);
+  collectHighlights(body, skipRanges, extensions);
+  return extensions.sort((left, right) => left.position - right.position || left.kind.localeCompare(right.kind) || left.value.localeCompare(right.value));
+}
+
+function collectCallouts(body: string, skipRanges: Range[], extensions: ParsedMarkdownExtension[]): void {
+  for (const match of body.matchAll(calloutRegex)) {
+    if (isSkipped(match.index, skipRanges)) {
+      continue;
+    }
+    const rawKind = match[1]?.toLowerCase() ?? "note";
+    const kind = normalizeCalloutKind(rawKind);
+    const title = match[2]?.trim() || defaultCalloutTitle(kind);
+    extensions.push({ kind: "callout", value: `${kind}:${title}`, position: byteOffset(body, match.index) });
+  }
+}
+
+function collectFootnotes(body: string, skipRanges: Range[], extensions: ParsedMarkdownExtension[]): void {
+  const definitions = new Map<string, { text: string; position: number }>();
+  for (const match of body.matchAll(footnoteDefinitionRegex)) {
+    if (!match[1] || isSkipped(match.index, skipRanges)) {
+      continue;
+    }
+    definitions.set(match[1], { text: match[2]?.trim() ?? "", position: byteOffset(body, match.index) });
+  }
+  const referenced = new Set<string>();
+  for (const match of body.matchAll(footnoteReferenceRegex)) {
+    if (!match[1] || body.slice(match.index + match[0].length).startsWith(":") || isSkipped(match.index, skipRanges)) {
+      continue;
+    }
+    if (definitions.has(match[1])) {
+      referenced.add(match[1]);
+      extensions.push({ kind: "footnoteRef", value: match[1], position: byteOffset(body, match.index) });
+    }
+  }
+  for (const id of [...referenced].sort((left, right) => left.localeCompare(right))) {
+    const definition = definitions.get(id);
+    if (definition) {
+      extensions.push({ kind: "footnoteDef", value: `${id}:${definition.text}`, position: definition.position });
+    }
+  }
+}
+
+function collectHighlights(body: string, skipRanges: Range[], extensions: ParsedMarkdownExtension[]): void {
+  let cursor = 0;
+  while (cursor < body.length) {
+    const start = body.indexOf("==", cursor);
+    if (start === -1) {
+      break;
+    }
+    if (body[start - 1] === "\\") {
+      const escapedEnd = body.indexOf("==", start + 2);
+      cursor = escapedEnd === -1 ? start + 2 : escapedEnd + 2;
+      continue;
+    }
+    const end = body.indexOf("==", start + 2);
+    if (end === -1) {
+      break;
+    }
+    const content = body.slice(start + 2, end);
+    if (content && !content.includes("\n") && !content.startsWith("![") && !content.startsWith("![[") && !isSkipped(start, skipRanges)) {
+      extensions.push({ kind: "highlight", value: content, position: byteOffset(body, start) });
+    }
+    cursor = end + 2;
+  }
+}
+
+function normalizeCalloutKind(kind: string): string {
+  return ["note", "info", "tip", "warning", "danger", "success", "quote", "abstract", "example"].includes(kind) ? kind : "note";
+}
+
+function defaultCalloutTitle(kind: string): string {
+  const labels = new Map([
+    ["info", "Info"],
+    ["tip", "Tip"],
+    ["warning", "Warning"],
+    ["danger", "Danger"],
+    ["success", "Success"],
+    ["quote", "Quote"],
+    ["abstract", "Abstract"],
+    ["example", "Example"],
+  ]);
+  return labels.get(kind) ?? "Note";
 }
 
 function collectFrontmatterTags(frontmatter: Record<string, unknown>, tags: Set<string>): void {

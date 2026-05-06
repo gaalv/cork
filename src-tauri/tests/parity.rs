@@ -12,12 +12,13 @@ struct NormalizedAst {
     tags: Vec<String>,
     links: Vec<noxe_lib::index::parser::ParsedLink>,
     headings: Vec<noxe_lib::index::parser::ParsedHeading>,
+    markdown_extensions: Vec<noxe_lib::index::parser::ParsedMarkdownExtension>,
 }
 
 #[test]
 fn parser_fixtures_emit_stable_ast_json() {
     let output = collect_fixture_asts();
-    assert_eq!(output.len(), 10);
+    assert_eq!(output.len(), 18);
     if std::env::var("NOXE_PARITY_EXPORT").as_deref() == Ok("1") {
         let root = repo_root();
         let out_path = root.join("target/parser-parity-rust.json");
@@ -51,6 +52,7 @@ fn collect_fixture_asts() -> Vec<NormalizedAst> {
                 tags: parsed.tags,
                 links: parsed.links,
                 headings: parsed.headings,
+                markdown_extensions: parsed.markdown_extensions,
             }
         })
         .collect()

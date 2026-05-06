@@ -1,0 +1,1 @@
+This keeps \==literal== markers.

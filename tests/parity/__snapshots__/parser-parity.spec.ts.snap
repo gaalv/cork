@@ -18,6 +18,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "targetText": "Target",
       },
     ],
+    "markdownExtensions": [],
     "tags": [
       "dev",
     ],
@@ -33,6 +34,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "links": [],
+    "markdownExtensions": [],
     "tags": [
       "project",
       "rust/lang",
@@ -43,6 +45,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
     "file": "03-frontmatter-string.md",
     "headings": [],
     "links": [],
+    "markdownExtensions": [],
     "tags": [
       "dev",
       "rust",
@@ -65,6 +68,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "targetText": "Visible",
       },
     ],
+    "markdownExtensions": [],
     "tags": [
       "visible",
     ],
@@ -80,6 +84,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "links": [],
+    "markdownExtensions": [],
     "tags": [
       "visible",
     ],
@@ -106,6 +111,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "targetText": "Other",
       },
     ],
+    "markdownExtensions": [],
     "tags": [],
     "title": "Links",
   },
@@ -129,6 +135,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "links": [],
+    "markdownExtensions": [],
     "tags": [],
     "title": "Top",
   },
@@ -148,6 +155,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "targetText": "São Paulo",
       },
     ],
+    "markdownExtensions": [],
     "tags": [
       "a",
     ],
@@ -157,6 +165,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
     "file": "09-empty-frontmatter.md",
     "headings": [],
     "links": [],
+    "markdownExtensions": [],
     "tags": [],
     "title": "09-empty-frontmatter",
   },
@@ -170,12 +179,118 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "links": [],
+    "markdownExtensions": [],
     "tags": [
       "bad",
       "dev/rust",
       "todo-list",
     ],
     "title": "Edge Tags",
+  },
+  {
+    "file": "11-callout-note.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [
+      {
+        "kind": "callout",
+        "position": 0,
+        "value": "note:Remember",
+      },
+    ],
+    "tags": [],
+    "title": "11-callout-note",
+  },
+  {
+    "file": "12-callout-warning.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [
+      {
+        "kind": "callout",
+        "position": 0,
+        "value": "warning:Heads up",
+      },
+    ],
+    "tags": [],
+    "title": "12-callout-warning",
+  },
+  {
+    "file": "13-callout-unknown.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [
+      {
+        "kind": "callout",
+        "position": 0,
+        "value": "note:Custom title",
+      },
+    ],
+    "tags": [],
+    "title": "13-callout-unknown",
+  },
+  {
+    "file": "14-footnote-basic.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [
+      {
+        "kind": "footnoteRef",
+        "position": 27,
+        "value": "1",
+      },
+      {
+        "kind": "footnoteDef",
+        "position": 33,
+        "value": "1:Footnote text.",
+      },
+    ],
+    "tags": [],
+    "title": "14-footnote-basic",
+  },
+  {
+    "file": "15-footnote-orphan.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [],
+    "tags": [],
+    "title": "15-footnote-orphan",
+  },
+  {
+    "file": "16-highlight-basic.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [
+      {
+        "kind": "highlight",
+        "position": 8,
+        "value": "important",
+      },
+    ],
+    "tags": [],
+    "title": "16-highlight-basic",
+  },
+  {
+    "file": "17-highlight-escape.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [],
+    "tags": [],
+    "title": "17-highlight-escape",
+  },
+  {
+    "file": "18-highlight-mixed.md",
+    "headings": [],
+    "links": [],
+    "markdownExtensions": [
+      {
+        "kind": "highlight",
+        "position": 2,
+        "value": "highlight",
+      },
+    ],
+    "tags": [],
+    "title": "18-highlight-mixed",
   },
 ]
 `;
