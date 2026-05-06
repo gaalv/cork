@@ -167,7 +167,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     }
     case "notes.rename": {
       const input = args as RenameNoteInput;
-      return { oldPath: input.oldPath, newName: input.newName };
+      return { oldPath: input.oldPath, newName: input.newName, rewrite: input.rewrite };
     }
     case "folders.create": {
       const input = args as FolderCreateInput;

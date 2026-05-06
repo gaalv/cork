@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { X } from "@phosphor-icons/react";
 
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 
 const shortcutGroups = [
@@ -12,6 +13,8 @@ const shortcutGroups = [
 export function HelpModal() {
   const open = useShellStore((state) => state.helpOpen);
   const closeHelp = useShellStore((state) => state.closeHelp);
+  const autoRewrite = useAppSettingsStore((state) => state.autoRewriteLinksOnRename);
+  const setAutoRewrite = useAppSettingsStore((state) => state.setAutoRewriteLinksOnRename);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -55,6 +58,18 @@ export function HelpModal() {
           </button>
         </div>
         <div className="space-y-4">
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm">
+            <span>
+              <span className="block font-medium">Rewrite wikilinks on rename</span>
+              <span className="text-[12px] text-[var(--color-noxe-muted)]">Keep [[Old]] links pointing at renamed notes.</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={autoRewrite}
+              onChange={(event) => setAutoRewrite(event.currentTarget.checked)}
+              aria-label="Rewrite wikilinks on rename"
+            />
+          </label>
           {shortcutGroups.map((group) => (
             <div key={group.title}>
               <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]">{group.title}</h3>

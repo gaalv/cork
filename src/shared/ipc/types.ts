@@ -50,6 +50,7 @@ export type CreateNoteInput = {
 export type RenameNoteInput = {
   oldPath: string;
   newName: string;
+  rewrite?: boolean;
 };
 
 export type MoveNoteInput = {
