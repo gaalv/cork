@@ -4,6 +4,7 @@ pub mod folders;
 pub mod frontmatter;
 pub mod io;
 pub mod list;
+pub mod rename_propagation;
 pub mod watcher;
 
 use std::fs;
@@ -315,10 +316,39 @@ pub fn notes_create(
 #[tauri::command]
 pub fn notes_rename(
     app: AppHandle,
+    state: tauri::State<'_, VaultState>,
     old_path: PathBuf,
     new_name: String,
+    rewrite: Option<bool>,
 ) -> Result<VaultPath, IpcError> {
+    let vault_root = state.current_path().ok_or(IpcError::NotFound)?;
     let new_path = io::rename_note(&old_path, &new_name)?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|err| IpcError::Other(err.to_string()))?;
+    let rewritten = rename_propagation::rewrite_after_rename(
+        &app_data_dir,
+        &vault_root,
+        &old_path,
+        &new_path,
+        rewrite.unwrap_or(true),
+        &state.fingerprint_cache,
+    )?;
+    for result in rewritten {
+        let metadata = fs::metadata(&result.path)?;
+        app.emit(
+            "vault.fileChanged",
+            VaultFileChangedEvent {
+                path: result.path,
+                kind: FileChangeKind::Modified,
+                source: FileChangeSource::Internal,
+                mtime: result.mtime,
+                size: metadata.len(),
+            },
+        )
+        .map_err(|err| IpcError::Other(err.to_string()))?;
+    }
     app.emit(
         "vault.fileRenamed",
         VaultFileRenamedEvent {
