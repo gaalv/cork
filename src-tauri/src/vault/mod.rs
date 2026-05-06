@@ -1,3 +1,4 @@
+pub mod bulk;
 pub mod fingerprint;
 pub mod folders;
 pub mod frontmatter;

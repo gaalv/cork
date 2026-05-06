@@ -86,10 +86,7 @@ export type BulkPathResult = {
   failed: BulkFailure[];
 };
 
-export type BulkMoveResult = {
-  ok: FolderPath[];
-  failed: BulkFailure[];
-};
+export type BulkMoveResult = BulkPathResult;
 
 export type BulkFrontmatterResult = BulkPathResult;
 

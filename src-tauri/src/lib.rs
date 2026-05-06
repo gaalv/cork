@@ -40,6 +40,11 @@ pub fn run() {
             vault::notes_create,
             vault::notes_rename,
             vault::notes_trash,
+            // === F12 Bulk Ops ===
+            vault::bulk::notes_move,
+            vault::bulk::notes_bulk_move,
+            vault::bulk::notes_bulk_trash,
+            vault::bulk::notes_bulk_set_frontmatter,
             index::notes_recent,
             index::notes_by_tag,
             index::notes_by_folder,
