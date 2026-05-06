@@ -12,6 +12,7 @@ import { Rail } from "@/features/shell/ui/Rail";
 import { Toaster } from "@/features/shell/ui/Toaster";
 import { TopBar } from "@/features/shell/ui/TopBar";
 import { ViewRouter } from "@/features/shell/ui/ViewRouter";
+import { SettingsPanel } from "@/features/settings/ui/SettingsPanel";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 export function Shell() {
@@ -36,6 +37,7 @@ export function Shell() {
         <EmptyVault />
         <CommandPalette />
         <HelpModal />
+        <SettingsPanel />
         <Toaster />
       </div>
     );
@@ -56,6 +58,7 @@ export function Shell() {
       <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
       <CommandPalette />
       <HelpModal />
+      <SettingsPanel />
       <Toaster />
     </div>
   );
