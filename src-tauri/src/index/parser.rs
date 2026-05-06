@@ -59,8 +59,10 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
     let mut skip_ranges = Vec::new();
     let mut heading: Option<HeadingAccumulator> = None;
 
-    let options =
-        Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS;
+    let options = Options::ENABLE_TABLES
+        | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_TASKLISTS
+        | Options::ENABLE_FOOTNOTES;
     for (event, range) in Parser::new_ext(&body, options).into_offset_iter() {
         match event {
             Event::Start(Tag::CodeBlock(_)) => in_code_block = true,
@@ -108,6 +110,14 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
     collect_tags(&body, tag_regex(), &skip_ranges, &mut tags);
     collect_links(&body, link_regex(), &skip_ranges, &mut links);
     collect_callouts(&body, &skip_ranges, true, &mut markdown_extensions);
+    collect_footnotes(&body, &skip_ranges, &mut markdown_extensions);
+    collect_highlights(&body, &skip_ranges, &mut markdown_extensions);
+    markdown_extensions.sort_by(|left, right| {
+        left.position
+            .cmp(&right.position)
+            .then_with(|| left.kind.cmp(&right.kind))
+            .then_with(|| left.value.cmp(&right.value))
+    });
 
     Ok(ParsedNote {
         title: first_h1.unwrap_or_else(|| fallback_title(filename)),
@@ -147,6 +157,20 @@ fn callout_regex() -> &'static Regex {
     static CALLOUT_REGEX: OnceLock<Regex> = OnceLock::new();
     CALLOUT_REGEX.get_or_init(|| {
         Regex::new(r"(?m)^(?:>\s*)+\[!([A-Za-z][\w-]*)\]\s*([^\r\n]*)").expect("callout regex compiles")
+    })
+}
+
+fn footnote_definition_regex() -> &'static Regex {
+    static FOOTNOTE_DEFINITION_REGEX: OnceLock<Regex> = OnceLock::new();
+    FOOTNOTE_DEFINITION_REGEX.get_or_init(|| {
+        Regex::new(r"(?m)^\[\^([A-Za-z0-9_-]+)\]:\s*([^\r\n]*)").expect("footnote definition regex compiles")
+    })
+}
+
+fn footnote_reference_regex() -> &'static Regex {
+    static FOOTNOTE_REFERENCE_REGEX: OnceLock<Regex> = OnceLock::new();
+    FOOTNOTE_REFERENCE_REGEX.get_or_init(|| {
+        Regex::new(r"\[\^([A-Za-z0-9_-]+)\]").expect("footnote reference regex compiles")
     })
 }
 
@@ -222,6 +246,91 @@ fn collect_callouts(
             value: format!("{kind}:{title}"),
             position: full_match.start(),
         });
+    }
+}
+
+fn collect_footnotes(
+    text: &str,
+    skip_ranges: &[std::ops::Range<usize>],
+    extensions: &mut Vec<ParsedMarkdownExtension>,
+) {
+    let definitions = footnote_definition_regex()
+        .captures_iter(text)
+        .filter_map(|captures| {
+            let full_match = captures.get(0)?;
+            if is_skipped(full_match.start(), skip_ranges) {
+                return None;
+            }
+            Some((
+                captures.get(1)?.as_str().to_string(),
+                (captures.get(2)?.as_str().trim().to_string(), full_match.start()),
+            ))
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let mut referenced = BTreeSet::new();
+    for captures in footnote_reference_regex().captures_iter(text) {
+        let Some(full_match) = captures.get(0) else {
+            continue;
+        };
+        if text[full_match.end()..].starts_with(':') || is_skipped(full_match.start(), skip_ranges) {
+            continue;
+        }
+        let Some(id) = captures.get(1).map(|id| id.as_str()) else {
+            continue;
+        };
+        if definitions.contains_key(id) {
+            referenced.insert(id.to_string());
+            extensions.push(ParsedMarkdownExtension {
+                kind: "footnoteRef".to_string(),
+                value: id.to_string(),
+                position: full_match.start(),
+            });
+        }
+    }
+    for id in referenced {
+        if let Some((definition, position)) = definitions.get(&id) {
+            extensions.push(ParsedMarkdownExtension {
+                kind: "footnoteDef".to_string(),
+                value: format!("{id}:{definition}"),
+                position: *position,
+            });
+        }
+    }
+}
+
+fn collect_highlights(
+    text: &str,
+    skip_ranges: &[std::ops::Range<usize>],
+    extensions: &mut Vec<ParsedMarkdownExtension>,
+) {
+    let mut cursor = 0;
+    while let Some(relative_start) = text[cursor..].find("==") {
+        let start = cursor + relative_start;
+        if start > 0 && text.as_bytes()[start - 1] == b'\\' {
+            cursor = text[start + 2..]
+                .find("==")
+                .map_or(start + 2, |relative_end| start + 2 + relative_end + 2);
+            continue;
+        }
+        let content_start = start + 2;
+        let Some(relative_end) = text[content_start..].find("==") else {
+            break;
+        };
+        let end = content_start + relative_end;
+        let content = &text[content_start..end];
+        if !content.is_empty()
+            && !content.contains('\n')
+            && !content.starts_with("![")
+            && !content.starts_with("![[")
+            && !is_skipped(start, skip_ranges)
+        {
+            extensions.push(ParsedMarkdownExtension {
+                kind: "highlight".to_string(),
+                value: content.to_string(),
+                position: start,
+            });
+        }
+        cursor = end + 2;
     }
 }
 
@@ -440,5 +549,37 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["note:Outer", "tip:Inner"]
         );
+    }
+
+    #[test]
+    fn extracts_referenced_footnotes() {
+        let parsed = parse("Body[^1]\n\n[^1]: Footnote text", "a.md").unwrap();
+        assert_eq!(
+            parsed
+                .markdown_extensions
+                .iter()
+                .map(|extension| (extension.kind.as_str(), extension.value.as_str()))
+                .collect::<Vec<_>>(),
+            vec![("footnoteRef", "1"), ("footnoteDef", "1:Footnote text")]
+        );
+    }
+
+    #[test]
+    fn omits_orphan_footnote_definitions() {
+        let parsed = parse("Body\n\n[^orphan]: Hidden", "a.md").unwrap();
+        assert!(parsed.markdown_extensions.is_empty());
+    }
+
+    #[test]
+    fn extracts_highlight_markers() {
+        let parsed = parse("This is ==important== text", "a.md").unwrap();
+        assert_eq!(parsed.markdown_extensions[0].kind, "highlight");
+        assert_eq!(parsed.markdown_extensions[0].value, "important");
+    }
+
+    #[test]
+    fn ignores_escaped_and_image_highlights() {
+        let parsed = parse(r"Keep \==literal== and ==![[img.png]]==", "a.md").unwrap();
+        assert!(parsed.markdown_extensions.is_empty());
     }
 }
