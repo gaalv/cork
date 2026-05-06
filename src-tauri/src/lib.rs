@@ -80,6 +80,8 @@ pub fn run() {
             index::notes_by_tag,
             index::notes_by_folder,
             index::notes_by_id,
+            // === F07 Drawers ===
+            index::notes_search,
             index::tags_list,
             index::links_outgoing,
             index::links_incoming,

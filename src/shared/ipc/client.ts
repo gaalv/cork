@@ -43,6 +43,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.byTag": "notes_by_tag",
   "notes.byFolder": "notes_by_folder",
   "notes.byId": "notes_by_id",
+  "notes.search": "notes_search",
   "tags.list": "tags_list",
   "links.outgoing": "links_outgoing",
   "links.incoming": "links_incoming",
@@ -90,6 +91,7 @@ export const client = {
     byTag: (tag: string) => invokeCommand("notes.byTag", { tag }),
     byFolder: (folder: string) => invokeCommand("notes.byFolder", { folder }),
     byId: (id: string) => invokeCommand("notes.byId", { id }),
+    search: (query: string, limit?: number) => invokeCommand("notes.search", { query, limit }),
   },
   tags: {
     list: () => invokeCommand("tags.list", undefined),
@@ -128,6 +130,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "notes.trash":
     case "notes.recent":
     case "notes.byId":
+    case "notes.search":
     case "links.outgoing":
     case "links.incoming":
     case "index.search":

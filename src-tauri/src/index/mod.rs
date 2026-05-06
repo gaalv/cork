@@ -2,6 +2,7 @@ pub mod migrate;
 pub mod parser;
 pub mod paths;
 pub mod query;
+pub mod search;
 pub mod worker;
 
 use std::path::{Path, PathBuf};
@@ -14,7 +15,8 @@ use tauri::{AppHandle, Emitter, Listener, Manager};
 
 use crate::index::migrate::open_index_at;
 use crate::index::paths::index_db_path;
-use crate::index::query::{LinkRow, SearchResult, TagCount};
+use crate::index::query::{LinkRow, TagCount};
+use crate::index::search::SearchResult;
 use crate::index::worker::IndexJob;
 use crate::vault::watcher::{FileChangeKind, VaultFileChangedEvent};
 use crate::vault::{NoteEntry, VaultFileRenamedEvent, VaultPath, VaultState};
@@ -267,6 +269,17 @@ pub fn links_incoming(
 }
 
 #[tauri::command]
+pub fn notes_search(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+    query: String,
+    limit: Option<usize>,
+) -> Result<Vec<SearchResult>, IpcError> {
+    state.with_conn(&app, &vault, |conn| search::search(conn, &query, limit))
+}
+
+#[tauri::command]
 pub fn index_search(
     app: AppHandle,
     vault: tauri::State<'_, VaultState>,
@@ -274,7 +287,7 @@ pub fn index_search(
     query: String,
     limit: Option<usize>,
 ) -> Result<Vec<SearchResult>, IpcError> {
-    state.with_conn(&app, &vault, |conn| query::search(conn, &query, limit))
+    notes_search(app, vault, state, query, limit)
 }
 
 #[tauri::command]

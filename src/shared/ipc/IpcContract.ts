@@ -151,6 +151,11 @@ export type IpcCommandMap = {
     args: { id: string };
     result: NoteEntry | null;
   };
+  // === F07 Drawers ===
+  "notes.search": {
+    args: { query: string; limit?: number };
+    result: SearchResult[];
+  };
   "tags.list": {
     args: undefined;
     result: TagCount[];
