@@ -2,7 +2,7 @@
 
 **Owner phase:** M3
 **Depends on:** F03, F04
-**Status:** Draft
+**Status:** Complete
 
 ## Problem Statement
 
@@ -69,18 +69,18 @@ The rail drawers (Search, Folders, Recent, Starred, Tags) are currently mock she
 
 | ID         | AC                  | Status  |
 | ---------- | ------------------- | ------- |
-| DRAWERS-01 | Search debounce     | Pending |
-| DRAWERS-02 | Search highlights   | Pending |
-| DRAWERS-03 | Search recent       | Pending |
-| DRAWERS-04 | Folders tree        | Pending |
-| DRAWERS-05 | Folder counts       | Pending |
-| DRAWERS-06 | Recent buckets      | Pending |
-| DRAWERS-07 | Starred list        | Pending |
-| DRAWERS-08 | Star toggle reflects | Pending |
-| DRAWERS-09 | Tag hierarchy       | Pending |
-| DRAWERS-10 | Tag counts          | Pending |
-| DRAWERS-11 | Empty states        | Pending |
-| DRAWERS-12 | FTS5 escaping       | Pending |
+| DRAWERS-01 | Search debounce     | Verified |
+| DRAWERS-02 | Search highlights   | Verified |
+| DRAWERS-03 | Search recent       | Verified |
+| DRAWERS-04 | Folders tree        | Verified |
+| DRAWERS-05 | Folder counts       | Verified |
+| DRAWERS-06 | Recent buckets      | Verified |
+| DRAWERS-07 | Starred list        | Verified |
+| DRAWERS-08 | Star toggle reflects | Verified |
+| DRAWERS-09 | Tag hierarchy       | Verified |
+| DRAWERS-10 | Tag counts          | Verified |
+| DRAWERS-11 | Empty states        | Verified |
+| DRAWERS-12 | FTS5 escaping       | Verified |
 
 ## Success Criteria
 

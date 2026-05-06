@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
 
 import type { SearchResult } from "@/shared/ipc/IpcContract";
+import type { NoteEntry } from "@/shared/ipc/types";
 
 type SearchState = {
   query: string;
@@ -20,6 +22,7 @@ export function useSearch(): SearchState {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const notes = useVaultStore((state) => state.notes);
   const addSearchHistory = useDrawersStore((state) => state.addSearchHistory);
 
   useEffect(() => {
@@ -48,8 +51,9 @@ export function useSearch(): SearchState {
           if (cancelled) {
             return;
           }
-          setResults([]);
-          setError(errorMessage(searchError));
+          const fallbackResults = fallbackSearch(notes, trimmed);
+          setResults(fallbackResults);
+          setError(fallbackResults.length > 0 ? null : errorMessage(searchError));
         })
         .finally(() => {
           if (!cancelled) {
@@ -62,9 +66,17 @@ export function useSearch(): SearchState {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [addSearchHistory, query]);
+  }, [addSearchHistory, notes, query]);
 
   return { query, setQuery, results, isSearching, error };
+}
+
+function fallbackSearch(notes: NoteEntry[], query: string): SearchResult[] {
+  const normalized = query.toLocaleLowerCase();
+  return notes
+    .filter((note) => note.title.toLocaleLowerCase().includes(normalized) || note.folder.toLocaleLowerCase().includes(normalized))
+    .slice(0, 30)
+    .map((note, index) => ({ ...note, snippet: note.title, rank: index }));
 }
 
 function errorMessage(error: unknown): string {

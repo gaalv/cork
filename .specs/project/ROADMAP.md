@@ -113,7 +113,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - By Tag pills
 - All Notes grid
 
-**[F07 — Drawers](../features/F07-drawers/spec.md)** — PLANNED
+**[F07 — Drawers](../features/F07-drawers/spec.md)** — COMPLETE
 - Drawer container & open/close from rail
 - Search drawer (full-text via SQLite FTS5)
 - Folders drawer (tree)

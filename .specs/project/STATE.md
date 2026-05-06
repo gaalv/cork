@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T17:47-03:00
-**Current Work:** F11 Asset Pipeline partial complete for T01/T02/T03/T04/T05/T06/T08; T07/T09/T10/T11/T12 deferred
+**Last Updated:** 2026-05-06T17:51-03:00
+**Current Work:** F07 Drawers complete; F05/F11 continue in parallel
 
 ---
 
@@ -150,6 +150,13 @@ src-tauri/
 **Trade-off:** Some folder-specific UI lives in shell temporarily and should move to F07/F12-owned drawer components later.
 **Impact:** F07 should replace `DrawerHost` placeholders with dedicated drawer bodies without changing the shell contract.
 
+### AD-027: F07 drawer state uses web-safe localStorage and indexed frontmatter (2026-05-06)
+
+**Decision:** Search history is persisted via the drawer Zustand store to `localStorage` (`noxe.searchHistory`) and starred notes are queried from the F03 `frontmatter` index (`starred: true`) rather than a second `starred.json` source.
+**Reason:** Drawers must run in Vite preview/Playwright without Tauri store APIs, and frontmatter keeps starred state portable in the pure Markdown vault.
+**Trade-off:** Search history is WebView-local until F13 settings/store migration; starred toggles require the note to be reindexed after save.
+**Impact:** F07 `notes.starred` reads the SQLite `frontmatter` table and `starService` writes `frontmatter.starred`.
+
 ---
 
 ## Active Blockers
@@ -165,6 +172,7 @@ _None._
 - **L-003:** Vitest on Node 24 can report Tinypool worker termination failures after all tests pass; running Vitest in a single thread keeps the suite deterministic.
 - **L-004:** `cmdk` needs `ResizeObserver` and `scrollIntoView` shims in jsdom component tests.
 - **L-005:** Browser E2E shortcut assertions are more reliable when shell shortcuts also listen for explicit `metaKey || ctrlKey` fallbacks in addition to `tinykeys` `$mod`.
+- **L-006:** Browser drawer E2E needs web-safe fallbacks for native IPC-backed queries; keep the fallback deterministic and fixture-shaped.
 
 ---
 
@@ -186,6 +194,7 @@ _None._
 | 012 | Implement F04 Shell (Zustand shell store, rail/topbar/drawers, cmdk palette, shortcuts/help/toasts, empty state, router, window-state, E2E) | 2026-05-06 | multiple | ✅ Done |
 | 013 | Partially land F12 Folder Ops & Bulk Operations (folder/bulk IPC, legacy folder UI, drag/drop, bulk selection, auto-close, E2E); T10 deferred pending F09-T03 | 2026-05-06 | multiple | ✅ Partial |
 | 014 | Partially implement F11 Asset Pipeline (asset DB/walker, scoped protocol, attachment IPC, resolver/url/open helpers); T07/T09/T10/T11/T12 deferred to F05/F10 | 2026-05-06 | multiple | ✅ Partial |
+| 015 | Implement F07 Drawers (FTS search, folders, recent, starred, tags, a11y, E2E) | 2026-05-06 | multiple | ✅ Done |
 
 ---
 
