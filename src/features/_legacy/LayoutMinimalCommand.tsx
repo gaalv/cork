@@ -22,9 +22,11 @@ import {
   Tag,
   FolderSimple,
 } from '@phosphor-icons/react'
+import { useBulkSelection } from '@/features/folder-ops/hooks/useBulkSelection'
 import { useDragDropFolder, useFolderDragSource, useFolderDropTarget, useNoteDragSource } from '@/features/folder-ops/hooks/useDragDropFolder'
 import { bulkOps } from '@/features/folder-ops/services/bulkOps'
 import { folderOps, validateFolderName } from '@/features/folder-ops/services/folderOps'
+import { BulkActionsBar } from '@/features/folder-ops/ui/BulkActionsBar'
 import { InlineRename } from '@/features/folder-ops/ui/InlineRename'
 import { NewFolderDialog } from '@/features/folder-ops/ui/NewFolderDialog'
 import { MockMarkdown } from '@/features/editor/ui/MockMarkdown'
@@ -171,6 +173,8 @@ export function LayoutMinimalCommand() {
         </div>
       </div>
 
+      <BulkActionsBar folders={legacyData.folders} onDone={loadNotes} />
+
       {/* Command palette */}
       {paletteOpen && (
         <CommandPalette
@@ -195,6 +199,7 @@ function HomeView({
   onOpenDrawer: (d: Drawer) => void
 }) {
   const { notes, recentNotes, tags, path, isLoading, openVault } = useLegacyData()
+  const bulkSelection = useBulkSelection(notes.map((note) => note.path))
   const pinned = notes.filter((n) => STARRED_IDS.has(n.id))
   const recent = recentNotes.map((id) => notes.find((n) => n.id === id)!).filter(Boolean)
 
@@ -222,7 +227,9 @@ function HomeView({
         <Section title="Fixadas" hint={`${pinned.length} notas`}>
           <div className="grid grid-cols-3 gap-3">
             {pinned.map((n) => (
-              <NoteCard key={n.id} note={n} onOpen={() => onOpenNote(n.id)} />
+              <NoteCard key={n.id} note={n} selected={bulkSelection.isSelected(n.path)} onOpen={(event) => {
+                if (!bulkSelection.handleClick(event, n.path)) onOpenNote(n.id)
+              }} />
             ))}
           </div>
         </Section>
@@ -235,8 +242,10 @@ function HomeView({
             {recent.map((n) => (
               <li key={n.id}>
                 <button
-                  onClick={() => onOpenNote(n.id)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--color-noxe-panel-2)]"
+                  onClick={(event) => {
+                    if (!bulkSelection.handleClick(event, n.path)) onOpenNote(n.id)
+                  }}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--color-noxe-panel-2)] ${bulkSelection.isSelected(n.path) ? 'bg-[var(--color-noxe-accent-soft)]' : ''}`}
                 >
                   <Article size={14} className="text-[var(--color-noxe-muted)]" />
                   <span className="flex-1 truncate text-[14px] font-medium">{n.title}</span>
@@ -273,7 +282,9 @@ function HomeView({
         <Section title="Todas as notas" hint={`${notes.length} no vault`}>
           <div className="grid grid-cols-2 gap-3">
             {notes.map((n) => (
-              <NoteCard key={n.id} note={n} onOpen={() => onOpenNote(n.id)} compact />
+              <NoteCard key={n.id} note={n} selected={bulkSelection.isSelected(n.path)} onOpen={(event) => {
+                if (!bulkSelection.handleClick(event, n.path)) onOpenNote(n.id)
+              }} compact />
             ))}
           </div>
         </Section>
@@ -316,11 +327,11 @@ function Section({
   )
 }
 
-function NoteCard({ note, onOpen, compact }: { note: Note; onOpen: () => void; compact?: boolean }) {
+function NoteCard({ note, onOpen, compact, selected }: { note: Note; onOpen: (event: React.MouseEvent<HTMLButtonElement>) => void; compact?: boolean; selected?: boolean }) {
   return (
     <button
       onClick={onOpen}
-      className="group flex flex-col gap-2 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-4 text-left transition hover:border-[var(--color-noxe-border-strong)] hover:shadow-sm"
+      className={`group flex flex-col gap-2 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-4 text-left transition hover:border-[var(--color-noxe-border-strong)] hover:shadow-sm ${selected ? 'border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-accent-soft)]' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="truncate text-[14px] font-semibold">{note.title}</h3>
@@ -499,6 +510,7 @@ function Drawer({
         n.tags.some((t) => t.toLowerCase().includes(q)),
     )
   }, [kind, notes, query, recentNotes])
+  const bulkSelection = useBulkSelection(filtered.map((note) => note.path))
 
   return (
     <aside className="flex w-[300px] shrink-0 flex-col border-r border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)]">
@@ -546,8 +558,10 @@ function Drawer({
             {filtered.map((n) => (
               <li key={n.id}>
                 <button
-                  onClick={() => onOpenNote(n.id)}
-                  className="flex w-full flex-col gap-0.5 rounded-md px-2 py-2 text-left hover:bg-[var(--color-noxe-panel-2)]"
+                  onClick={(event) => {
+                    if (!bulkSelection.handleClick(event, n.path)) onOpenNote(n.id)
+                  }}
+                  className={`flex w-full flex-col gap-0.5 rounded-md px-2 py-2 text-left hover:bg-[var(--color-noxe-panel-2)] ${bulkSelection.isSelected(n.path) ? 'bg-[var(--color-noxe-accent-soft)]' : ''}`}
                 >
                   <span className="flex items-center gap-1.5 text-[13px] font-medium">
                     {STARRED_IDS.has(n.id) && <Star size={10} weight="fill" className="text-amber-500" />}
