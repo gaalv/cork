@@ -26,6 +26,7 @@ describe("VaultSwitcher", () => {
       isLoading: false,
       error: null,
       loadRecent: vi.fn().mockResolvedValue(undefined),
+      removeRecent: vi.fn().mockResolvedValue(undefined),
     });
   });
 
@@ -47,5 +48,23 @@ describe("VaultSwitcher", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open another vault…" }));
 
     await waitFor(() => expect(switchVaultMock).toHaveBeenCalledWith(undefined));
+  });
+
+  it("prompts before acting on a missing vault", async () => {
+    const removeRecent = vi.fn().mockResolvedValue(undefined);
+    useRecentVaultsStore.setState({
+      vaults: [{ path: "/gone/Vault", name: "Vault", missing: true }],
+      removeRecent,
+      loadRecent: vi.fn().mockResolvedValue(undefined),
+    });
+    render(<VaultSwitcher />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Vault: Vault A/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Vault.*Missing/ }));
+
+    expect(screen.getByRole("dialog", { name: "Vault not found" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove from list" }));
+
+    await waitFor(() => expect(removeRecent).toHaveBeenCalledWith("/gone/Vault"));
   });
 });

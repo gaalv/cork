@@ -5,15 +5,19 @@ import { switchVault } from "@/features/vault-switcher/services/switchVault";
 import { useRecentVaultsStore } from "@/features/vault-switcher/state/recentVaultsStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
+import type { RecentVault } from "@/shared/ipc/types";
+
 import { VaultListItem } from "./VaultListItem";
 
 export function VaultSwitcher() {
   const [open, setOpen] = useState(false);
+  const [missingVault, setMissingVault] = useState<RecentVault | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const activePath = useVaultStore((state) => state.path);
   const vaults = useRecentVaultsStore((state) => state.vaults);
   const isLoading = useRecentVaultsStore((state) => state.isLoading);
   const loadRecent = useRecentVaultsStore((state) => state.loadRecent);
+  const removeRecent = useRecentVaultsStore((state) => state.removeRecent);
   const vaultName = activePath ? activePath.split(/[\\/]/).filter(Boolean).at(-1) ?? "Vault" : "No vault open";
 
   useEffect(() => {
@@ -38,7 +42,17 @@ export function VaultSwitcher() {
 
   const selectVault = (path?: string) => {
     setOpen(false);
+    setMissingVault(null);
     void switchVault(path ? { path } : undefined);
+  };
+
+  const removeMissingVault = () => {
+    if (!missingVault) {
+      return;
+    }
+    const path = missingVault.path;
+    setMissingVault(null);
+    void removeRecent(path);
   };
 
   return (
@@ -66,7 +80,13 @@ export function VaultSwitcher() {
             <div className="px-3 py-2 text-[12px] text-[var(--color-noxe-muted)]">No recent vaults yet.</div>
           ) : null}
           {vaults.map((vault) => (
-            <VaultListItem key={vault.path} vault={vault} activePath={activePath} onSelect={(path) => selectVault(path)} />
+            <VaultListItem
+              key={vault.path}
+              vault={vault}
+              activePath={activePath}
+              onSelect={(path) => selectVault(path)}
+              onMissing={setMissingVault}
+            />
           ))}
           <div className="my-2 border-t border-[var(--color-noxe-border)]" />
           <button
@@ -76,6 +96,46 @@ export function VaultSwitcher() {
           >
             Open another vault…
           </button>
+        </div>
+      )}
+      {missingVault && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="missing-vault-title"
+          className="absolute top-full left-0 z-40 mt-2 w-80 rounded-xl border border-amber-200 bg-[var(--color-noxe-panel)] p-4 shadow-xl"
+        >
+          <h2 id="missing-vault-title" className="text-sm font-semibold text-[var(--color-noxe-ink)]">
+            Vault not found
+          </h2>
+          <p className="mt-2 text-[12px] text-[var(--color-noxe-muted)]">
+            Noxe could not find <span className="font-medium text-[var(--color-noxe-ink)]">{missingVault.name}</span> at
+            that path.
+          </p>
+          <p className="mt-1 truncate text-[11px] text-[var(--color-noxe-muted)]">{missingVault.path}</p>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => selectVault()}
+              className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] hover:bg-[var(--color-noxe-panel-2)]"
+            >
+              Locate
+            </button>
+            <button
+              type="button"
+              onClick={removeMissingVault}
+              className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] hover:bg-[var(--color-noxe-panel-2)]"
+            >
+              Remove from list
+            </button>
+            <button
+              type="button"
+              onClick={() => selectVault()}
+              className="rounded-md bg-[var(--color-noxe-ink)] px-3 py-1.5 text-[12px] font-medium text-white"
+            >
+              Open another
+            </button>
+          </div>
         </div>
       )}
     </div>
