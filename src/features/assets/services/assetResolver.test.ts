@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveAssetSrc, toAssetProtocolUrl } from "./assetResolver";
+import { resolveAssetSrc } from "./assetResolver";
 
 describe("resolveAssetSrc", () => {
   const vault = "/vault";
@@ -72,11 +72,5 @@ describe("resolveAssetSrc", () => {
     expect(resolveAssetSrc("image.png", note, vault, { toUrl: (path) => `custom:${path}` })).toMatchObject({
       url: "custom:/vault/notes/image.png",
     });
-  });
-});
-
-describe("toAssetProtocolUrl", () => {
-  it("normalizes and encodes absolute paths", () => {
-    expect(toAssetProtocolUrl("/vault/A B/logo.png")).toBe("asset://localhost//vault/A%20B/logo.png");
   });
 });

@@ -1,3 +1,5 @@
+import { assetUrl } from "./assetUrl";
+
 export type AssetResolveResult =
   | { status: "resolved"; path: string; url: string }
   | { status: "blocked"; reason: "outside-vault" | "unsupported-url"; path: string }
@@ -36,12 +38,8 @@ export function resolveAssetSrc(
   return {
     status: "resolved",
     path: candidate,
-    url: options.toUrl ? options.toUrl(candidate) : toAssetProtocolUrl(candidate),
+    url: options.toUrl ? options.toUrl(candidate) : assetUrl(candidate),
   };
-}
-
-export function toAssetProtocolUrl(path: string): string {
-  return `asset://localhost/${encodePathSegments(normalizeAbsolutePath(path))}`;
 }
 
 function isRemoteUrl(value: string): boolean {
@@ -88,9 +86,3 @@ function isInsidePath(path: string, root: string): boolean {
   return path === root || path.startsWith(`${root.replace(/\/$/, "")}/`);
 }
 
-function encodePathSegments(path: string): string {
-  return path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-}
