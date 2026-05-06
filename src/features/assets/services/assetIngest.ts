@@ -14,26 +14,36 @@ export type WriteAttachmentResult = {
 
 export type AssetIngestOptions = {
   attachmentsFolder?: string;
+  now?: () => Date;
   writeAttachment?: (input: WriteAttachmentInput) => Promise<WriteAttachmentResult>;
 };
 
 const DEFAULT_ATTACHMENTS_FOLDER = "attachments";
 
 export async function ingestDroppedImage(file: File, options: AssetIngestOptions = {}): Promise<string> {
-  const written = await writeFileAttachment(file, options);
+  const written = await writeFileAttachment(file, file.name || "image.png", options);
   return `![${imageAlt(file.name)}](${written.relativePath})`;
+}
+
+export async function ingestPastedImage(file: File, options: AssetIngestOptions = {}): Promise<string> {
+  const written = await writeFileAttachment(file, pastedImageName(options.now?.() ?? new Date()), options);
+  return `![](${written.relativePath})`;
 }
 
 export function isImageFile(file: File): boolean {
   return file.type.startsWith("image/") || /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(file.name);
 }
 
-async function writeFileAttachment(file: File, options: AssetIngestOptions): Promise<WriteAttachmentResult> {
+async function writeFileAttachment(
+  file: File,
+  suggestedName: string,
+  options: AssetIngestOptions,
+): Promise<WriteAttachmentResult> {
   const bytes = Array.from(new Uint8Array(await readFileBytes(file)));
   const writer = options.writeAttachment ?? testWriteAttachment() ?? client.assets.writeAttachment;
   return writer({
     bytes,
-    suggestedName: file.name || "image.png",
+    suggestedName,
     vaultRelDir: options.attachmentsFolder ?? DEFAULT_ATTACHMENTS_FOLDER,
   });
 }
@@ -54,6 +64,14 @@ async function readFileBytes(file: File): Promise<ArrayBuffer> {
     reader.addEventListener("error", () => reject(reader.error ?? new Error("failed to read attachment bytes")));
     reader.readAsArrayBuffer(file);
   });
+}
+
+function pastedImageName(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(date.getHours())}${pad(
+    date.getMinutes(),
+  )}${pad(date.getSeconds())}`;
+  return `Pasted Image ${stamp}.png`;
 }
 
 function imageAlt(fileName: string): string {

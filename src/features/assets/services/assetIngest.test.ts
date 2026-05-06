@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ingestDroppedImage, isImageFile } from "./assetIngest";
+import { ingestDroppedImage, ingestPastedImage, isImageFile } from "./assetIngest";
 
 describe("assetIngest", () => {
   it("writes dropped images to the attachments folder and returns image markdown", async () => {
@@ -13,6 +13,26 @@ describe("assetIngest", () => {
     expect(writeAttachment).toHaveBeenCalledWith({
       bytes: Array.from(new TextEncoder().encode("image-bytes")),
       suggestedName: "logo.png",
+      vaultRelDir: "attachments",
+    });
+  });
+
+  it("writes pasted images with a timestamped filename and empty alt text", async () => {
+    const writeAttachment = vi.fn().mockResolvedValue({
+      path: "/vault/attachments/Pasted Image 20260506123456.png",
+      relativePath: "attachments/Pasted%20Image%2020260506123456.png",
+    });
+
+    await expect(
+      ingestPastedImage(new File(["paste"], "image.png", { type: "image/png" }), {
+        now: () => new Date(2026, 4, 6, 12, 34, 56),
+        writeAttachment,
+      }),
+    ).resolves.toBe("![](attachments/Pasted%20Image%2020260506123456.png)");
+
+    expect(writeAttachment).toHaveBeenCalledWith({
+      bytes: Array.from(new TextEncoder().encode("paste")),
+      suggestedName: "Pasted Image 20260506123456.png",
       vaultRelDir: "attachments",
     });
   });
