@@ -41,6 +41,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.bulkMove": "notes_bulk_move",
   "notes.bulkTrash": "notes_bulk_trash",
   "notes.bulkSetFrontmatter": "notes_bulk_set_frontmatter",
+  "notes.allPaged": "notes_all_paged",
   "notes.recent": "notes_recent",
   "notes.byTag": "notes_by_tag",
   "notes.byFolder": "notes_by_folder",
@@ -95,6 +96,7 @@ export const client = {
     bulkTrash: (paths: string[]) => invokeCommand("notes.bulkTrash", { paths }),
     bulkSetFrontmatter: (paths: string[], patch: JsonRecord) =>
       invokeCommand("notes.bulkSetFrontmatter", { paths, patch }),
+    allPaged: (offset: number, limit: number) => invokeCommand("notes.allPaged", { offset, limit }),
     recent: (limit?: number) => invokeCommand("notes.recent", { limit }),
     byTag: (tag: string) => invokeCommand("notes.byTag", { tag }),
     byFolder: (folder: string) => invokeCommand("notes.byFolder", { folder }),
@@ -138,6 +140,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "folders.trash":
     case "notes.read":
     case "notes.trash":
+    case "notes.allPaged":
     case "notes.recent":
     case "notes.byId":
     case "notes.search":

@@ -145,6 +145,11 @@ export type IpcCommandMap = {
     args: { paths: string[]; patch: JsonRecord };
     result: BulkFrontmatterResult;
   };
+  // === F06/F08 ===
+  "notes.allPaged": {
+    args: { offset: number; limit: number };
+    result: NoteEntry[];
+  };
   "notes.recent": {
     args: { limit?: number };
     result: NoteEntry[];

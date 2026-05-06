@@ -44,6 +44,27 @@ pub fn recent(conn: &Connection, limit: Option<usize>) -> Result<Vec<NoteEntry>,
     collect_notes(rows)
 }
 
+pub fn all_paged(
+    conn: &Connection,
+    offset: usize,
+    limit: usize,
+) -> Result<Vec<NoteEntry>, IpcError> {
+    let offset = offset.min(100_000) as i64;
+    let limit = limit.clamp(1, 200) as i64;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, path, folder, title, size, mtime
+             FROM notes
+             ORDER BY mtime DESC
+             LIMIT ?1 OFFSET ?2",
+        )
+        .map_err(sql_error)?;
+    let rows = stmt
+        .query_map(params![limit, offset], note_from_row)
+        .map_err(sql_error)?;
+    collect_notes(rows)
+}
+
 pub fn by_tag(conn: &Connection, tag: &str) -> Result<Vec<NoteEntry>, IpcError> {
     let descendant = format!("{tag}/%");
     let mut stmt = conn
@@ -230,6 +251,14 @@ mod tests {
         let conn = seeded_db(&dir.path().join("index.sqlite"));
 
         assert_eq!(recent(&conn, Some(1)).unwrap()[0].id, "n2");
+        assert_eq!(
+            all_paged(&conn, 1, 2)
+                .unwrap()
+                .iter()
+                .map(|note| note.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["n1", "n3"]
+        );
         assert_eq!(by_tag(&conn, "dev").unwrap().len(), 2);
         assert_eq!(by_tag(&conn, "dev/rust").unwrap().len(), 1);
         assert_eq!(by_folder(&conn, "work").unwrap().len(), 2);

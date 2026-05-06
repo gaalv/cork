@@ -7,6 +7,7 @@ import type { IpcEventName, IpcEventPayload } from "@/shared/ipc/IpcContract";
 const { clientMock } = vi.hoisted(() => ({
   clientMock: {
     notes: {
+      allPaged: vi.fn(),
       recent: vi.fn(),
       byTag: vi.fn(),
       byFolder: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock("@/shared/ipc/client", () => ({
 
 describe("indexStore", () => {
   beforeEach(() => {
+    clientMock.notes.allPaged.mockReset();
     clientMock.notes.recent.mockReset();
     clientMock.notes.byTag.mockReset();
     clientMock.notes.byFolder.mockReset();
@@ -73,10 +75,13 @@ describe("indexStore", () => {
   });
 
   it("delegates query helpers to the IPC client", async () => {
+    clientMock.notes.allPaged.mockResolvedValue([]);
     clientMock.notes.byTag.mockResolvedValue([]);
 
+    await useIndexStore.getState().allPaged(30, 30);
     await useIndexStore.getState().byTag("dev");
 
+    expect(clientMock.notes.allPaged).toHaveBeenCalledWith(30, 30);
     expect(clientMock.notes.byTag).toHaveBeenCalledWith("dev");
   });
 });

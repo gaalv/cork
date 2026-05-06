@@ -9,7 +9,7 @@ import type { IpcEventName, IpcEventPayload } from "@/shared/ipc/IpcContract";
 
 const { clientMock } = vi.hoisted(() => ({
   clientMock: {
-    notes: { recent: vi.fn(), read: vi.fn() },
+    notes: { allPaged: vi.fn(), recent: vi.fn(), read: vi.fn() },
     tags: { list: vi.fn() },
     events: { on: vi.fn() },
   },
@@ -24,6 +24,7 @@ const notes = [
 ];
 
 beforeEach(() => {
+  clientMock.notes.allPaged.mockReset();
   clientMock.notes.recent.mockReset();
   clientMock.notes.read.mockReset();
   clientMock.tags.list.mockReset();
@@ -34,6 +35,7 @@ beforeEach(() => {
 
 describe("useHomeSections", () => {
   it("aggregates pinned, recents, tags, and the first all-notes page", async () => {
+    clientMock.notes.allPaged.mockResolvedValue(notes.slice(0, 2));
     clientMock.notes.recent.mockResolvedValue(notes);
     clientMock.tags.list.mockResolvedValue([{ tag: "dev", count: 2 }]);
     clientMock.notes.read.mockImplementation((path: string) =>
@@ -46,7 +48,7 @@ describe("useHomeSections", () => {
     expect(result.current.pinned.map((note) => note.id)).toEqual(["n1"]);
     expect(result.current.recents).toHaveLength(3);
     expect(result.current.tagsTop[0]?.tag).toBe("dev");
-    expect(result.current.allPage.map((note) => note.id)).toEqual(["n1", "n2", "n3"]);
+    expect(result.current.allPage.map((note) => note.id)).toEqual(["n1", "n2"]);
   });
 
   it("refreshes when vault file changes", async () => {
@@ -55,6 +57,7 @@ describe("useHomeSections", () => {
       listeners.set(event, callback);
       return Promise.resolve(vi.fn());
     });
+    clientMock.notes.allPaged.mockResolvedValue(notes);
     clientMock.notes.recent.mockResolvedValue(notes);
     clientMock.tags.list.mockResolvedValue([]);
     clientMock.notes.read.mockResolvedValue({ path: "/vault/a.md", frontmatter: {}, body: "Body", mtime: 1 });

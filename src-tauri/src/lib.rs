@@ -85,6 +85,7 @@ pub fn run() {
             vault::bulk::notes_bulk_trash,
             vault::bulk::notes_bulk_set_frontmatter,
             index::notes_recent,
+            index::notes_all_paged,
             index::notes_by_tag,
             index::notes_by_folder,
             index::notes_by_id,

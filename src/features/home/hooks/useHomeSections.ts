@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
 
 import type { TagCount } from "@/shared/ipc/IpcContract";
@@ -31,10 +30,11 @@ export type HomeSections = {
 };
 
 export function useHomeSections(): HomeSections {
-  const vaultNotes = useVaultStore((state) => state.notes);
   const [pinned, setPinned] = useState<HomeNote[]>([]);
   const [recents, setRecents] = useState<NoteEntry[]>([]);
   const [tags, setTags] = useState<TagCount[]>([]);
+  const [allPage, setAllPage] = useState<NoteEntry[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [pageCount, setPageCount] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +42,18 @@ export function useHomeSections(): HomeSections {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [recentNotes, tagCounts] = await Promise.all([client.notes.recent(200), client.tags.list()]);
+      const [recentNotes, tagCounts, firstPage] = await Promise.all([
+        client.notes.recent(200),
+        client.tags.list(),
+        client.notes.allPaged(0, PAGE_SIZE),
+      ]);
       const pinnedNotes = await derivePinnedNotes(recentNotes);
       setPinned(pinnedNotes);
       setRecents(recentNotes.slice(0, RECENTS_LIMIT));
       setTags(tagCounts.slice(0, TAG_LIMIT));
+      setAllPage(firstPage);
+      setHasMore(firstPage.length === PAGE_SIZE);
+      setPageCount(1);
       setError(null);
     } catch (nextError) {
       setError(errorMessage(nextError));
@@ -79,14 +86,31 @@ export function useHomeSections(): HomeSections {
     };
   }, [load]);
 
-  const sortedVaultNotes = useMemo(
-    () => [...vaultNotes].sort((left, right) => right.mtime - left.mtime),
-    [vaultNotes],
-  );
-  const visibleCount = pageCount * PAGE_SIZE;
-  const allPage = sortedVaultNotes.slice(0, visibleCount);
-  const hasMore = visibleCount < sortedVaultNotes.length;
   const loadMore = useCallback(() => setPageCount((count) => count + 1), []);
+
+  useEffect(() => {
+    if (pageCount === 1) {
+      return;
+    }
+    let cancelled = false;
+    void client.notes
+      .allPaged((pageCount - 1) * PAGE_SIZE, PAGE_SIZE)
+      .then((nextPage) => {
+        if (cancelled) {
+          return;
+        }
+        setAllPage((current) => [...current, ...nextPage]);
+        setHasMore(nextPage.length === PAGE_SIZE);
+      })
+      .catch((nextError) => {
+        if (!cancelled) {
+          setError(errorMessage(nextError));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pageCount]);
 
   return { pinned, recents, tagsTop: tags, allPage, hasMore, isLoading, error, loadMore, refresh: load };
 }

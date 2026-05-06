@@ -228,6 +228,17 @@ pub fn notes_recent(
 }
 
 #[tauri::command]
+pub fn notes_all_paged(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+    offset: usize,
+    limit: usize,
+) -> Result<Vec<NoteEntry>, IpcError> {
+    state.with_conn(&app, &vault, |conn| query::all_paged(conn, offset, limit))
+}
+
+#[tauri::command]
 pub fn notes_by_tag(
     app: AppHandle,
     vault: tauri::State<'_, VaultState>,

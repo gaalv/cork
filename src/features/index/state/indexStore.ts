@@ -24,6 +24,7 @@ type IndexStore = {
   stopIndexIntegration: () => void;
   refreshStatus: () => Promise<void>;
   loadHomeIndex: () => Promise<void>;
+  allPaged: (offset: number, limit: number) => Promise<NoteEntry[]>;
   recent: (limit?: number) => Promise<NoteEntry[]>;
   byTag: (tag: string) => Promise<NoteEntry[]>;
   byFolder: (folder: string) => Promise<NoteEntry[]>;
@@ -91,6 +92,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
     }
   },
 
+  allPaged: (offset, limit) => client.notes.allPaged(offset, limit),
   recent: (limit) => client.notes.recent(limit),
   byTag: (tag) => client.notes.byTag(tag),
   byFolder: (folder) => client.notes.byFolder(folder),
