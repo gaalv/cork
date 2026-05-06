@@ -1,0 +1,150 @@
+import { create } from "zustand";
+
+import type { JsonRecord, NoteFile, SaveResult } from "@/shared/ipc/types";
+
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+export type EditorConflict = {
+  externalMtime: number;
+  message?: string;
+};
+
+export type EditorBuffer = {
+  noteId: string;
+  path: string;
+  frontmatter: JsonRecord;
+  body: string;
+  loadedMtime: number;
+  dirty: boolean;
+  saveStatus: SaveStatus;
+  saveError: string | null;
+  lastSavedAt: number | null;
+  pendingSave: boolean;
+  conflict: EditorConflict | null;
+};
+
+type OpenBufferInput = {
+  noteId: string;
+  file: NoteFile;
+};
+
+type EditorStore = {
+  activeNoteId: string | null;
+  buffers: Map<string, EditorBuffer>;
+  openBuffer: (input: OpenBufferInput) => void;
+  setActiveNoteId: (noteId: string | null) => void;
+  updateBody: (noteId: string, body: string) => void;
+  markSaving: (noteId: string) => void;
+  markSaved: (noteId: string, result: SaveResult, savedAt?: number) => void;
+  markSaveError: (noteId: string, message: string) => void;
+  setPendingSave: (noteId: string, pendingSave: boolean) => void;
+  setConflict: (noteId: string, conflict: EditorConflict) => void;
+  resolveConflict: (noteId: string, strategy: "reload" | "keep", file?: NoteFile) => void;
+  replaceFromDisk: (noteId: string, file: NoteFile) => void;
+};
+
+export const useEditorStore = create<EditorStore>((set) => ({
+  activeNoteId: null,
+  buffers: new Map(),
+
+  openBuffer({ noteId, file }) {
+    set((state) => {
+      const buffers = cloneBuffers(state.buffers);
+      buffers.set(noteId, createBuffer(noteId, file));
+      return { activeNoteId: noteId, buffers };
+    });
+  },
+
+  setActiveNoteId(noteId) {
+    set({ activeNoteId: noteId });
+  },
+
+  updateBody(noteId, body) {
+    updateBuffer(set, noteId, (buffer) => ({
+      ...buffer,
+      body,
+      dirty: body !== buffer.body ? true : buffer.dirty,
+      saveStatus: body !== buffer.body ? "idle" : buffer.saveStatus,
+    }));
+  },
+
+  markSaving(noteId) {
+    updateBuffer(set, noteId, (buffer) => ({ ...buffer, saveStatus: "saving", saveError: null }));
+  },
+
+  markSaved(noteId, result, savedAt = Date.now()) {
+    updateBuffer(set, noteId, (buffer) => ({
+      ...buffer,
+      path: result.path,
+      loadedMtime: result.mtime,
+      dirty: false,
+      pendingSave: false,
+      saveStatus: "saved",
+      saveError: null,
+      lastSavedAt: savedAt,
+      conflict: null,
+    }));
+  },
+
+  markSaveError(noteId, message) {
+    updateBuffer(set, noteId, (buffer) => ({ ...buffer, saveStatus: "error", saveError: message }));
+  },
+
+  setPendingSave(noteId, pendingSave) {
+    updateBuffer(set, noteId, (buffer) => ({ ...buffer, pendingSave }));
+  },
+
+  setConflict(noteId, conflict) {
+    updateBuffer(set, noteId, (buffer) => ({ ...buffer, conflict, saveStatus: "error" }));
+  },
+
+  resolveConflict(noteId, strategy, file) {
+    if (strategy === "reload" && file) {
+      updateBuffer(set, noteId, () => createBuffer(noteId, file));
+      return;
+    }
+    updateBuffer(set, noteId, (buffer) => ({ ...buffer, conflict: null, saveStatus: "idle" }));
+  },
+
+  replaceFromDisk(noteId, file) {
+    updateBuffer(set, noteId, () => createBuffer(noteId, file));
+  },
+}));
+
+function createBuffer(noteId: string, file: NoteFile): EditorBuffer {
+  return {
+    noteId,
+    path: file.path,
+    frontmatter: file.frontmatter,
+    body: file.body,
+    loadedMtime: file.mtime,
+    dirty: false,
+    saveStatus: "idle",
+    saveError: null,
+    lastSavedAt: null,
+    pendingSave: false,
+    conflict: null,
+  };
+}
+
+function cloneBuffers(buffers: Map<string, EditorBuffer>) {
+  return new Map(buffers);
+}
+
+type SetEditorState = (updater: (state: EditorStore) => Partial<EditorStore>) => void;
+
+function updateBuffer(
+  set: SetEditorState,
+  noteId: string,
+  updater: (buffer: EditorBuffer) => EditorBuffer,
+) {
+  set((state) => {
+    const current = state.buffers.get(noteId);
+    if (!current) {
+      return state;
+    }
+    const buffers = cloneBuffers(state.buffers);
+    buffers.set(noteId, updater(current));
+    return { buffers };
+  });
+}
