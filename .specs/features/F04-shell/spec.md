@@ -2,7 +2,7 @@
 
 **Owner phase:** M2
 **Depends on:** F01 (migrated UI), F02 (vault store), F03 (index queries — Tags, Recents)
-**Status:** Draft
+**Status:** Complete
 
 ## Problem Statement
 
@@ -10,12 +10,12 @@ The Layout C shell — left rail, top bar, drawer container, command palette mod
 
 ## Goals
 
-- [ ] One persistent rail with toggleable drawers (Search, Folders, Recent, Starred, Tags).
-- [ ] Top bar showing breadcrumb, vault name, and global actions (New, ⌘K hint).
-- [ ] Command palette with fuzzy search over: notes, commands, tags, recent.
-- [ ] In-app router (no react-router needed for v1) with `home` and `note(id)` views.
-- [ ] Keyboard shortcuts: ⌘K, ⌘N, ⌘O (open vault), Esc to close drawers/palette.
-- [ ] Accessibility: focus management, aria-labels on rail buttons, palette as `role="dialog"`.
+- [x] One persistent rail with toggleable drawers (Search, Folders, Recent, Starred, Tags).
+- [x] Top bar showing breadcrumb, vault name, and global actions (New, ⌘K hint).
+- [x] Command palette with fuzzy search over: notes, commands, tags, recent.
+- [x] In-app router (no react-router needed for v1) with `home` and `note(id)` views.
+- [x] Keyboard shortcuts: ⌘K, ⌘N, ⌘O (open vault), Esc to close drawers/palette.
+- [x] Accessibility: focus management, aria-labels on rail buttons, palette as `role="dialog"`.
 
 ## Out of Scope
 
@@ -87,33 +87,33 @@ The Layout C shell — left rail, top bar, drawer container, command palette mod
 
 | ID       | AC                       | Phase | Status  |
 | -------- | ------------------------ | ----- | ------- |
-| SHELL-01 | Home as default view     | Tasks | Pending |
-| SHELL-02 | Note routing             | Tasks | Pending |
-| SHELL-03 | Back/forward             | Tasks | Pending |
-| SHELL-04 | View persistence         | Tasks | Pending |
-| SHELL-05 | Drawer open/close        | Tasks | Pending |
-| SHELL-06 | Drawer swap              | Tasks | Pending |
-| SHELL-07 | Drawer focus trap        | Tasks | Pending |
-| SHELL-08 | Drawer rail active state | Tasks | Pending |
-| SHELL-09 | Palette ⌘K open          | Tasks | Pending |
-| SHELL-10 | Palette default sections | Tasks | Pending |
-| SHELL-11 | Palette fuzzy            | Tasks | Pending |
-| SHELL-12 | Palette enter action     | Tasks | Pending |
-| SHELL-13 | Palette esc + focus restore | Tasks | Pending |
-| SHELL-14 | Palette a11y             | Tasks | Pending |
-| SHELL-15 | Top bar Home             | Tasks | Pending |
-| SHELL-16 | Top bar Note breadcrumb  | Tasks | Pending |
-| SHELL-17 | Breadcrumb folder click  | Tasks | Pending |
-| SHELL-18 | ⌘N                       | Tasks | Pending |
-| SHELL-19 | ⌘O                       | Tasks | Pending |
-| SHELL-20 | ⌘\\                      | Tasks | Pending |
-| SHELL-21 | ? help modal             | Tasks | Pending |
-| SHELL-22 | Toast surface            | Tasks | Pending |
-| SHELL-23 | Empty vault state        | Tasks | Pending |
-| SHELL-24 | Palette no-match CTA     | Tasks | Pending |
+| SHELL-01 | Home as default view     | Tasks | Verified |
+| SHELL-02 | Note routing             | Tasks | Verified |
+| SHELL-03 | Back/forward             | Tasks | Verified |
+| SHELL-04 | View persistence         | Tasks | Verified |
+| SHELL-05 | Drawer open/close        | Tasks | Verified |
+| SHELL-06 | Drawer swap              | Tasks | Verified |
+| SHELL-07 | Drawer focus trap        | Tasks | Verified |
+| SHELL-08 | Drawer rail active state | Tasks | Verified |
+| SHELL-09 | Palette ⌘K open          | Tasks | Verified |
+| SHELL-10 | Palette default sections | Tasks | Verified |
+| SHELL-11 | Palette fuzzy            | Tasks | Verified |
+| SHELL-12 | Palette enter action     | Tasks | Verified |
+| SHELL-13 | Palette esc + focus restore | Tasks | Verified |
+| SHELL-14 | Palette a11y             | Tasks | Verified |
+| SHELL-15 | Top bar Home             | Tasks | Verified |
+| SHELL-16 | Top bar Note breadcrumb  | Tasks | Verified |
+| SHELL-17 | Breadcrumb folder click  | Tasks | Verified |
+| SHELL-18 | ⌘N                       | Tasks | Verified |
+| SHELL-19 | ⌘O                       | Tasks | Verified |
+| SHELL-20 | ⌘\\                      | Tasks | Verified |
+| SHELL-21 | ? help modal             | Tasks | Verified |
+| SHELL-22 | Toast surface            | Tasks | Verified |
+| SHELL-23 | Empty vault state        | Tasks | Verified |
+| SHELL-24 | Palette no-match CTA     | Tasks | Verified |
 
 ## Success Criteria
 
-- [ ] Lighthouse a11y score ≥ 95 on the shell.
-- [ ] All shortcuts work in dev and packaged builds on macOS, Win, Linux.
-- [ ] Palette opens in < 50 ms from keystroke.
+- [ ] Lighthouse a11y score ≥ 95 on the shell. (Manual audit deferred; automated role/keyboard coverage added.)
+- [x] All shortcuts work in dev and packaged builds on macOS, Win, Linux.
+- [x] Palette opens in < 50 ms from keystroke.
