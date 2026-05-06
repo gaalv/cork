@@ -9,6 +9,7 @@ import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { resolvedVaultSettings, useVaultSettingsStore } from "@/features/settings/state/vaultSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { AboutDialog } from "./AboutDialog";
 import { SettingRow } from "./SettingRow";
 
 import type { ChangeEvent } from "react";
@@ -144,6 +145,10 @@ type SectionContext = {
 
 function renderSection(section: SettingsSectionId, context: SectionContext) {
   const { settings, updateSettings, patchEditor, vaultSettings, hasVaultSettings, applyVaultSettings, vaultPath, pushToast, rebuildIndex, rebuilding, setRebuilding } = context;
+  if (section === "about") {
+    return <AboutDialog />;
+  }
+
   if (section === "general") {
     return (
       <div className="space-y-3">
