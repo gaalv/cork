@@ -55,3 +55,13 @@ CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
   body,
   tokenize = 'porter unicode61 remove_diacritics 2'
 );
+
+
+CREATE TABLE IF NOT EXISTS assets (
+  path TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  mtime INTEGER NOT NULL,
+  sha1 TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_assets_kind ON assets(kind);

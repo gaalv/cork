@@ -7,7 +7,8 @@ use crate::index::paths::index_db_path;
 use crate::IpcError;
 
 const SCHEMA: &str = include_str!("schema.sql");
-const SCHEMA_VERSION: i64 = 1;
+const MIGRATION_003_ASSETS: &str = include_str!("migrations/003_assets.sql");
+const SCHEMA_VERSION: i64 = 3;
 
 pub fn open_index(app_data_dir: &Path, vault_path: &Path) -> Result<Connection, IpcError> {
     let db_path = index_db_path(app_data_dir, vault_path);
@@ -47,10 +48,24 @@ fn ensure_schema(conn: &Connection) -> Result<(), rusqlite::Error> {
         .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| row.get::<_, i64>(0))
         .optional()?;
 
-    if existing.is_none() {
-        conn.execute("INSERT INTO schema_version (version) VALUES (?1)", [SCHEMA_VERSION])?;
+    match existing {
+        None => {
+            conn.execute("INSERT INTO schema_version (version) VALUES (?1)", [SCHEMA_VERSION])?;
+        }
+        Some(version) if version < SCHEMA_VERSION => {
+            run_migrations(conn, version)?;
+            conn.execute("UPDATE schema_version SET version = ?1", [SCHEMA_VERSION])?;
+        }
+        _ => {}
     }
 
+    Ok(())
+}
+
+fn run_migrations(conn: &Connection, current_version: i64) -> Result<(), rusqlite::Error> {
+    if current_version < 3 {
+        conn.execute_batch(MIGRATION_003_ASSETS)?;
+    }
     Ok(())
 }
 
@@ -93,9 +108,37 @@ mod tests {
         let journal_mode: String = conn
             .pragma_query_value(None, "journal_mode", |row| row.get(0))
             .unwrap();
+        let asset_count: i64 = conn
+            .query_row("SELECT count(*) FROM assets", [], |row| row.get(0))
+            .unwrap();
         assert_eq!(version, SCHEMA_VERSION);
         assert_eq!(note_count, 0);
+        assert_eq!(asset_count, 0);
         assert_eq!(journal_mode.to_lowercase(), "wal");
+    }
+
+    #[test]
+    fn migrates_existing_database_to_assets_schema() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("index.sqlite");
+        let conn = Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE schema_version (version INTEGER NOT NULL);
+             INSERT INTO schema_version (version) VALUES (1);",
+        )
+        .unwrap();
+        drop(conn);
+
+        let conn = open_index_at(&db_path).unwrap();
+
+        let version: i64 = conn
+            .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| row.get(0))
+            .unwrap();
+        let asset_count: i64 = conn
+            .query_row("SELECT count(*) FROM assets", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, SCHEMA_VERSION);
+        assert_eq!(asset_count, 0);
     }
 
     #[test]
