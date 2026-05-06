@@ -72,7 +72,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Task list rendering (`- [ ] / - [x]`)
 - Wikilink autocomplete in editor
 
-**[F08 — Note view + Meta panel](../features/F08-note-view/spec.md)** — PLANNED
+**[F08 — Note view + Meta panel](../features/F08-note-view/spec.md)** — COMPLETE
 - Note layout (editor + right meta)
 - Right panel: Outline, Backlinks, Recents
 - Breadcrumb + Back-to-Home in top bar
@@ -106,7 +106,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ### Features
 
-**[F06 — Home Dashboard](../features/F06-home/spec.md)** — PLANNED
+**[F06 — Home Dashboard](../features/F06-home/spec.md)** — COMPLETE
 - Hero (greeting + counts + "Abrir nota de hoje")
 - Pinned grid
 - Recents list

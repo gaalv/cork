@@ -68,19 +68,19 @@ The Home view is the user's landing page. It must answer "what should I look at?
 
 | ID      | AC                       | Phase | Status  |
 | ------- | ------------------------ | ----- | ------- |
-| HOME-01 | Render < 100 ms          | Tasks | Pending |
-| HOME-02 | Skeletons                | Tasks | Pending |
-| HOME-03 | Pinned section           | Tasks | Pending |
-| HOME-04 | Recents section          | Tasks | Pending |
-| HOME-05 | By Tag section           | Tasks | Pending |
-| HOME-06 | All Notes paginated      | Tasks | Pending |
-| HOME-07 | Card click → note view   | Tasks | Pending |
-| HOME-08 | Card context menu        | Tasks | Pending |
-| HOME-09 | Pin/unpin via frontmatter | Tasks | Pending |
-| HOME-10 | Live updates             | Tasks | Pending |
-| HOME-11 | Greeting variants        | Tasks | Pending |
-| HOME-12 | Empty vault state        | Tasks | Pending |
-| HOME-13 | Empty tags state         | Tasks | Pending |
+| HOME-01 | Render < 100 ms          | Tasks | Verified |
+| HOME-02 | Skeletons                | Tasks | Verified |
+| HOME-03 | Pinned section           | Tasks | Verified |
+| HOME-04 | Recents section          | Tasks | Verified |
+| HOME-05 | By Tag section           | Tasks | Verified |
+| HOME-06 | All Notes paginated      | Tasks | Verified |
+| HOME-07 | Card click → note view   | Tasks | Verified |
+| HOME-08 | Card context menu        | Tasks | Verified |
+| HOME-09 | Pin/unpin via frontmatter | Tasks | Verified |
+| HOME-10 | Live updates             | Tasks | Verified |
+| HOME-11 | Greeting variants        | Tasks | Verified |
+| HOME-12 | Empty vault state        | Tasks | Verified |
+| HOME-13 | Empty tags state         | Tasks | Verified |
 
 ## Success Criteria
 

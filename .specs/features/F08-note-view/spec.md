@@ -75,18 +75,18 @@ The Note view is where the user reads/edits a single note. It composes the edito
 
 | ID       | AC                       | Status  |
 | -------- | ------------------------ | ------- |
-| NOTE-01  | Three-column layout      | Pending |
-| NOTE-02  | Responsive collapse      | Pending |
-| NOTE-03  | Outline refresh < 200ms  | Pending |
-| NOTE-04  | Outline click → scroll   | Pending |
-| NOTE-05  | Outline active highlight | Pending |
-| NOTE-06  | Backlinks list           | Pending |
-| NOTE-07  | Backlink click → nav     | Pending |
-| NOTE-08  | Recents (panel)          | Pending |
-| NOTE-09  | Star toggle              | Pending |
-| NOTE-10  | AI stub card             | Pending |
-| NOTE-11  | Metadata footer          | Pending |
-| NOTE-12  | Scroll position preserved | Pending |
+| NOTE-01  | Three-column layout      | Verified |
+| NOTE-02  | Responsive collapse      | Verified |
+| NOTE-03  | Outline refresh < 200ms  | Verified |
+| NOTE-04  | Outline click → scroll   | Verified |
+| NOTE-05  | Outline active highlight | Verified |
+| NOTE-06  | Backlinks list           | Verified |
+| NOTE-07  | Backlink click → nav     | Verified |
+| NOTE-08  | Recents (panel)          | Verified |
+| NOTE-09  | Star toggle              | Verified |
+| NOTE-10  | AI stub card             | Verified |
+| NOTE-11  | Metadata footer          | Verified |
+| NOTE-12  | Scroll position preserved | Verified |
 
 ## Success Criteria
 

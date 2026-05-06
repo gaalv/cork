@@ -198,6 +198,7 @@ _None._
 - **L-007:** CM6 autocompletion sources must be merged into a single `autocompletion({ override })` extension; stacking multiple override facets causes config merge conflicts.
 - **L-008:** Browser editor E2E should use contenteditable `fill()` for deterministic large text insertion; raw keyboard typing can be dropped by CM6 under fast automation.
 - **L-009:** CM6 drop tests in jsdom may resolve coordinates to position 0; assert insertion and service calls rather than relying on pixel layout.
+- **L-010:** Browser Home E2E needs fixture-backed note reads/frontmatter toggles because Playwright preview cannot call Tauri IPC.
 
 ---
 
@@ -221,6 +222,8 @@ _None._
 | 014 | Partially implement F11 Asset Pipeline (asset DB/walker, scoped protocol, attachment IPC, resolver/url/open helpers); T07/T09/T10/T11/T12 deferred to F05/F10 | 2026-05-06 | multiple | ✅ Partial |
 | 015 | Implement F07 Drawers (FTS search, folders, recent, starred, tags, a11y, E2E) | 2026-05-06 | multiple | ✅ Done |
 | 016 | Implement F05 Editor (CM6, autosave/conflicts, Markdown preview, Shiki/KaTeX/Mermaid, completions, split view, search, chaos E2E) | 2026-05-06 | multiple | ✅ Done |
+| 017 | Implement F06 Home Dashboard (query-backed hero, pinned/recents/tags/all notes, pin flow E2E) | 2026-05-06 | multiple | ✅ Done |
+| 018 | Implement F08 Note View + Meta Panel (store, outline/backlinks/hooks, responsive meta panel, NoteView composition) | 2026-05-06 | multiple | ✅ Done |
 | 017 | Complete F11 remaining asset pipeline tasks (preview image rendering, CM6 image drop/paste, drop-render E2E); T11 deferred pending F10-T11 | 2026-05-06 | multiple | ✅ Partial |
 
 ---
