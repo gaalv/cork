@@ -1,4 +1,5 @@
 pub mod error;
+pub mod index;
 pub mod vault;
 
 pub use error::IpcError;
