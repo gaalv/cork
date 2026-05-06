@@ -1,9 +1,19 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useShellStore } from "@/features/shell/state/shellStore";
 
 import { DrawerHost } from "./DrawerHost";
+
+const { clientMock } = vi.hoisted(() => ({
+  clientMock: {
+    notes: { recent: vi.fn().mockResolvedValue([]), starred: vi.fn().mockResolvedValue([]), byTag: vi.fn().mockResolvedValue([]), search: vi.fn().mockResolvedValue([]) },
+    tags: { list: vi.fn().mockResolvedValue([]) },
+    events: { on: vi.fn().mockResolvedValue(vi.fn()) },
+  },
+}));
+
+vi.mock("@/shared/ipc/client", () => ({ client: clientMock }));
 
 beforeEach(() => {
   useShellStore.getState().reset();

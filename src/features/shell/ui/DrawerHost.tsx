@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { FocusTrap } from "focus-trap-react";
 import { X } from "@phosphor-icons/react";
 
-import { folderOps, validateFolderName } from "@/features/folder-ops/services/folderOps";
-import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
-import { NewFolderDialog } from "@/features/folder-ops/ui/NewFolderDialog";
+import { FoldersDrawer } from "@/features/drawers/ui/FoldersDrawer";
+import { RecentDrawer } from "@/features/drawers/ui/RecentDrawer";
+import { SearchDrawer } from "@/features/drawers/ui/SearchDrawer";
+import { StarredDrawer } from "@/features/drawers/ui/StarredDrawer";
+import { TagsDrawer } from "@/features/drawers/ui/TagsDrawer";
 import { useShellStore } from "@/features/shell/state/shellStore";
-import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import type { DrawerId } from "@/features/shell/state/shellStore";
 
@@ -25,7 +26,17 @@ const drawerTitles: Record<DrawerId, string> = {
 export function DrawerHost({ onOpenNote }: DrawerHostProps) {
   const drawer = useShellStore((state) => state.drawer);
   const closeDrawer = useShellStore((state) => state.closeDrawer);
+  const navigate = useShellStore((state) => state.navigate);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const openNote = (id: string) => {
+    if (onOpenNote) {
+      onOpenNote(id);
+    } else {
+      navigate({ kind: "note", id });
+    }
+    closeDrawer();
+  };
 
   useEffect(() => {
     if (!drawer) {
@@ -81,7 +92,7 @@ export function DrawerHost({ onOpenNote }: DrawerHostProps) {
               <X size={16} />
             </button>
           </div>
-          <DrawerBody drawer={drawer} onOpenNote={onOpenNote} />
+          <DrawerBody drawer={drawer} onOpenNote={openNote} />
         </div>
       </FocusTrap>
       <button
@@ -96,67 +107,20 @@ export function DrawerHost({ onOpenNote }: DrawerHostProps) {
 
 type DrawerBodyProps = {
   drawer: DrawerId;
-  onOpenNote?: (id: string) => void;
+  onOpenNote: (id: string) => void;
 };
 
 function DrawerBody({ drawer, onOpenNote }: DrawerBodyProps) {
-  const notes = useVaultStore((state) => state.notes);
-  const loadNotes = useVaultStore((state) => state.loadNotes);
-  const [renaming, setRenaming] = useState<string | null>(null);
-  const [newFolderParent, setNewFolderParent] = useState<string | null>(null);
-  const folders = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const note of notes) {
-      if (note.folder) {
-        counts.set(note.folder, (counts.get(note.folder) ?? 0) + 1);
-      }
-    }
-    return [...counts.entries()].map(([id, count]) => ({ id, name: id, count }));
-  }, [notes]);
-
-  if (drawer === "folders") {
-    return (
-      <div className="space-y-2 text-sm">
-        <button type="button" className="w-full rounded-md border border-dashed border-[var(--color-noxe-border)] px-2 py-1.5 text-[12px] text-[var(--color-noxe-muted)] hover:border-[var(--color-noxe-border-strong)]" onClick={() => setNewFolderParent("")}>New folder</button>
-        {folders.map((folder) => (
-          <div key={folder.id}>
-            {renaming === folder.id ? (
-              <InlineRename
-                initial={folder.name}
-                label={`Rename ${folder.name}`}
-                validate={validateFolderName}
-                onCancel={() => setRenaming(null)}
-                onCommit={async (name) => {
-                  await folderOps.rename({ oldPath: folder.id, newName: name });
-                  setRenaming(null);
-                  await loadNotes();
-                }}
-              />
-            ) : (
-              <button type="button" className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-noxe-panel-2)]" onContextMenu={(event) => { event.preventDefault(); setRenaming(folder.id); }} onClick={() => setRenaming(folder.id)}>
-                <span>{folder.name}</span>
-                <span className="text-[11px] text-[var(--color-noxe-muted)]">{folder.count}</span>
-              </button>
-            )}
-          </div>
-        ))}
-        <NewFolderDialog parent={newFolderParent ?? ""} open={newFolderParent !== null} onClose={() => setNewFolderParent(null)} onCreate={async (parent, name) => { await folderOps.create({ parent, name }); await loadNotes(); }} />
-      </div>
-    );
+  switch (drawer) {
+    case "search":
+      return <SearchDrawer onOpenNote={onOpenNote} />;
+    case "folders":
+      return <FoldersDrawer onOpenNote={onOpenNote} />;
+    case "recent":
+      return <RecentDrawer onOpenNote={onOpenNote} />;
+    case "starred":
+      return <StarredDrawer onOpenNote={onOpenNote} />;
+    case "tags":
+      return <TagsDrawer onOpenNote={onOpenNote} />;
   }
-
-  return (
-    <div className="space-y-2 text-sm text-[var(--color-noxe-muted)]">
-      {notes.map((note) => (
-        <button
-          key={note.id}
-          type="button"
-          onClick={() => onOpenNote?.(note.id)}
-          className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-noxe-panel-2)]"
-        >
-          {note.title}
-        </button>
-      ))}
-    </div>
-  );
 }
