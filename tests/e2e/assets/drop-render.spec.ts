@@ -21,7 +21,7 @@ test.beforeEach(async ({ page }) => {
   fs.mkdirSync(vaultPath, { recursive: true });
 
   await page.exposeFunction("__noxeNodeWriteAttachment", async (input: WriteAttachmentInput) => {
-    const relativeDir = input.vaultRelDir ?? "attachments";
+    const relativeDir = input.vaultRelDir ?? "_attachments";
     const destinationDir = path.join(vaultPath, relativeDir);
     fs.mkdirSync(destinationDir, { recursive: true });
     const destinationPath = path.join(destinationDir, input.suggestedName);
@@ -57,10 +57,10 @@ test("drops an image into the editor and renders it in preview", async ({ page }
   });
   await editor.dispatchEvent("drop", { dataTransfer });
 
-  await expect(editor).toContainText("![pixel](attachments/pixel.png)");
-  expect(fs.existsSync(path.join(vaultPath, "attachments", "pixel.png"))).toBe(true);
+  await expect(editor).toContainText("![pixel](_attachments/pixel.png)");
+  expect(fs.existsSync(path.join(vaultPath, "_attachments", "pixel.png"))).toBe(true);
 
   const image = page.getByRole("img", { name: "pixel" });
   await expect(image).toHaveAttribute("loading", "lazy");
-  await expect(image).toHaveAttribute("src", /asset:\/\/localhost\/.*attachments\/pixel\.png/);
+  await expect(image).toHaveAttribute("src", /asset:\/\/localhost\/.*_attachments\/pixel\.png/);
 });

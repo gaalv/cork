@@ -1,3 +1,4 @@
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { client } from "@/shared/ipc/client";
 
 export type WriteAttachmentInput = {
@@ -18,7 +19,7 @@ export type AssetIngestOptions = {
   writeAttachment?: (input: WriteAttachmentInput) => Promise<WriteAttachmentResult>;
 };
 
-const DEFAULT_ATTACHMENTS_FOLDER = "attachments";
+const DEFAULT_ATTACHMENTS_FOLDER = "_attachments";
 
 export async function ingestDroppedImage(file: File, options: AssetIngestOptions = {}): Promise<string> {
   const written = await writeFileAttachment(file, file.name || "image.png", options);
@@ -44,7 +45,7 @@ async function writeFileAttachment(
   return writer({
     bytes,
     suggestedName,
-    vaultRelDir: options.attachmentsFolder ?? DEFAULT_ATTACHMENTS_FOLDER,
+    vaultRelDir: resolveAttachmentsFolder(options),
   });
 }
 
@@ -72,6 +73,13 @@ function pastedImageName(date: Date): string {
     date.getMinutes(),
   )}${pad(date.getSeconds())}`;
   return `Pasted Image ${stamp}.png`;
+}
+
+function resolveAttachmentsFolder(options: AssetIngestOptions): string {
+  if (options.attachmentsFolder !== undefined) {
+    return options.attachmentsFolder;
+  }
+  return useAppSettingsStore.getState().attachmentsFolder ?? DEFAULT_ATTACHMENTS_FOLDER;
 }
 
 function imageAlt(fileName: string): string {
