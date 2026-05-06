@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
+import { createEditorDropPasteExtension } from "@/features/assets/hooks/useEditorDropPaste";
 import { createEditorExtensions } from "@/features/editor/cm/extensions";
 import { useEditorStore } from "@/features/editor/state/editorStore";
 
@@ -30,7 +31,7 @@ export function Editor({ className, extraExtensions = [], onReady }: EditorProps
           updateBody(noteId, update.state.doc.toString());
         }
       }),
-      ...createEditorExtensions({ extraExtensions }),
+      ...createEditorExtensions({ extraExtensions: [createEditorDropPasteExtension(), ...extraExtensions] }),
     ],
     [extraExtensions, updateBody],
   );
