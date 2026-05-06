@@ -1,0 +1,165 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HelpModal > renders the shortcut reference 1`] = `
+<div>
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4"
+    role="presentation"
+  >
+    <section
+      aria-label="Keyboard shortcuts"
+      aria-modal="true"
+      class="w-[min(520px,100%)] rounded-2xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-5 shadow-2xl"
+      role="dialog"
+    >
+      <div
+        class="mb-4 flex items-center justify-between"
+      >
+        <h2
+          class="text-lg font-semibold"
+        >
+          Keyboard shortcuts
+        </h2>
+        <button
+          aria-label="Close shortcuts"
+          class="rounded-md p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+          type="button"
+        >
+          <svg
+            fill="currentColor"
+            height="16"
+            viewBox="0 0 256 256"
+            width="16"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="space-y-4"
+      >
+        <div>
+          <h3
+            class="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]"
+          >
+            Navigation
+          </h3>
+          <dl
+            class="space-y-2"
+          >
+            <div
+              class="flex items-center justify-between gap-4 text-sm"
+            >
+              <dt>
+                Open command palette
+              </dt>
+              <dd
+                class="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium"
+              >
+                ⌘K
+              </dd>
+            </div>
+            <div
+              class="flex items-center justify-between gap-4 text-sm"
+            >
+              <dt>
+                Back
+              </dt>
+              <dd
+                class="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium"
+              >
+                ⌘[
+              </dd>
+            </div>
+            <div
+              class="flex items-center justify-between gap-4 text-sm"
+            >
+              <dt>
+                Forward
+              </dt>
+              <dd
+                class="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium"
+              >
+                ⌘]
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <div>
+          <h3
+            class="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]"
+          >
+            Vault
+          </h3>
+          <dl
+            class="space-y-2"
+          >
+            <div
+              class="flex items-center justify-between gap-4 text-sm"
+            >
+              <dt>
+                Open vault
+              </dt>
+              <dd
+                class="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium"
+              >
+                ⌘O
+              </dd>
+            </div>
+            <div
+              class="flex items-center justify-between gap-4 text-sm"
+            >
+              <dt>
+                New note
+              </dt>
+              <dd
+                class="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium"
+              >
+                ⌘N
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <div>
+          <h3
+            class="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]"
+          >
+            Shell
+          </h3>
+          <dl
+            class="space-y-2"
+          >
+            <div
+              class="flex items-center justify-between gap-4 text-sm"
+            >
+              <dt>
+                Toggle last drawer
+              </dt>
+              <dd
+                class="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium"
+              >
+                ⌘\\
+              </dd>
+            </div>
+            <div
+              class="flex items-center justify-between gap-4 text-sm"
+            >
+              <dt>
+                Show shortcuts
+              </dt>
+              <dd
+                class="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium"
+              >
+                ?
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+`;
