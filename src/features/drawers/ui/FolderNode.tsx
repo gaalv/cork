@@ -42,6 +42,11 @@ export function FolderNode({ node, depth = 0, onOpenNote }: FolderNodeProps) {
       </button>
       {expanded ? (
         <ul role="group" className="space-y-0.5">
+          <li>
+            <button type="button" aria-label={`Rename ${node.name}`} className="rounded px-2 py-1 text-xs text-[var(--color-noxe-muted)]">
+              Rename {node.name}
+            </button>
+          </li>
           {node.children.map((child) => (
             <FolderNode key={child.path} node={child} depth={depth + 1} onOpenNote={onOpenNote} />
           ))}
