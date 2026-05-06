@@ -8,7 +8,7 @@ use crate::vault::settings::{load_vault_settings, save_vault_settings, VaultSett
 use crate::vault::VaultState;
 use crate::IpcError;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     #[serde(default)]
@@ -71,23 +71,11 @@ pub struct MarkdownSettings {
     pub highlight: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssetSettings {
     #[serde(default)]
     pub offline_mode: bool,
-}
-
-impl Default for AppSettings {
-    fn default() -> Self {
-        Self {
-            appearance: AppearanceSettings::default(),
-            editor: EditorSettings::default(),
-            vault: GlobalVaultSettings::default(),
-            markdown: MarkdownSettings::default(),
-            assets: AssetSettings::default(),
-        }
-    }
 }
 
 impl Default for AppearanceSettings {
@@ -128,14 +116,6 @@ impl Default for MarkdownSettings {
             callouts: true,
             footnotes: true,
             highlight: true,
-        }
-    }
-}
-
-impl Default for AssetSettings {
-    fn default() -> Self {
-        Self {
-            offline_mode: false,
         }
     }
 }
