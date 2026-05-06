@@ -30,6 +30,11 @@ pub fn run() {
             vault::vault_list,
             vault::vault_watcher_start,
             vault::vault_watcher_stop,
+            // === F12 Folder Ops ===
+            vault::folders::folders_create,
+            vault::folders::folders_rename,
+            vault::folders::folders_move,
+            vault::folders::folders_trash,
             vault::notes_read,
             vault::notes_save,
             vault::notes_create,

@@ -1,4 +1,5 @@
 pub mod fingerprint;
+pub mod folders;
 pub mod frontmatter;
 pub mod io;
 pub mod list;
@@ -12,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
+
+pub use folders::{folders_create, folders_move, folders_rename, folders_trash, VaultFolderChangedEvent};
 
 use crate::vault::fingerprint::FingerprintCache;
 use crate::vault::io::CreateNoteInput;
