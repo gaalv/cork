@@ -63,6 +63,12 @@ export function LayoutMinimalCommand() {
   const activeNote = view.kind === 'note' ? legacyData.notes.find((n) => n.id === view.id) : null
 
   useEffect(() => {
+    if (view.kind === 'note' && legacyData.notes.length > 0 && !activeNote) {
+      setView({ kind: 'home' })
+    }
+  }, [activeNote, legacyData.notes.length, view.kind])
+
+  useEffect(() => {
     void loadNotes()
       .then(() => Promise.all([startWatcherIntegration(), startIndexIntegration()]))
       .catch(() => undefined)
