@@ -129,6 +129,13 @@ impl IndexState {
             .map_err(|err| IpcError::Other(err.to_string()))
     }
 
+    pub fn close(&self) {
+        let mut runtime = self.runtime.lock().expect("index runtime mutex poisoned");
+        if let Some(current) = runtime.take() {
+            let _ = current.sender.send(IndexJob::Shutdown);
+        }
+    }
+
     fn status(&self) -> IndexStatus {
         let runtime = self.runtime.lock().expect("index runtime mutex poisoned");
         self.status_for_runtime(runtime.as_ref())

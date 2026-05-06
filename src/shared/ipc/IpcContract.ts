@@ -14,6 +14,8 @@ import type {
   RenameNoteInput,
   SaveInput,
   SaveResult,
+  RecentVault,
+  VaultClosedEvent,
   VaultFileChangedEvent,
   VaultFileRenamedEvent,
   VaultFolderChangedEvent,
@@ -80,6 +82,19 @@ export type IpcCommandMap = {
   };
   "vault.watcherStop": {
     args: undefined;
+    result: void;
+  };
+  // === F10 Vault Mgmt ===
+  "vault.close": {
+    args: undefined;
+    result: void;
+  };
+  "vault.recent": {
+    args: undefined;
+    result: RecentVault[];
+  };
+  "vault.removeRecent": {
+    args: { path: string };
     result: void;
   };
   // === F11 Assets ===
@@ -207,6 +222,7 @@ export type IpcCommandResult<Name extends IpcCommandName> = IpcCommandMap[Name][
 
 export type IpcEventMap = {
   "vault.opened": VaultOpenedEvent;
+  "vault.closed": VaultClosedEvent;
   "vault.fileChanged": VaultFileChangedEvent;
   "vault.fileRenamed": VaultFileRenamedEvent;
   "vault.folderChanged": VaultFolderChangedEvent;

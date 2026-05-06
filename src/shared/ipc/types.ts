@@ -14,6 +14,12 @@ export type VaultPath = {
   path: string;
 };
 
+export type RecentVault = {
+  path: string;
+  name: string;
+  missing: boolean;
+};
+
 export type NoteEntry = {
   id: string;
   path: string;
@@ -96,6 +102,7 @@ export type FileChangeSource = "internal" | "external";
 export type FolderChangeKind = "created" | "renamed" | "removed" | "moved";
 
 export type VaultOpenedEvent = VaultPath;
+export type VaultClosedEvent = { previousPath: string | null };
 
 export type VaultFileChangedEvent = {
   path: string;

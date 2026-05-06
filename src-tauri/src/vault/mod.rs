@@ -63,11 +63,29 @@ pub struct SaveResult {
     pub mtime: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct PersistedVault {
-    path: PathBuf,
+    path: Option<PathBuf>,
+    #[serde(default)]
+    recent: Vec<PathBuf>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentVault {
+    pub path: PathBuf,
+    pub name: String,
+    pub missing: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultClosedEvent {
+    pub previous_path: Option<PathBuf>,
+}
+
+const MAX_RECENT_VAULTS: usize = 10;
 
 pub struct VaultState {
     current_path: Mutex<Option<PathBuf>>,
@@ -106,24 +124,22 @@ impl VaultState {
         }
         let canonical = path.canonicalize()?;
         *self.current_path.lock().expect("vault path mutex poisoned") = Some(canonical.clone());
-        self.persist_current_path(&canonical)?;
+        self.persist_current_path(Some(&canonical))?;
         Ok(())
+    }
+
+    pub fn close_current_path(&self) -> Result<Option<PathBuf>, IpcError> {
+        let previous = self.current_path();
+        *self.current_path.lock().expect("vault path mutex poisoned") = None;
+        self.watcher.stop();
+        self.persist_current_path(None)?;
+        Ok(previous)
     }
 
     pub fn clear_current_path(&self) -> Result<(), IpcError> {
         *self.current_path.lock().expect("vault path mutex poisoned") = None;
         self.watcher.stop();
-        if let Some(config_path) = self
-            .config_path
-            .lock()
-            .expect("config path mutex poisoned")
-            .clone()
-        {
-            if config_path.exists() {
-                fs::remove_file(config_path)?;
-            }
-        }
-        Ok(())
+        self.write_config(&PersistedVault::default())
     }
 
     pub fn load_persisted_path(&self) -> Result<Option<PathBuf>, IpcError> {
@@ -138,10 +154,29 @@ impl VaultState {
         if !config_path.exists() {
             return Ok(None);
         }
-        let text = fs::read_to_string(config_path)?;
-        let persisted: PersistedVault =
-            serde_json::from_str(&text).map_err(|err| IpcError::Parse(err.to_string()))?;
-        Ok(Some(persisted.path))
+        Ok(self.load_config()?.path)
+    }
+
+    pub fn recent_vaults(&self) -> Result<Vec<RecentVault>, IpcError> {
+        Ok(self
+            .load_config()?
+            .recent
+            .into_iter()
+            .map(|path| RecentVault {
+                name: vault_display_name(&path),
+                missing: !path.is_dir(),
+                path,
+            })
+            .collect())
+    }
+
+    pub fn remove_recent(&self, path: &Path) -> Result<(), IpcError> {
+        let mut config = self.load_config()?;
+        config.recent.retain(|candidate| candidate != path);
+        if config.path.as_deref() == Some(path) {
+            config.path = None;
+        }
+        self.write_config(&config)
     }
 
     pub fn start_watcher(&self, app: &AppHandle) -> Result<(), IpcError> {
@@ -158,7 +193,46 @@ impl VaultState {
         self.watcher.stop();
     }
 
-    fn persist_current_path(&self, path: &Path) -> Result<(), IpcError> {
+    fn persist_current_path(&self, path: Option<&Path>) -> Result<(), IpcError> {
+        let mut config = self.load_config()?;
+        config.path = path.map(Path::to_path_buf);
+        if let Some(path) = path {
+            config.recent.retain(|candidate| candidate != path);
+            config.recent.insert(0, path.to_path_buf());
+            config.recent.truncate(MAX_RECENT_VAULTS);
+        }
+        self.write_config(&config)
+    }
+
+    fn load_config(&self) -> Result<PersistedVault, IpcError> {
+        let Some(config_path) = self
+            .config_path
+            .lock()
+            .expect("config path mutex poisoned")
+            .clone()
+        else {
+            return Ok(PersistedVault::default());
+        };
+        if !config_path.exists() {
+            return Ok(PersistedVault::default());
+        }
+        let text = fs::read_to_string(config_path)?;
+        if let Ok(config) = serde_json::from_str::<PersistedVault>(&text) {
+            return Ok(config);
+        }
+        #[derive(Deserialize)]
+        struct LegacyPersistedVault {
+            path: PathBuf,
+        }
+        let legacy: LegacyPersistedVault =
+            serde_json::from_str(&text).map_err(|err| IpcError::Parse(err.to_string()))?;
+        Ok(PersistedVault {
+            path: Some(legacy.path.clone()),
+            recent: vec![legacy.path],
+        })
+    }
+
+    fn write_config(&self, config: &PersistedVault) -> Result<(), IpcError> {
         let Some(config_path) = self
             .config_path
             .lock()
@@ -170,13 +244,23 @@ impl VaultState {
         if let Some(parent) = config_path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let payload = serde_json::to_string_pretty(&PersistedVault {
-            path: path.to_path_buf(),
-        })
-        .map_err(|err| IpcError::Other(err.to_string()))?;
+        let payload =
+            serde_json::to_string_pretty(config).map_err(|err| IpcError::Other(err.to_string()))?;
         fs::write(config_path, payload)?;
         Ok(())
     }
+}
+
+fn vault_display_name(path: &Path) -> String {
+    path.components()
+        .filter_map(|component| component.as_os_str().to_str())
+        .rev()
+        .take(2)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -232,6 +316,32 @@ pub fn vault_open(
     app.emit("vault.opened", &payload)
         .map_err(|err| IpcError::Other(err.to_string()))?;
     Ok(payload)
+}
+
+#[tauri::command]
+pub fn vault_close(
+    app: AppHandle,
+    state: tauri::State<'_, VaultState>,
+    index: tauri::State<'_, crate::index::IndexState>,
+) -> Result<(), IpcError> {
+    let previous_path = state.close_current_path()?;
+    index.close();
+    app.emit("vault.closed", VaultClosedEvent { previous_path })
+        .map_err(|err| IpcError::Other(err.to_string()))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn vault_recent(state: tauri::State<'_, VaultState>) -> Result<Vec<RecentVault>, IpcError> {
+    state.recent_vaults()
+}
+
+#[tauri::command]
+pub fn vault_remove_recent(
+    state: tauri::State<'_, VaultState>,
+    path: PathBuf,
+) -> Result<(), IpcError> {
+    state.remove_recent(&path)
 }
 
 #[tauri::command]
@@ -412,10 +522,18 @@ mod tests {
             state.load_persisted_path().unwrap().unwrap(),
             vault.canonicalize().unwrap()
         );
+        let recent = state.recent_vaults().unwrap();
+        assert_eq!(recent.len(), 1);
+        assert_eq!(recent[0].path, vault.canonicalize().unwrap());
+
+        let previous = state.close_current_path().unwrap();
+        assert_eq!(previous.unwrap(), vault.canonicalize().unwrap());
+        assert!(state.load_persisted_path().unwrap().is_none());
+        assert_eq!(state.recent_vaults().unwrap().len(), 1);
     }
 
     #[test]
-    fn missing_vault_clears_config_and_returns_not_found() {
+    fn missing_vault_clears_current_path_and_returns_not_found() {
         let dir = tempdir().unwrap();
         let state = VaultState::default();
         let config = dir.path().join("vault.json");
@@ -426,7 +544,7 @@ mod tests {
             .unwrap_err();
 
         assert!(matches!(err, IpcError::NotFound));
-        assert!(!config.exists());
+        assert!(state.load_persisted_path().unwrap().is_none());
     }
 
     #[test]

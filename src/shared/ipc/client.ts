@@ -26,6 +26,9 @@ const commandNames: Record<IpcCommandName, string> = {
   "vault.list": "vault_list",
   "vault.watcherStart": "vault_watcher_start",
   "vault.watcherStop": "vault_watcher_stop",
+  "vault.close": "vault_close",
+  "vault.recent": "vault_recent",
+  "vault.removeRecent": "vault_remove_recent",
   "assets.setScope": "assets_set_scope",
   "assets.writeAttachment": "assets_write_attachment",
   "folders.create": "folders_create",
@@ -73,6 +76,9 @@ export const client = {
     list: () => invokeCommand("vault.list", undefined),
     watcherStart: () => invokeCommand("vault.watcherStart", undefined),
     watcherStop: () => invokeCommand("vault.watcherStop", undefined),
+    close: () => invokeCommand("vault.close", undefined),
+    recent: () => invokeCommand("vault.recent", undefined),
+    removeRecent: (path: string) => invokeCommand("vault.removeRecent", { path }),
   },
   assets: {
     setScope: (vaultRoot: string) => invokeCommand("assets.setScope", { vaultRoot }),
@@ -132,11 +138,14 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "vault.list":
     case "vault.watcherStart":
     case "vault.watcherStop":
+    case "vault.close":
+    case "vault.recent":
     case "tags.list":
     case "index.status":
     case "index.rebuild":
     case "notes.starred":
       return undefined;
+    case "vault.removeRecent":
     case "folders.trash":
     case "notes.read":
     case "notes.trash":

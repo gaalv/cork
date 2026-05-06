@@ -66,6 +66,10 @@ pub fn run() {
             vault::vault_list,
             vault::vault_watcher_start,
             vault::vault_watcher_stop,
+            // === F10 Vault Mgmt ===
+            vault::vault_close,
+            vault::vault_recent,
+            vault::vault_remove_recent,
             // === F11 Assets ===
             assets::assets_set_scope,
             assets::assets_write_attachment,
