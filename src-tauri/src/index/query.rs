@@ -292,7 +292,9 @@ mod tests {
         let conn = seeded_db(&dir.path().join("index.sqlite"));
 
         assert_eq!(links_outgoing(&conn, "n1").unwrap()[0].target_text, "Beta");
-        assert_eq!(links_incoming(&conn, "n2").unwrap()[0].src_note_id, "n1");
+        let incoming = links_incoming(&conn, "n2").unwrap();
+        assert_eq!(incoming.len(), 1);
+        assert_eq!(incoming[0].src_note_id, "n1");
     }
 
     #[test]
@@ -327,7 +329,9 @@ mod tests {
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO links (src_note_id, target_text, target_id, position, alias, ambiguous) VALUES ('n1', 'Beta', 'n2', 7, 'B', 0)",
+            "INSERT INTO links (src_note_id, target_text, target_id, position, alias, ambiguous) VALUES
+             ('n1', 'Beta', 'n2', 7, 'B', 0),
+             ('n3', 'Missing', NULL, 9, NULL, 0)",
             [],
         )
         .unwrap();
