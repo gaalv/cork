@@ -1,7 +1,7 @@
 # Roadmap
 
-**Current Milestone:** M0 — Foundation
-**Status:** F01 in progress (scaffold landed; verification suite green)
+**Current Milestone:** M1 — Vault & Index
+**Status:** F02 complete; F03 planned
 
 Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
@@ -29,7 +29,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ### Features
 
-**[F02 — Vault FS](../features/F02-vault-fs/spec.md)** — PLANNED
+**[F02 — Vault FS](../features/F02-vault-fs/spec.md)** — COMPLETE
 - Open vault (folder picker), persist recent vaults
 - Read/write `.md` files via Rust IPC
 - File watcher (Rust `notify`) emitting Tauri events to frontend

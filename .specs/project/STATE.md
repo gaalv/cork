@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T14:35-03:00
-**Current Work:** F01–F14 planning complete, awaiting implementation (multi-agent ready)
+**Last Updated:** 2026-05-06T15:45-03:00
+**Current Work:** F02 Vault FS complete; F03 Index is next
 
 ---
 
@@ -106,11 +106,26 @@ src-tauri/
 **Reason:** Multi-agent safety — if a Rust agent adds a command, the TS agent reads the contract file, not source-spelunks.
 **Impact:** F02 introduces `IpcContract.ts`; every later IPC change updates it in the same commit as the Rust handler.
 
+
 ### AD-012: Real AI deferred — only UI stub on note-view (2026-05-06)
 
 **Decision:** The "Sugestão de link" card from the mock is a static UI stub in v1. No LLM call, no embeddings.
 **Reason:** Out of v1 scope; protect bundle size and complexity; design surface stays for future.
 **Impact:** F08 includes the card as a fixed-content component; no `ai/` feature folder in v1.
+
+### AD-022: Vault path persistence uses app-data JSON for F02 (2026-05-06)
+
+**Decision:** F02 persists the active vault in `vault.json` under Tauri `app_data_dir()` instead of integrating `tauri-plugin-store`.
+**Reason:** The JSON file satisfies AD-004 (vault stays pure `.md`) and keeps F02 small while preserving the same app-data location semantics.
+**Trade-off:** No plugin-managed migrations yet; F13 settings can migrate this into the settings bridge if needed.
+**Impact:** `VaultState` owns config read/write and clears the file when the persisted vault is missing.
+
+### AD-023: Browser E2E uses a localhost-only vault injection hook (2026-05-06)
+
+**Decision:** Playwright web E2E sets fixture vault entries through `window.__noxe_test_setVault(path, notes)`, enabled only for non-production mode or localhost preview.
+**Reason:** Playwright runs against Vite preview in a browser, not the Tauri app, so it cannot drive the native folder picker or Rust IPC.
+**Trade-off:** The E2E validates UI wiring/listing with a fixture-shaped payload; Rust IPC/file walking remain covered by cargo tests.
+**Impact:** Production desktop builds do not expose the hook unless served on localhost for tests.
 
 ---
 
@@ -122,7 +137,8 @@ _None._
 
 ## Lessons Learned
 
-_None yet._
+- **L-001:** Vite preview serves the last `dist/`; E2E scripts that target preview should build first so browser tests exercise current source.
+- **L-002:** Watcher echo suppression needs canonical paths because macOS temp paths may differ between `/var` and `/private/var`.
 
 ---
 
@@ -139,6 +155,7 @@ _None yet._
 | 007 | Reflect 123 atomic tasks into SQL todos with deps | 2026-05-06 | — | ✅ Done |
 | 008 | Author F11–F14 (assets, folder ops, settings, markdown ext.) + mini-tasks F05-T18 / F04-T14 | 2026-05-06 | — | ✅ Done |
 | 009 | Implement F01 Foundation (Tauri + React + tooling + CI + legacy migration); typecheck/lint/test/build/cargo test/e2e all green | 2026-05-06 | — | ✅ Done |
+| 010 | Implement F02 Vault FS (typed IPC, Rust vault IO/list/watch, vault store, legacy UI bridge, E2E fixture flow) | 2026-05-06 | f68ef01 | ✅ Done |
 
 ---
 
