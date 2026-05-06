@@ -64,7 +64,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
       ...buffer,
       body,
       dirty: body !== buffer.body ? true : buffer.dirty,
-      saveStatus: body !== buffer.body ? "idle" : buffer.saveStatus,
+      pendingSave: body !== buffer.body && buffer.saveStatus === "saving" ? true : buffer.pendingSave,
+      saveStatus: body !== buffer.body && buffer.saveStatus !== "saving" ? "idle" : buffer.saveStatus,
     }));
   },
 
@@ -77,8 +78,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
       ...buffer,
       path: result.path,
       loadedMtime: result.mtime,
-      dirty: false,
-      pendingSave: false,
+      dirty: buffer.pendingSave,
+      pendingSave: buffer.pendingSave,
       saveStatus: "saved",
       saveError: null,
       lastSavedAt: savedAt,
