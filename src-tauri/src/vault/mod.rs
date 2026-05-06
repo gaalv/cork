@@ -15,11 +15,15 @@ use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 
-pub use folders::{folders_create, folders_move, folders_rename, folders_trash, VaultFolderChangedEvent};
+pub use folders::{
+    folders_create, folders_move, folders_rename, folders_trash, VaultFolderChangedEvent,
+};
 
 use crate::vault::fingerprint::FingerprintCache;
 use crate::vault::io::CreateNoteInput;
-use crate::vault::watcher::{FileChangeKind, FileChangeSource, VaultEventSink, VaultFileChangedEvent, WatcherController};
+use crate::vault::watcher::{
+    FileChangeKind, FileChangeSource, VaultEventSink, VaultFileChangedEvent, WatcherController,
+};
 use crate::IpcError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -108,7 +112,12 @@ impl VaultState {
     pub fn clear_current_path(&self) -> Result<(), IpcError> {
         *self.current_path.lock().expect("vault path mutex poisoned") = None;
         self.watcher.stop();
-        if let Some(config_path) = self.config_path.lock().expect("config path mutex poisoned").clone() {
+        if let Some(config_path) = self
+            .config_path
+            .lock()
+            .expect("config path mutex poisoned")
+            .clone()
+        {
             if config_path.exists() {
                 fs::remove_file(config_path)?;
             }
@@ -117,15 +126,20 @@ impl VaultState {
     }
 
     pub fn load_persisted_path(&self) -> Result<Option<PathBuf>, IpcError> {
-        let Some(config_path) = self.config_path.lock().expect("config path mutex poisoned").clone() else {
+        let Some(config_path) = self
+            .config_path
+            .lock()
+            .expect("config path mutex poisoned")
+            .clone()
+        else {
             return Ok(None);
         };
         if !config_path.exists() {
             return Ok(None);
         }
         let text = fs::read_to_string(config_path)?;
-        let persisted: PersistedVault = serde_json::from_str(&text)
-            .map_err(|err| IpcError::Parse(err.to_string()))?;
+        let persisted: PersistedVault =
+            serde_json::from_str(&text).map_err(|err| IpcError::Parse(err.to_string()))?;
         Ok(Some(persisted.path))
     }
 
@@ -144,7 +158,12 @@ impl VaultState {
     }
 
     fn persist_current_path(&self, path: &Path) -> Result<(), IpcError> {
-        let Some(config_path) = self.config_path.lock().expect("config path mutex poisoned").clone() else {
+        let Some(config_path) = self
+            .config_path
+            .lock()
+            .expect("config path mutex poisoned")
+            .clone()
+        else {
             return Ok(());
         };
         if let Some(parent) = config_path.parent() {
@@ -167,6 +186,10 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         if path.is_dir() {
             state.set_current_path(path)?;
             let app_handle = app.handle().clone();
+            if let Some(path) = state.current_path() {
+                let assets = app_handle.state::<crate::assets::AssetScopeState>();
+                crate::assets::set_scope_for_path(&app_handle, &assets, &path)?;
+            }
             state.start_watcher(&app_handle)?;
             if let Some(path) = state.current_path() {
                 app_handle.emit("vault.opened", VaultPath { path })?;
@@ -185,7 +208,10 @@ pub struct VaultPath {
 }
 
 #[tauri::command]
-pub fn vault_open(app: AppHandle, state: tauri::State<'_, VaultState>) -> Result<VaultPath, IpcError> {
+pub fn vault_open(
+    app: AppHandle,
+    state: tauri::State<'_, VaultState>,
+) -> Result<VaultPath, IpcError> {
     let folder = app
         .dialog()
         .file()
@@ -195,6 +221,10 @@ pub fn vault_open(app: AppHandle, state: tauri::State<'_, VaultState>) -> Result
         .into_path()
         .map_err(|err| IpcError::Io(err.to_string()))?;
     state.set_current_path(path)?;
+    if let Some(path) = state.current_path() {
+        let assets = app.state::<crate::assets::AssetScopeState>();
+        crate::assets::set_scope_for_path(&app, &assets, &path)?;
+    }
     state.start_watcher(&app)?;
     let path = state.current_path().ok_or(IpcError::NotFound)?;
     let payload = VaultPath { path };
@@ -262,7 +292,10 @@ pub fn notes_create(
 ) -> Result<VaultPath, IpcError> {
     let root = state.current_path().ok_or(IpcError::NotFound)?;
     let folder_path = resolve_folder(&root, &folder);
-    let path = io::create_note(&CreateNoteInput { folder: folder_path, title })?;
+    let path = io::create_note(&CreateNoteInput {
+        folder: folder_path,
+        title,
+    })?;
     let metadata = fs::metadata(&path)?;
     let mtime = io::metadata_mtime_ms(&metadata)?;
     app.emit(
@@ -345,7 +378,10 @@ mod tests {
 
         state.set_current_path(vault.clone()).unwrap();
         assert_eq!(state.current_path().unwrap(), vault.canonicalize().unwrap());
-        assert_eq!(state.load_persisted_path().unwrap().unwrap(), vault.canonicalize().unwrap());
+        assert_eq!(
+            state.load_persisted_path().unwrap().unwrap(),
+            vault.canonicalize().unwrap()
+        );
     }
 
     #[test]
@@ -355,7 +391,9 @@ mod tests {
         let config = dir.path().join("vault.json");
         state.set_config_path(config.clone());
 
-        let err = state.set_current_path(dir.path().join("missing")).unwrap_err();
+        let err = state
+            .set_current_path(dir.path().join("missing"))
+            .unwrap_err();
 
         assert!(matches!(err, IpcError::NotFound));
         assert!(!config.exists());
@@ -364,6 +402,9 @@ mod tests {
     #[test]
     fn relative_folder_resolves_under_root() {
         let root = PathBuf::from("/vault");
-        assert_eq!(resolve_folder(&root, "daily"), PathBuf::from("/vault/daily"));
+        assert_eq!(
+            resolve_folder(&root, "daily"),
+            PathBuf::from("/vault/daily")
+        );
     }
 }

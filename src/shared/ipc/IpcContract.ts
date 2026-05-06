@@ -81,6 +81,11 @@ export type IpcCommandMap = {
     args: undefined;
     result: void;
   };
+  // === F11 Assets ===
+  "assets.setScope": {
+    args: { vaultRoot: string };
+    result: { vaultRoot: string };
+  };
   // === F12 Folder Ops ===
   "folders.create": {
     args: FolderCreateInput;

@@ -1,3 +1,4 @@
+pub mod assets;
 pub mod error;
 pub mod index;
 pub mod vault;
@@ -31,7 +32,10 @@ fn ensure_window_visible(window: &WebviewWindow) -> Result<(), tauri::Error> {
     });
 
     if !is_visible {
-        let target = monitors.first().map(|monitor| *monitor.position()).unwrap_or(PhysicalPosition { x: 100, y: 100 });
+        let target = monitors
+            .first()
+            .map(|monitor| *monitor.position())
+            .unwrap_or(PhysicalPosition { x: 100, y: 100 });
         window.set_position(Position::Physical(target))?;
     }
 
@@ -46,6 +50,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(vault::VaultState::default())
         .manage(index::IndexState::default())
+        .manage(assets::AssetScopeState::default())
         .setup(|app| {
             vault::setup(app)?;
             index::setup(app)?;
@@ -61,6 +66,8 @@ pub fn run() {
             vault::vault_list,
             vault::vault_watcher_start,
             vault::vault_watcher_stop,
+            // === F11 Assets ===
+            assets::assets_set_scope,
             // === F12 Folder Ops ===
             vault::folders::folders_create,
             vault::folders::folders_rename,
