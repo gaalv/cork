@@ -27,6 +27,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "vault.watcherStart": "vault_watcher_start",
   "vault.watcherStop": "vault_watcher_stop",
   "assets.setScope": "assets_set_scope",
+  "assets.writeAttachment": "assets_write_attachment",
   "folders.create": "folders_create",
   "folders.rename": "folders_rename",
   "folders.move": "folders_move",
@@ -73,6 +74,8 @@ export const client = {
   },
   assets: {
     setScope: (vaultRoot: string) => invokeCommand("assets.setScope", { vaultRoot }),
+    writeAttachment: (input: { sourcePath?: string; bytes?: number[]; suggestedName: string; vaultRelDir?: string }) =>
+      invokeCommand("assets.writeAttachment", input),
   },
   folders: {
     create: (input: FolderCreateInput) => invokeCommand("folders.create", input),
@@ -148,6 +151,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
       return { folder: input.folder };
     }
     case "assets.setScope":
+    case "assets.writeAttachment":
       return { input: args };
     case "notes.save":
       return { input: args };

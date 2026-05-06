@@ -86,6 +86,10 @@ export type IpcCommandMap = {
     args: { vaultRoot: string };
     result: { vaultRoot: string };
   };
+  "assets.writeAttachment": {
+    args: { sourcePath?: string; bytes?: number[]; suggestedName: string; vaultRelDir?: string };
+    result: { path: string; relativePath: string };
+  };
   // === F12 Folder Ops ===
   "folders.create": {
     args: FolderCreateInput;

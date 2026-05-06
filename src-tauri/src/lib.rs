@@ -68,6 +68,7 @@ pub fn run() {
             vault::vault_watcher_stop,
             // === F11 Assets ===
             assets::assets_set_scope,
+            assets::assets_write_attachment,
             // === F12 Folder Ops ===
             vault::folders::folders_create,
             vault::folders::folders_rename,
