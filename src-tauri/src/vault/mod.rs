@@ -296,15 +296,21 @@ pub struct VaultPath {
 pub fn vault_open(
     app: AppHandle,
     state: tauri::State<'_, VaultState>,
+    path: Option<PathBuf>,
 ) -> Result<VaultPath, IpcError> {
-    let folder = app
-        .dialog()
-        .file()
-        .blocking_pick_folder()
-        .ok_or_else(|| IpcError::Other("folder selection cancelled".to_string()))?;
-    let path = folder
-        .into_path()
-        .map_err(|err| IpcError::Io(err.to_string()))?;
+    let path = match path {
+        Some(path) => path,
+        None => {
+            let folder = app
+                .dialog()
+                .file()
+                .blocking_pick_folder()
+                .ok_or_else(|| IpcError::Other("folder selection cancelled".to_string()))?;
+            folder
+                .into_path()
+                .map_err(|err| IpcError::Io(err.to_string()))?
+        }
+    };
     state.set_current_path(path)?;
     if let Some(path) = state.current_path() {
         let assets = app.state::<crate::assets::AssetScopeState>();

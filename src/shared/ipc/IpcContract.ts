@@ -65,7 +65,7 @@ export type IpcCommandMap = {
     result: string;
   };
   "vault.open": {
-    args: undefined;
+    args: { path?: string } | undefined;
     result: VaultPath;
   };
   "vault.current": {

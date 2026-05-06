@@ -71,7 +71,7 @@ export async function invokeCommand<Name extends IpcCommandName>(
 export const client = {
   health: () => invokeCommand("health", undefined),
   vault: {
-    open: () => invokeCommand("vault.open", undefined),
+    open: (path?: string) => invokeCommand("vault.open", path ? { path } : undefined),
     current: () => invokeCommand("vault.current", undefined),
     list: () => invokeCommand("vault.list", undefined),
     watcherStart: () => invokeCommand("vault.watcherStart", undefined),
@@ -133,7 +133,6 @@ export const client = {
 function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommandArgs<Name>): RustArgs {
   switch (command) {
     case "health":
-    case "vault.open":
     case "vault.current":
     case "vault.list":
     case "vault.watcherStart":
@@ -145,6 +144,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.rebuild":
     case "notes.starred":
       return undefined;
+    case "vault.open":
     case "vault.removeRecent":
     case "folders.trash":
     case "notes.read":
