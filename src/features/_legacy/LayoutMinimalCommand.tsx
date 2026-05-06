@@ -22,6 +22,7 @@ import {
   FolderSimple,
 } from '@phosphor-icons/react'
 import { MockMarkdown } from '@/features/editor/ui/MockMarkdown'
+import { useIndexStore } from '@/features/index/state/indexStore'
 import { useVaultStore } from '@/features/vault/state/vaultStore'
 import { useLegacyVaultData } from './legacyAdapter'
 import type { LegacyVaultData, Note } from './legacyAdapter'
@@ -50,11 +51,14 @@ export function LayoutMinimalCommand() {
   const legacyData = useLegacyVaultData()
   const loadNotes = useVaultStore((state) => state.loadNotes)
   const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration)
+  const startIndexIntegration = useIndexStore((state) => state.startIndexIntegration)
   const activeNote = view.kind === 'note' ? legacyData.notes.find((n) => n.id === view.id) : null
 
   useEffect(() => {
-    void loadNotes().then(() => startWatcherIntegration()).catch(() => undefined)
-  }, [loadNotes, startWatcherIntegration])
+    void loadNotes()
+      .then(() => Promise.all([startWatcherIntegration(), startIndexIntegration()]))
+      .catch(() => undefined)
+  }, [loadNotes, startIndexIntegration, startWatcherIntegration])
 
   const openNote = (id: string) => {
     setView({ kind: 'note', id })
@@ -219,6 +223,9 @@ function HomeView({
 
         <Section title="Recentes" hint="ver todas" onHintClick={() => onOpenDrawer('recent')}>
           <ul className="divide-y divide-[var(--color-noxe-border)] overflow-hidden rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)]">
+            {isLoading && recent.length === 0 && (
+              <li className="px-4 py-3 text-[13px] text-[var(--color-noxe-muted)]">Indexando recentes…</li>
+            )}
             {recent.map((n) => (
               <li key={n.id}>
                 <button
@@ -239,6 +246,11 @@ function HomeView({
 
         <Section title="Por tag" hint="ver todas" onHintClick={() => onOpenDrawer('tags')}>
           <div className="flex flex-wrap gap-2">
+            {isLoading && tags.every((tag) => tag.count === 0) && (
+              <span className="rounded-full border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] text-[var(--color-noxe-muted)]">
+                Indexando tags…
+              </span>
+            )}
             {tags.map((t) => (
               <button
                 key={t.id}

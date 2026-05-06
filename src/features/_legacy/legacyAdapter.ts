@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 
+import { useIndexStore } from '@/features/index/state/indexStore'
 import { useVaultStore } from '@/features/vault/state/vaultStore'
 
 import type { NoteEntry } from '@/shared/ipc/types'
@@ -47,24 +48,36 @@ const placeholderTags: LegacyTag[] = [
 export function useLegacyVaultData(): LegacyVaultData {
   const path = useVaultStore((state) => state.path)
   const noteEntries = useVaultStore((state) => state.notes)
-  const isLoading = useVaultStore((state) => state.isLoading)
+  const vaultLoading = useVaultStore((state) => state.isLoading)
   const openVault = useVaultStore((state) => state.openVault)
+  const indexReady = useIndexStore((state) => state.ready)
+  const indexedRecent = useIndexStore((state) => state.recentNotes)
+  const indexedTags = useIndexStore((state) => state.tags)
 
   return useMemo(() => {
     const notes = noteEntries.map(toLegacyNote)
+    const recentEntries = indexedRecent.length > 0 ? indexedRecent : noteEntries
+    const recentNotes = recentEntries
+      .map((entry) => entry.id)
+      .filter((id, index, values) => values.indexOf(id) === index)
+      .slice(0, 5)
     return {
       path,
       notes,
       folders: toLegacyFolders(notes),
-      tags: placeholderTags.map((tag) => ({ ...tag, count: tag.id === 'untagged' ? notes.length : 0 })),
-      recentNotes: [...notes]
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-        .slice(0, 5)
-        .map((note) => note.id),
-      isLoading,
+      tags: toLegacyTags(indexedTags, notes.length),
+      recentNotes,
+      isLoading: vaultLoading || (path !== null && !indexReady),
       openVault,
     }
-  }, [isLoading, noteEntries, openVault, path])
+  }, [indexReady, indexedRecent, indexedTags, noteEntries, openVault, path, vaultLoading])
+}
+
+function toLegacyTags(tags: Array<{ tag: string; count: number }>, noteCount: number): LegacyTag[] {
+  if (tags.length > 0) {
+    return tags.map((tag) => ({ id: tag.tag, name: tag.tag, count: tag.count }))
+  }
+  return placeholderTags.map((tag) => ({ ...tag, count: tag.id === 'untagged' ? noteCount : 0 }))
 }
 
 function toLegacyNote(entry: NoteEntry): Note {
