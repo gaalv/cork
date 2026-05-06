@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { useIndexStore } from "@/features/index/state/indexStore";
 import { useShortcuts } from "@/features/shell/hooks/useShortcuts";
+import { BulkActionsBar } from "@/features/folder-ops/ui/BulkActionsBar";
 import { CommandPalette } from "@/features/shell/ui/CommandPalette";
 import { DrawerHost } from "@/features/shell/ui/DrawerHost";
 import { EmptyVault } from "@/features/shell/ui/EmptyVault";
@@ -15,6 +16,7 @@ import { useVaultStore } from "@/features/vault/state/vaultStore";
 export function Shell() {
   useShortcuts();
   const vaultPath = useVaultStore((state) => state.path);
+  const notes = useVaultStore((state) => state.notes);
   const loadNotes = useVaultStore((state) => state.loadNotes);
   const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration);
   const startIndexIntegration = useIndexStore((state) => state.startIndexIntegration);
@@ -48,9 +50,20 @@ export function Shell() {
           </div>
         </div>
       </div>
+      <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
       <CommandPalette />
       <HelpModal />
       <Toaster />
     </div>
   );
+}
+
+function toFolders(notes: Array<{ folder: string }>) {
+  const counts = new Map<string, number>();
+  for (const note of notes) {
+    if (note.folder) {
+      counts.set(note.folder, (counts.get(note.folder) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()].map(([id, count]) => ({ id, name: id, count }));
 }

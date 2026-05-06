@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { useBulkSelection } from "@/features/folder-ops/hooks/useBulkSelection";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
@@ -29,6 +30,10 @@ export function ViewRouter() {
 
   if (view.kind === "note") {
     const note = notes.find((candidate) => candidate.id === view.id);
+    if (!note && notes.length > 0) {
+      navigate({ kind: "home" });
+      return <HomeView />;
+    }
     return <NoteView title={note?.title ?? "Untitled"} noteId={view.id} />;
   }
 
@@ -38,6 +43,7 @@ export function ViewRouter() {
 function HomeView() {
   const notes = useVaultStore((state) => state.notes);
   const navigate = useShellStore((state) => state.navigate);
+  const bulkSelection = useBulkSelection(notes.map((note) => note.path));
 
   return (
     <main className="flex-1 overflow-y-auto p-10" data-testid="home-view">
@@ -48,8 +54,12 @@ function HomeView() {
           <button
             key={note.id}
             type="button"
-            onClick={() => navigate({ kind: "note", id: note.id })}
-            className="rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-4 text-left hover:border-[var(--color-noxe-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+            onClick={(event) => {
+              if (!bulkSelection.handleClick(event, note.path)) {
+                navigate({ kind: "note", id: note.id });
+              }
+            }}
+            className={`rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-4 text-left hover:border-[var(--color-noxe-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none ${bulkSelection.isSelected(note.path) ? "border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-accent-soft)]" : ""}`}
           >
             <span className="font-medium">{note.title}</span>
             <span className="mt-1 block text-[12px] text-[var(--color-noxe-muted)]">{note.folder || "Vault"}</span>

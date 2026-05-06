@@ -15,6 +15,14 @@ export function useShortcuts() {
   const openVault = useVaultStore((state) => state.openVault);
 
   useEffect(() => {
+    const onPaletteShortcut = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        openPalette();
+      }
+    };
+    window.addEventListener("keydown", onPaletteShortcut);
+
     const onQuestionMark = (event: KeyboardEvent) => {
       if (event.key !== "?" || isEditableTarget(event.target)) {
         return;
@@ -75,6 +83,7 @@ export function useShortcuts() {
 
     return () => {
       unsubscribe();
+      window.removeEventListener("keydown", onPaletteShortcut);
       window.removeEventListener("keydown", onQuestionMark);
     };
   }, [back, forward, lastDrawer, navigate, openHelp, openPalette, openVault, toggleDrawer]);

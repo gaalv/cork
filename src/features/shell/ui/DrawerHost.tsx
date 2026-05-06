@@ -1,8 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FocusTrap } from "focus-trap-react";
 import { X } from "@phosphor-icons/react";
 
+import { folderOps, validateFolderName } from "@/features/folder-ops/services/folderOps";
+import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
+import { NewFolderDialog } from "@/features/folder-ops/ui/NewFolderDialog";
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import type { DrawerId } from "@/features/shell/state/shellStore";
 
@@ -96,16 +100,63 @@ type DrawerBodyProps = {
 };
 
 function DrawerBody({ drawer, onOpenNote }: DrawerBodyProps) {
+  const notes = useVaultStore((state) => state.notes);
+  const loadNotes = useVaultStore((state) => state.loadNotes);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [newFolderParent, setNewFolderParent] = useState<string | null>(null);
+  const folders = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const note of notes) {
+      if (note.folder) {
+        counts.set(note.folder, (counts.get(note.folder) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()].map(([id, count]) => ({ id, name: id, count }));
+  }, [notes]);
+
+  if (drawer === "folders") {
+    return (
+      <div className="space-y-2 text-sm">
+        <button type="button" className="w-full rounded-md border border-dashed border-[var(--color-noxe-border)] px-2 py-1.5 text-[12px] text-[var(--color-noxe-muted)] hover:border-[var(--color-noxe-border-strong)]" onClick={() => setNewFolderParent("")}>New folder</button>
+        {folders.map((folder) => (
+          <div key={folder.id}>
+            {renaming === folder.id ? (
+              <InlineRename
+                initial={folder.name}
+                label={`Rename ${folder.name}`}
+                validate={validateFolderName}
+                onCancel={() => setRenaming(null)}
+                onCommit={async (name) => {
+                  await folderOps.rename({ oldPath: folder.id, newName: name });
+                  setRenaming(null);
+                  await loadNotes();
+                }}
+              />
+            ) : (
+              <button type="button" className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-noxe-panel-2)]" onContextMenu={(event) => { event.preventDefault(); setRenaming(folder.id); }} onClick={() => setRenaming(folder.id)}>
+                <span>{folder.name}</span>
+                <span className="text-[11px] text-[var(--color-noxe-muted)]">{folder.count}</span>
+              </button>
+            )}
+          </div>
+        ))}
+        <NewFolderDialog parent={newFolderParent ?? ""} open={newFolderParent !== null} onClose={() => setNewFolderParent(null)} onCreate={async (parent, name) => { await folderOps.create({ parent, name }); await loadNotes(); }} />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3 text-sm text-[var(--color-noxe-muted)]">
-      <p>{drawerTitles[drawer]} drawer content will be populated by F07.</p>
-      <button
-        type="button"
-        onClick={() => onOpenNote?.("placeholder")}
-        className="rounded-md border border-[var(--color-noxe-border)] px-2 py-1 text-[12px] hover:border-[var(--color-noxe-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
-      >
-        Placeholder note
-      </button>
+    <div className="space-y-2 text-sm text-[var(--color-noxe-muted)]">
+      {notes.map((note) => (
+        <button
+          key={note.id}
+          type="button"
+          onClick={() => onOpenNote?.(note.id)}
+          className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--color-noxe-panel-2)]"
+        >
+          {note.title}
+        </button>
+      ))}
     </div>
   );
 }
