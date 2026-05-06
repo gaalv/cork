@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
+import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
@@ -13,6 +14,7 @@ export function useShortcuts() {
   const toggleDrawer = useShellStore((state) => state.toggleDrawer);
   const lastDrawer = useShellStore((state) => state.lastDrawer);
   const openHelp = useShellStore((state) => state.openHelp);
+  const openSettings = useSettingsUiStore((state) => state.openSettings);
   const openVault = useVaultStore((state) => state.openVault);
 
   useEffect(() => {
@@ -51,6 +53,10 @@ export function useShortcuts() {
         }
         event.preventDefault();
         void openVault();
+      },
+      "$mod+,": (event) => {
+        event.preventDefault();
+        openSettings();
       },
       "$mod+d": (event) => {
         if (isEditableTarget(event.target)) {
@@ -94,7 +100,7 @@ export function useShortcuts() {
       window.removeEventListener("keydown", onPaletteShortcut);
       window.removeEventListener("keydown", onQuestionMark);
     };
-  }, [back, forward, lastDrawer, navigate, openHelp, openPalette, openVault, toggleDrawer]);
+  }, [back, forward, lastDrawer, navigate, openHelp, openPalette, openSettings, openVault, toggleDrawer]);
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {

@@ -3,6 +3,7 @@ import { Command } from "cmdk";
 import fuzzysort from "fuzzysort";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
+import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { commandsRegistry } from "@/features/shell/commands/registry";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useIndexStore } from "@/features/index/state/indexStore";
@@ -31,6 +32,7 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
   const tags = useIndexStore((state) => state.tags);
   const rebuild = useIndexStore((state) => state.rebuild);
   const openVault = useVaultStore((state) => state.openVault);
+  const openSettings = useSettingsUiStore((state) => state.openSettings);
   const [query, setQuery] = useState("");
   const previousFocus = useRef<Element | null>(null);
 
@@ -104,7 +106,7 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
                   key={itemKey(item)}
                   item={item}
                   onSelect={() => {
-                    runPaletteItem(item, { closePalette, navigate, toggleDrawer, openVault, rebuild, openDaily: openOrCreateToday });
+                    runPaletteItem(item, { closePalette, navigate, toggleDrawer, openVault, openSettings, rebuild, openDaily: openOrCreateToday });
                   }}
                 />
               ))}
@@ -218,6 +220,7 @@ function runPaletteItem(
     navigate: (view: { kind: "home" } | { kind: "note"; id: string }) => void;
     toggleDrawer: (drawer: "search" | "folders" | "recent" | "starred" | "tags") => void;
     openVault: () => Promise<void>;
+    openSettings: () => void;
     rebuild: () => Promise<void>;
     openDaily: () => Promise<void>;
   },
@@ -237,6 +240,7 @@ function runCommand(
   actions: {
     navigate: (view: { kind: "home" } | { kind: "note"; id: string }) => void;
     openVault: () => Promise<void>;
+    openSettings: () => void;
     rebuild: () => Promise<void>;
     openDaily: () => Promise<void>;
   },
@@ -252,6 +256,9 @@ function runCommand(
   }
   if (id === "open-daily") {
     void actions.openDaily();
+  }
+  if (id === "open-settings") {
+    actions.openSettings();
   }
   if (id === "rebuild-index") {
     void actions.rebuild();
