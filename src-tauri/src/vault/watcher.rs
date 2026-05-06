@@ -5,14 +5,14 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebounceEventResult, DebouncedEventKind, Debouncer};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::vault::fingerprint::FingerprintCache;
 use crate::IpcError;
 
 const DEBOUNCE: Duration = Duration::from_millis(200);
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultFileChangedEvent {
     pub path: PathBuf,
@@ -22,7 +22,7 @@ pub struct VaultFileChangedEvent {
     pub size: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FileChangeKind {
     Created,
@@ -30,7 +30,7 @@ pub enum FileChangeKind {
     Removed,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FileChangeSource {
     Internal,

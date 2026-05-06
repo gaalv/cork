@@ -17,7 +17,12 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(vault::VaultState::default())
-        .setup(|app| vault::setup(app))
+        .manage(index::IndexState::default())
+        .setup(|app| {
+            vault::setup(app)?;
+            index::setup(app)?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             health,
             vault::vault_open,
@@ -29,7 +34,17 @@ pub fn run() {
             vault::notes_save,
             vault::notes_create,
             vault::notes_rename,
-            vault::notes_trash
+            vault::notes_trash,
+            index::notes_recent,
+            index::notes_by_tag,
+            index::notes_by_folder,
+            index::notes_by_id,
+            index::tags_list,
+            index::links_outgoing,
+            index::links_incoming,
+            index::index_search,
+            index::index_status,
+            index::index_rebuild
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

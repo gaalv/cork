@@ -174,7 +174,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultPath {
     pub path: PathBuf,
@@ -309,7 +309,7 @@ pub fn notes_trash(app: AppHandle, path: PathBuf) -> Result<(), IpcError> {
     .map_err(|err| IpcError::Other(err.to_string()))
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultFileRenamedEvent {
     pub old_path: PathBuf,
