@@ -2,6 +2,7 @@ pub mod fingerprint;
 pub mod frontmatter;
 pub mod io;
 pub mod list;
+pub mod watcher;
 
 use std::path::PathBuf;
 

@@ -55,7 +55,8 @@ pub fn save_atomic(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveRe
     temp_file.persist(&input.path).map_err(|err| IpcError::Io(err.to_string()))?;
 
     let metadata = fs::metadata(&input.path)?;
-    cache.record(&input.path, metadata.len(), metadata.modified()?);
+    let fingerprint_path = input.path.canonicalize().unwrap_or_else(|_| input.path.clone());
+    cache.record(fingerprint_path, metadata.len(), metadata.modified()?);
 
     Ok(SaveResult {
         path: input.path.clone(),
@@ -125,7 +126,8 @@ fn write_new_note(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveRes
         }
     })?;
     let metadata = fs::metadata(&input.path)?;
-    cache.record(&input.path, metadata.len(), metadata.modified()?);
+    let fingerprint_path = input.path.canonicalize().unwrap_or_else(|_| input.path.clone());
+    cache.record(fingerprint_path, metadata.len(), metadata.modified()?);
     Ok(SaveResult {
         path: input.path.clone(),
         mtime: metadata_mtime_ms(&metadata)?,
@@ -254,7 +256,7 @@ mod tests {
 
         assert_eq!(result.path, path);
         assert!(fs::read_to_string(&input.path).unwrap().contains("title: Saved"));
-        assert!(cache.pop_recent(&input.path, metadata.len(), metadata.modified().unwrap()));
+        assert!(cache.pop_recent(&input.path.canonicalize().unwrap(), metadata.len(), metadata.modified().unwrap()));
     }
 
     #[test]
