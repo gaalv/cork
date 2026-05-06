@@ -68,6 +68,16 @@ describe("resolveAssetSrc", () => {
     }
   });
 
+  it("decodes markdown URL escapes before building asset URLs", () => {
+    const result = resolveAssetSrc("My%20Logo%20æ.png", note, vault);
+
+    expect(result.status).toBe("resolved");
+    if (result.status === "resolved") {
+      expect(result.path).toBe("/vault/notes/My Logo æ.png");
+      expect(result.url).toBe("asset://localhost//vault/notes/My%20Logo%20%C3%A6.png");
+    }
+  });
+
   it("allows a custom URL builder", () => {
     expect(resolveAssetSrc("image.png", note, vault, { toUrl: (path) => `custom:${path}` })).toMatchObject({
       url: "custom:/vault/notes/image.png",

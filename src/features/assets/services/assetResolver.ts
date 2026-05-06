@@ -24,9 +24,12 @@ export function resolveAssetSrc(
     return { status: "blocked", reason: "unsupported-url", path: trimmed };
   }
 
+  const pathValue = safeDecodePath(trimmed);
   const normalizedVault = normalizeAbsolutePath(vaultRoot);
   const currentDir = dirname(normalizeAbsolutePath(currentNotePath));
-  const candidate = isAbsolutePath(trimmed) ? normalizeAbsolutePath(trimmed) : normalizeAbsolutePath(joinPath(currentDir, trimmed));
+  const candidate = isAbsolutePath(pathValue)
+    ? normalizeAbsolutePath(pathValue)
+    : normalizeAbsolutePath(joinPath(currentDir, pathValue));
 
   if (!isInsidePath(candidate, normalizedVault)) {
     return { status: "blocked", reason: "outside-vault", path: candidate };
@@ -40,6 +43,14 @@ export function resolveAssetSrc(
     path: candidate,
     url: options.toUrl ? options.toUrl(candidate) : assetUrl(candidate),
   };
+}
+
+function safeDecodePath(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function isRemoteUrl(value: string): boolean {

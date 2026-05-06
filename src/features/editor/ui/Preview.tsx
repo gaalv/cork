@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
+import { AssetImage } from "@/features/assets/preview/AssetImage";
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { baseRehypePlugins, baseRemarkPlugins } from "@/features/editor/preview/plugins";
 import { MermaidDiagram } from "@/features/editor/preview/mermaidRenderer";
 import { highlightCode } from "@/features/editor/preview/shikiHighlighter";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import type { ComponentProps } from "react";
 
@@ -12,13 +14,15 @@ type PreviewProps = {
   noteId?: string;
   markdown?: string;
   onWikilinkClick?: (target: string) => void;
+  assetExists?: (path: string) => boolean;
 };
 
-export function Preview({ noteId, markdown, onWikilinkClick }: PreviewProps) {
+export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: PreviewProps) {
   const activeNoteId = useEditorStore((state) => state.activeNoteId);
   const resolvedNoteId = noteId ?? activeNoteId;
   const buffer = useEditorStore((state) => (resolvedNoteId ? state.buffers.get(resolvedNoteId) : null));
   const updateBody = useEditorStore((state) => state.updateBody);
+  const vaultRoot = useVaultStore((state) => state.path);
   const source = markdown ?? buffer?.body ?? "";
   const components = useMemo(
     () => ({
@@ -40,6 +44,9 @@ export function Preview({ noteId, markdown, onWikilinkClick }: PreviewProps) {
           </a>
         );
       },
+      img: ({ src, alt, ...props }: ComponentProps<"img">) => (
+        <AssetImage src={src} alt={alt} currentNotePath={buffer?.path} vaultRoot={vaultRoot} exists={assetExists} {...props} />
+      ),
       code: ({ children, className }: ComponentProps<"code">) => {
         const match = /language-([\w-]+)/.exec(className ?? "");
         if (!match) {
@@ -69,7 +76,7 @@ export function Preview({ noteId, markdown, onWikilinkClick }: PreviewProps) {
         );
       },
     }),
-    [onWikilinkClick, resolvedNoteId, source, updateBody],
+    [assetExists, buffer?.path, onWikilinkClick, resolvedNoteId, source, updateBody, vaultRoot],
   );
 
   return (
