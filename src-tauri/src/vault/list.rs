@@ -7,6 +7,33 @@ use walkdir::WalkDir;
 
 use crate::vault::frontmatter;
 use crate::vault::NoteEntry;
+
+pub const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
+pub const OTHER_EXTS: &[&str] = &["pdf", "mp4", "mov", "mp3", "wav", "zip"];
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AssetEntry {
+    pub path: std::path::PathBuf,
+    pub kind: AssetKind,
+    pub size: u64,
+    pub mtime: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetKind {
+    Image,
+    Other,
+}
+
+impl AssetKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            AssetKind::Image => "image",
+            AssetKind::Other => "other",
+        }
+    }
+}
+
 use crate::IpcError;
 
 pub fn list(root: &Path) -> Result<Vec<NoteEntry>, IpcError> {
@@ -61,6 +88,40 @@ pub fn list(root: &Path) -> Result<Vec<NoteEntry>, IpcError> {
     Ok(entries)
 }
 
+pub fn list_assets(root: &Path) -> Result<Vec<AssetEntry>, IpcError> {
+    let root = root.canonicalize()?;
+    let mut entries = Vec::new();
+
+    for entry in WalkDir::new(&root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|entry| !is_hidden(entry.path(), &root))
+    {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(err) => return Err(IpcError::Io(err.to_string())),
+        };
+        let file_type = entry.file_type();
+        let Some(kind) = asset_kind(entry.path()) else {
+            continue;
+        };
+        if !file_type.is_file() || file_type.is_symlink() {
+            continue;
+        }
+        let path = entry.path().canonicalize()?;
+        let metadata = fs::metadata(&path)?;
+        entries.push(AssetEntry {
+            path,
+            kind,
+            size: metadata.len(),
+            mtime: metadata_mtime_ms(&metadata)?,
+        });
+    }
+
+    entries.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok(entries)
+}
+
 fn is_hidden(path: &Path, root: &Path) -> bool {
     let relative = path.strip_prefix(root).unwrap_or(path);
     relative.components().any(|component| match component {
@@ -69,10 +130,27 @@ fn is_hidden(path: &Path, root: &Path) -> bool {
     })
 }
 
-fn is_markdown(path: &Path) -> bool {
+pub fn is_markdown(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
         .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+}
+
+pub fn asset_kind(path: &Path) -> Option<AssetKind> {
+    let extension = path.extension()?.to_str()?;
+    if IMAGE_EXTS
+        .iter()
+        .any(|candidate| extension.eq_ignore_ascii_case(candidate))
+    {
+        Some(AssetKind::Image)
+    } else if OTHER_EXTS
+        .iter()
+        .any(|candidate| extension.eq_ignore_ascii_case(candidate))
+    {
+        Some(AssetKind::Other)
+    } else {
+        None
+    }
 }
 
 fn title_from_body(body: &str) -> Option<String> {
@@ -120,13 +198,40 @@ mod tests {
         let entries = list(&root).unwrap();
 
         assert_eq!(entries.len(), 10);
-        assert!(entries.iter().all(|entry| entry.path.extension().unwrap() == "md"));
-        assert!(entries.iter().all(|entry| !entry.path.to_string_lossy().contains("/.")));
+        assert!(entries
+            .iter()
+            .all(|entry| entry.path.extension().unwrap() == "md"));
+        assert!(entries
+            .iter()
+            .all(|entry| !entry.path.to_string_lossy().contains("/.")));
         assert!(entries.iter().all(|entry| entry.size > 0));
         assert!(entries.iter().all(|entry| entry.mtime > 0));
         assert!(entries.iter().any(|entry| entry.title == "From Heading"));
         assert!(entries.iter().any(|entry| entry.title == "filename-title"));
         assert!(entries.iter().any(|entry| entry.folder == "nested/deep"));
         assert!(entries.iter().all(|entry| entry.id.len() == 40));
+    }
+
+    #[test]
+    fn lists_known_assets_with_kind_and_skips_unknown_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join("logo.png"), b"image").unwrap();
+        fs::write(root.join("manual.pdf"), b"pdf").unwrap();
+        fs::write(root.join("ignored.txt"), b"text").unwrap();
+        fs::create_dir(root.join(".hidden")).unwrap();
+        fs::write(root.join(".hidden/secret.png"), b"secret").unwrap();
+
+        let assets = list_assets(root).unwrap();
+
+        assert_eq!(assets.len(), 2);
+        assert!(assets
+            .iter()
+            .any(|asset| asset.path.ends_with("logo.png") && asset.kind == AssetKind::Image));
+        assert!(assets
+            .iter()
+            .any(|asset| asset.path.ends_with("manual.pdf") && asset.kind == AssetKind::Other));
+        assert!(assets.iter().all(|asset| asset.size > 0));
+        assert!(assets.iter().all(|asset| asset.mtime > 0));
     }
 }

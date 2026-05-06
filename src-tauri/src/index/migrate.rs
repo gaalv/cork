@@ -45,12 +45,17 @@ fn open_and_migrate(db_path: &Path) -> Result<Connection, rusqlite::Error> {
 fn ensure_schema(conn: &Connection) -> Result<(), rusqlite::Error> {
     conn.execute_batch(SCHEMA)?;
     let existing = conn
-        .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| row.get::<_, i64>(0))
+        .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| {
+            row.get::<_, i64>(0)
+        })
         .optional()?;
 
     match existing {
         None => {
-            conn.execute("INSERT INTO schema_version (version) VALUES (?1)", [SCHEMA_VERSION])?;
+            conn.execute(
+                "INSERT INTO schema_version (version) VALUES (?1)",
+                [SCHEMA_VERSION],
+            )?;
         }
         Some(version) if version < SCHEMA_VERSION => {
             run_migrations(conn, version)?;
@@ -100,7 +105,9 @@ mod tests {
         let conn = open_index(dir.path(), &vault).unwrap();
 
         let version: i64 = conn
-            .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| row.get(0))
+            .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         let note_count: i64 = conn
             .query_row("SELECT count(*) FROM notes", [], |row| row.get(0))
@@ -132,7 +139,9 @@ mod tests {
         let conn = open_index_at(&db_path).unwrap();
 
         let version: i64 = conn
-            .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| row.get(0))
+            .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         let asset_count: i64 = conn
             .query_row("SELECT count(*) FROM assets", [], |row| row.get(0))

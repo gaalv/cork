@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant, UNIX_EPOCH};
 
@@ -13,6 +13,7 @@ use walkdir::WalkDir;
 
 use crate::index::migrate::open_index_at;
 use crate::index::parser::{parse, ParsedNote};
+use crate::vault::list::{asset_kind, is_markdown};
 use crate::IpcError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +21,10 @@ pub enum IndexJob {
     BuildAll,
     Upsert(PathBuf),
     Remove(PathBuf),
-    Rename { old_path: PathBuf, new_path: PathBuf },
+    Rename {
+        old_path: PathBuf,
+        new_path: PathBuf,
+    },
     Shutdown,
 }
 
@@ -62,11 +66,17 @@ pub fn spawn_worker(
         while let Ok(job) = receiver.recv() {
             let result = match job {
                 IndexJob::BuildAll => build_all(&mut conn, &vault_path, progress_sink.as_deref()),
-                IndexJob::Upsert(path) => upsert_path(&mut conn, &vault_path, &path, progress_sink.as_deref()),
-                IndexJob::Remove(path) => remove_path(&mut conn, &path, progress_sink.as_deref()),
-                IndexJob::Rename { old_path, new_path } => {
-                    rename_path(&mut conn, &vault_path, &old_path, &new_path, progress_sink.as_deref())
+                IndexJob::Upsert(path) => {
+                    upsert_path(&mut conn, &vault_path, &path, progress_sink.as_deref())
                 }
+                IndexJob::Remove(path) => remove_path(&mut conn, &path, progress_sink.as_deref()),
+                IndexJob::Rename { old_path, new_path } => rename_path(
+                    &mut conn,
+                    &vault_path,
+                    &old_path,
+                    &new_path,
+                    progress_sink.as_deref(),
+                ),
                 IndexJob::Shutdown => break,
             };
             if let Err(error) = result {
@@ -82,9 +92,10 @@ pub fn build_all(
     vault_path: &Path,
     progress_sink: Option<&(dyn Fn(IndexProgress) + Send + Sync + 'static)>,
 ) -> Result<(), IpcError> {
-    let files = markdown_files(vault_path)?;
+    let files = indexable_files(vault_path)?;
     let total = files.len();
     emit_progress(progress_sink, 0, total, IndexPhase::Building);
+    conn.execute("DELETE FROM assets", []).map_err(sql_error)?;
     let mut last_emit = Instant::now();
     for (index, chunk) in files.chunks(100).enumerate() {
         let tx = conn.transaction().map_err(sql_error)?;
@@ -93,7 +104,10 @@ pub fn build_all(
         }
         tx.commit().map_err(sql_error)?;
         let processed = ((index + 1) * 100).min(total);
-        if processed == total || processed % 50 == 0 || last_emit.elapsed() >= Duration::from_millis(100) {
+        if processed == total
+            || processed % 50 == 0
+            || last_emit.elapsed() >= Duration::from_millis(100)
+        {
             emit_progress(progress_sink, processed, total, IndexPhase::Building);
             last_emit = Instant::now();
         }
@@ -124,8 +138,12 @@ pub fn remove_path(
 ) -> Result<(), IpcError> {
     let id = note_id(path);
     let tx = conn.transaction().map_err(sql_error)?;
-    tx.execute("DELETE FROM notes_fts WHERE id = ?1", [&id]).map_err(sql_error)?;
-    tx.execute("DELETE FROM notes WHERE id = ?1", [&id]).map_err(sql_error)?;
+    tx.execute("DELETE FROM notes_fts WHERE id = ?1", [&id])
+        .map_err(sql_error)?;
+    tx.execute("DELETE FROM notes WHERE id = ?1", [&id])
+        .map_err(sql_error)?;
+    tx.execute("DELETE FROM assets WHERE path = ?1", [path_string(path)])
+        .map_err(sql_error)?;
     tx.commit().map_err(sql_error)?;
     emit_progress(progress_sink, 1, 1, IndexPhase::Removing);
     Ok(())
@@ -138,6 +156,19 @@ pub fn rename_path(
     new_path: &Path,
     progress_sink: Option<&(dyn Fn(IndexProgress) + Send + Sync + 'static)>,
 ) -> Result<(), IpcError> {
+    if asset_kind(new_path).is_some() {
+        conn.execute(
+            "DELETE FROM assets WHERE path = ?1",
+            [path_string(old_path)],
+        )
+        .map_err(sql_error)?;
+        let tx = conn.transaction().map_err(sql_error)?;
+        upsert_asset_in_tx(&tx, new_path)?;
+        tx.commit().map_err(sql_error)?;
+        emit_progress(progress_sink, 1, 1, IndexPhase::Renaming);
+        return Ok(());
+    }
+
     let old_id = note_id(old_path);
     let metadata = fs::metadata(new_path)?;
     let folder = folder_for(vault_path, new_path);
@@ -148,21 +179,41 @@ pub fn rename_path(
         .to_string();
     conn.execute(
         "UPDATE notes SET path = ?1, folder = ?2, title = ?3, size = ?4, mtime = ?5 WHERE id = ?6",
-        params![path_string(new_path), folder, title, metadata.len() as i64, metadata_mtime_ms(&metadata)?, old_id],
+        params![
+            path_string(new_path),
+            folder,
+            title,
+            metadata.len() as i64,
+            metadata_mtime_ms(&metadata)?,
+            old_id
+        ],
     )
     .map_err(sql_error)?;
     emit_progress(progress_sink, 1, 1, IndexPhase::Renaming);
     Ok(())
 }
 
-fn upsert_path_in_tx(tx: &rusqlite::Transaction<'_>, vault_path: &Path, path: &Path) -> Result<(), IpcError> {
+fn upsert_path_in_tx(
+    tx: &rusqlite::Transaction<'_>,
+    vault_path: &Path,
+    path: &Path,
+) -> Result<(), IpcError> {
+    if asset_kind(path).is_some() {
+        return upsert_asset_in_tx(tx, path);
+    }
+    if !is_markdown(path) {
+        return Ok(());
+    }
+
     let metadata = fs::metadata(path)?;
     let content = fs::read_to_string(path).unwrap_or_default();
     let parsed = parse(&content, &path_string(path))?;
     let id = note_id(path);
 
     let existing_hash = tx
-        .query_row("SELECT body_hash FROM notes WHERE id = ?1", [&id], |row| row.get::<_, String>(0))
+        .query_row("SELECT body_hash FROM notes WHERE id = ?1", [&id], |row| {
+            row.get::<_, String>(0)
+        })
         .optional()
         .map_err(sql_error)?;
     if existing_hash.as_deref() == Some(parsed.body_hash.as_str()) {
@@ -192,8 +243,10 @@ fn replace_note_rows(
     parsed: &ParsedNote,
     id: &str,
 ) -> Result<(), IpcError> {
-    tx.execute("DELETE FROM notes_fts WHERE id = ?1", [id]).map_err(sql_error)?;
-    tx.execute("DELETE FROM notes WHERE id = ?1", [id]).map_err(sql_error)?;
+    tx.execute("DELETE FROM notes_fts WHERE id = ?1", [id])
+        .map_err(sql_error)?;
+    tx.execute("DELETE FROM notes WHERE id = ?1", [id])
+        .map_err(sql_error)?;
     tx.execute(
         "INSERT INTO notes (id, path, folder, title, size, mtime, created, updated, body_hash)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
@@ -212,7 +265,8 @@ fn replace_note_rows(
     .map_err(sql_error)?;
 
     for tag in &parsed.tags {
-        tx.execute("INSERT OR IGNORE INTO tags (tag) VALUES (?1)", [tag]).map_err(sql_error)?;
+        tx.execute("INSERT OR IGNORE INTO tags (tag) VALUES (?1)", [tag])
+            .map_err(sql_error)?;
         tx.execute(
             "INSERT OR IGNORE INTO note_tags (note_id, tag) VALUES (?1, ?2)",
             params![id, tag],
@@ -232,7 +286,11 @@ fn replace_note_rows(
         for (key, value) in map {
             tx.execute(
                 "INSERT INTO frontmatter (note_id, key, value) VALUES (?1, ?2, ?3)",
-                params![id, key, serde_json::to_string(value).map_err(|err| IpcError::Other(err.to_string()))?],
+                params![
+                    id,
+                    key,
+                    serde_json::to_string(value).map_err(|err| IpcError::Other(err.to_string()))?
+                ],
             )
             .map_err(sql_error)?;
         }
@@ -246,22 +304,47 @@ fn replace_note_rows(
     Ok(())
 }
 
-fn markdown_files(root: &Path) -> Result<Vec<PathBuf>, IpcError> {
+fn indexable_files(root: &Path) -> Result<Vec<PathBuf>, IpcError> {
     let mut files = Vec::new();
     for entry in WalkDir::new(root).follow_links(false) {
         let entry = entry.map_err(|err| IpcError::Io(err.to_string()))?;
         if entry.file_type().is_file()
-            && entry
-                .path()
-                .extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+            && (is_markdown(entry.path()) || asset_kind(entry.path()).is_some())
         {
             files.push(entry.path().to_path_buf());
         }
     }
     files.sort();
     Ok(files)
+}
+
+fn upsert_asset_in_tx(tx: &rusqlite::Transaction<'_>, path: &Path) -> Result<(), IpcError> {
+    let metadata = fs::metadata(path)?;
+    let kind = asset_kind(path)
+        .ok_or_else(|| IpcError::Other("unsupported asset extension".to_string()))?;
+    tx.execute(
+        "INSERT OR REPLACE INTO assets (path, kind, size, mtime, sha1) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![
+            path_string(path),
+            kind.as_str(),
+            metadata.len() as i64,
+            metadata_mtime_ms(&metadata)?,
+            file_sha1(path)?,
+        ],
+    )
+    .map_err(sql_error)?;
+    Ok(())
+}
+
+fn file_sha1(path: &Path) -> Result<String, IpcError> {
+    let bytes = fs::read(path)?;
+    let mut hasher = Sha1::new();
+    hasher.update(&bytes);
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 fn note_id(path: &Path) -> String {
@@ -314,7 +397,11 @@ fn emit_progress(
     phase: IndexPhase,
 ) {
     if let Some(sink) = progress_sink {
-        sink(IndexProgress { processed, total, phase });
+        sink(IndexProgress {
+            processed,
+            total,
+            phase,
+        });
     }
 }
 
@@ -348,20 +435,42 @@ mod tests {
         let beta = vault.join("work/beta.md");
         fs::write(&alpha, "# Alpha\n#dev [[Beta]]").unwrap();
         fs::write(&beta, "# Beta\n#dev/rust").unwrap();
+        let logo = vault.join("work/logo.png");
+        fs::write(&logo, b"png").unwrap();
         let mut conn = open_index_at(&dir.path().join("index.sqlite")).unwrap();
 
         build_all(&mut conn, &vault, None).unwrap();
 
         assert_eq!(query::recent(&conn, Some(10)).unwrap().len(), 2);
+        let asset_count: i64 = conn
+            .query_row("SELECT count(*) FROM assets", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(asset_count, 1);
         assert_eq!(query::by_tag(&conn, "dev").unwrap().len(), 2);
-        assert_eq!(query::links_outgoing(&conn, &note_id(&alpha)).unwrap().len(), 1);
+        assert_eq!(
+            query::links_outgoing(&conn, &note_id(&alpha))
+                .unwrap()
+                .len(),
+            1
+        );
 
         fs::write(&alpha, "# Alpha changed\n#idea").unwrap();
         upsert_path(&mut conn, &vault, &alpha, None).unwrap();
-        assert_eq!(query::by_id(&conn, &note_id(&alpha)).unwrap().unwrap().title, "Alpha changed");
+        assert_eq!(
+            query::by_id(&conn, &note_id(&alpha))
+                .unwrap()
+                .unwrap()
+                .title,
+            "Alpha changed"
+        );
 
         remove_path(&mut conn, &beta, None).unwrap();
         assert_eq!(query::recent(&conn, Some(10)).unwrap().len(), 1);
+        remove_path(&mut conn, &logo, None).unwrap();
+        let asset_count: i64 = conn
+            .query_row("SELECT count(*) FROM assets", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(asset_count, 0);
 
         let renamed = vault.join("renamed.md");
         fs::rename(&alpha, &renamed).unwrap();
@@ -376,7 +485,11 @@ mod tests {
         let vault = dir.path().join("vault");
         fs::create_dir(&vault).unwrap();
         for index in 0..120 {
-            fs::write(vault.join(format!("note-{index}.md")), format!("# Note {index}\n#tag")).unwrap();
+            fs::write(
+                vault.join(format!("note-{index}.md")),
+                format!("# Note {index}\n#tag"),
+            )
+            .unwrap();
         }
         let events = Arc::new(Mutex::new(Vec::new()));
         let events_clone = Arc::clone(&events);
@@ -385,7 +498,11 @@ mod tests {
 
         build_all(&mut conn, &vault, Some(&sink)).unwrap();
 
-        assert!(events.lock().unwrap().iter().any(|event| event.processed == 120));
+        assert!(events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|event| event.processed == 120));
     }
 
     #[test]
@@ -411,7 +528,10 @@ mod tests {
         let update_start = Instant::now();
         upsert_path(&mut conn, &vault, &update_path, None).unwrap();
 
-        assert!(build_elapsed < Duration::from_secs(3), "build took {build_elapsed:?}");
+        assert!(
+            build_elapsed < Duration::from_secs(3),
+            "build took {build_elapsed:?}"
+        );
         assert!(update_start.elapsed() < Duration::from_millis(200));
     }
 }
