@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T16:54-03:00
-**Current Work:** F03 Index complete; F04 Shell is next
+**Last Updated:** 2026-05-06T17:27-03:00
+**Current Work:** F04 Shell complete; F12 is partially landed in parallel
 
 ---
 
@@ -135,6 +135,21 @@ src-tauri/
 **Trade-off:** The CI summary numbers are synthetic JS-side timings; use Rust test timings for release gating.
 **Impact:** Future desktop IPC benchmarks can replace the JS harness when Tauri E2E automation is available.
 
+
+### AD-025: F04 shell persists UI route/drawer state in web-safe localStorage (2026-05-06)
+
+**Decision:** F04 persists the shell view and active drawer through a small localStorage adapter instead of adding a Tauri store bridge. Native window geometry uses `tauri-plugin-window-state`.
+**Reason:** The shell must also run in Vite preview/Playwright where Tauri plugin APIs are unavailable; F13 will own the durable settings/store bridge.
+**Trade-off:** View persistence is browser/WebView-local until F13 settings migration.
+**Impact:** `shellStore` can be migrated behind the same API when the settings bridge lands.
+
+### AD-026: Shell host includes temporary F12 folder/bulk compatibility seams (2026-05-06)
+
+**Decision:** F04 Shell exposes minimal folder drawer rows and bulk-selection hooks so the parallel F12 folder/bulk UX can coexist while F07 drawers are still pending.
+**Reason:** Multi-agent changes touched shell chrome and drawer surfaces at the same time; preserving both E2E suites avoids regressing either feature.
+**Trade-off:** Some folder-specific UI lives in shell temporarily and should move to F07/F12-owned drawer components later.
+**Impact:** F07 should replace `DrawerHost` placeholders with dedicated drawer bodies without changing the shell contract.
+
 ---
 
 ## Active Blockers
@@ -148,6 +163,8 @@ _None._
 - **L-001:** Vite preview serves the last `dist/`; E2E scripts that target preview should build first so browser tests exercise current source.
 - **L-002:** Watcher echo suppression needs canonical paths because macOS temp paths may differ between `/var` and `/private/var`.
 - **L-003:** Vitest on Node 24 can report Tinypool worker termination failures after all tests pass; running Vitest in a single thread keeps the suite deterministic.
+- **L-004:** `cmdk` needs `ResizeObserver` and `scrollIntoView` shims in jsdom component tests.
+- **L-005:** Browser E2E shortcut assertions are more reliable when shell shortcuts also listen for explicit `metaKey || ctrlKey` fallbacks in addition to `tinykeys` `$mod`.
 
 ---
 
@@ -166,6 +183,8 @@ _None._
 | 009 | Implement F01 Foundation (Tauri + React + tooling + CI + legacy migration); typecheck/lint/test/build/cargo test/e2e all green | 2026-05-06 | — | ✅ Done |
 | 010 | Implement F02 Vault FS (typed IPC, Rust vault IO/list/watch, vault store, legacy UI bridge, E2E fixture flow) | 2026-05-06 | f68ef01 | ✅ Done |
 | 011 | Implement F03 Index (SQLite schema/migrations, Rust+TS markdown parser parity, worker, IPC, store/UI integration, crash safety) | 2026-05-06 | de3de18 | ✅ Done |
+| 012 | Implement F04 Shell (Zustand shell store, rail/topbar/drawers, cmdk palette, shortcuts/help/toasts, empty state, router, window-state, E2E) | 2026-05-06 | multiple | ✅ Done |
+| 013 | Partially land F12 Folder Ops & Bulk Operations (folder/bulk IPC, legacy folder UI, drag/drop, bulk selection, auto-close, E2E); T10 deferred pending F09-T03 | 2026-05-06 | multiple | ✅ Partial |
 
 ---
 

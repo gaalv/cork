@@ -48,7 +48,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ### Features
 
-**[F04 — Shell](../features/F04-shell/spec.md)** — PLANNED
+**[F04 — Shell](../features/F04-shell/spec.md)** — COMPLETE
 - Slim icon rail
 - Top bar with breadcrumb, ⌘K trigger, Nova nota
 - Drawer container (Search/Folders/Recent/Starred/Tags routes)
@@ -91,7 +91,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Drop / paste image → write into attachments folder
 - Click non-image asset opens with OS handler (safelist + confirm)
 
-**[F12 — Folder Ops & Rename UX](../features/F12-folder-ops/spec.md)** — PLANNED
+**[F12 — Folder Ops & Rename UX](../features/F12-folder-ops/spec.md)** — IN PROGRESS — T10 deferred to F09 completion
 - `folders.create/rename/move/trash` IPC
 - FoldersDrawer context menu + inline rename
 - Drag-and-drop notes between folders (`@dnd-kit/core`)
