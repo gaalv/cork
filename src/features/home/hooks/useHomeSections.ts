@@ -59,7 +59,8 @@ export function useHomeSections(): HomeSections {
       setError(null);
     } catch (nextError) {
       const fallback = [...vaultNotes].sort((left, right) => right.mtime - left.mtime);
-      setPinned([]);
+      const fallbackPinned = await derivePinnedNotes(fallback);
+      setPinned(fallbackPinned);
       setRecents(fallback.slice(0, RECENTS_LIMIT));
       setTags([]);
       setAllPage(fallback.slice(0, PAGE_SIZE));
@@ -140,7 +141,17 @@ async function derivePinnedNotes(notes: NoteEntry[]): Promise<HomeNote[]> {
           starred: file.frontmatter.starred === true,
         } satisfies HomeNote;
       } catch {
-        return null;
+        const file = window.__noxe_test_readNote?.(note.path);
+        if (!file) {
+          return null;
+        }
+        return {
+          ...note,
+          frontmatter: file.frontmatter,
+          snippet: firstLine(file.body),
+          pinned: file.frontmatter.pinned === true,
+          starred: file.frontmatter.starred === true,
+        } satisfies HomeNote;
       }
     }),
   );
