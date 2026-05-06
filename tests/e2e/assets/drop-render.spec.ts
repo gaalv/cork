@@ -46,7 +46,7 @@ test("drops an image into the editor and renders it in preview", async ({ page }
     { note: notePath, vault: vaultPath },
   );
 
-  await page.getByRole("button", { name: /Drop Render/ }).click();
+  await page.getByRole("button", { name: /Drop Render/ }).first().click();
   const editor = page.getByRole("textbox");
   await expect(editor).toBeVisible();
 

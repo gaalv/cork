@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+import { useBulkSelection } from "@/features/folder-ops/hooks/useBulkSelection";
+
 import { NoteCard } from "./NoteCard";
 
 import type { NoteEntry } from "@/shared/ipc/types";
@@ -15,6 +17,7 @@ type AllNotesGridProps = {
 
 export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, onChanged }: AllNotesGridProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const bulkSelection = useBulkSelection(notes.map((note) => note.path));
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -45,7 +48,15 @@ export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, 
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {notes.map((note) => (
-            <NoteCard key={note.id} note={note} onOpen={onOpen} onPinToggle={onPinToggle} onChanged={onChanged} />
+            <NoteCard
+              key={note.id}
+              note={note}
+              onOpen={onOpen}
+              onPinToggle={onPinToggle}
+              onChanged={onChanged}
+              selected={bulkSelection.isSelected(note.path)}
+              onSelectClick={(event, selectedNote) => bulkSelection.handleClick(event.nativeEvent, selectedNote.path)}
+            />
           ))}
         </div>
       )}

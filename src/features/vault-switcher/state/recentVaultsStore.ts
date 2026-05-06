@@ -43,6 +43,15 @@ export const useRecentVaultsStore = create<RecentVaultsStore>((set, get) => ({
   },
 }));
 
+if (
+  typeof window !== "undefined" &&
+  (import.meta.env.MODE !== "production" || window.location.hostname === "localhost")
+) {
+  window.__noxe_test_setRecentVaults = (vaults) => {
+    useRecentVaultsStore.setState({ vaults, isLoading: false, error: null });
+  };
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;

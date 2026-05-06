@@ -16,9 +16,10 @@ test("selects multiple notes and opens bulk move picker", async ({ page }) => {
     fixtureNotes: notes,
   });
 
+  const allNotes = page.locator('section[aria-labelledby="home-all-notes-heading"]');
   await page.keyboard.down("Meta");
-  await page.getByRole("button", { name: /Welcome/i }).first().click();
-  await page.getByRole("button", { name: /Roadmap/i }).first().click();
+  await allNotes.getByRole("button", { name: /Welcome/i }).first().click();
+  await allNotes.getByRole("button", { name: /Roadmap/i }).first().click();
   await page.keyboard.up("Meta");
 
   await expect(page.getByText("2 selected")).toBeVisible();

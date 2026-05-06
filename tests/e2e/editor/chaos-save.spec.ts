@@ -8,7 +8,7 @@ test("keeps local editor text through simulated external-change chaos", async ({
     ]);
   });
 
-  await page.getByRole("button", { name: /Chaos/ }).click();
+  await page.getByRole("button", { name: /Chaos/ }).first().click();
   const editor = page.getByRole("textbox");
   await expect(editor).toBeVisible();
 

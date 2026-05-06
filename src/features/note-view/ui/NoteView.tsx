@@ -33,7 +33,7 @@ export function NoteView({ noteId, title }: NoteViewProps) {
   }, [note?.path, setActiveNotePath]);
 
   useEffect(() => {
-    if (!note) {
+    if (!note || buffer?.dirty) {
       return;
     }
     let cancelled = false;
@@ -48,7 +48,7 @@ export function NoteView({ noteId, title }: NoteViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [note, noteId, openBuffer]);
+  }, [buffer?.dirty, note, noteId, openBuffer]);
 
   const recents = useMemo(() => [...notes].sort((left, right) => right.mtime - left.mtime), [notes]);
   const openNote = (entry: NoteEntry) => navigate({ kind: "note", id: entry.id });

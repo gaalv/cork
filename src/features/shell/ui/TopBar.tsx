@@ -17,7 +17,7 @@ export function TopBar() {
   return (
     <header
       data-testid="topbar"
-      className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)]/80 px-6 backdrop-blur"
+      className="relative z-50 flex h-14 shrink-0 items-center gap-3 border-b border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)]/80 px-6 backdrop-blur"
     >
       {view.kind === "note" ? (
         <button

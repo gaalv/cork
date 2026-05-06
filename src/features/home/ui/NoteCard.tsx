@@ -1,6 +1,7 @@
 import { NoteCardMenu } from "./NoteCardMenu";
 
 import type { HomeNote } from "@/features/home/hooks/useHomeSections";
+import type { MouseEvent } from "react";
 import type { NoteEntry } from "@/shared/ipc/types";
 
 type NoteCardProps = {
@@ -8,20 +9,27 @@ type NoteCardProps = {
   onOpen: (note: NoteEntry) => void;
   onPinToggle: (note: NoteEntry) => Promise<void> | void;
   onChanged?: () => void;
+  selected?: boolean;
+  onSelectClick?: (event: MouseEvent, note: NoteEntry) => boolean;
 };
 
-export function NoteCard({ note, onOpen, onPinToggle, onChanged }: NoteCardProps) {
+export function NoteCard({ note, onOpen, onPinToggle, onChanged, selected = false, onSelectClick }: NoteCardProps) {
   const homeNote = isHomeNote(note) ? note : null;
   const pinned = homeNote?.pinned ?? false;
   const starred = homeNote?.starred ?? false;
   const snippet = homeNote?.snippet ?? (note.folder || "No preview available");
 
   return (
-    <article className="group rounded-2xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-4 transition hover:border-[var(--color-noxe-border-strong)] hover:shadow-sm">
+    <article className={`group rounded-2xl border bg-[var(--color-noxe-panel)] p-4 transition hover:border-[var(--color-noxe-border-strong)] hover:shadow-sm ${selected ? "border-[var(--color-noxe-ring)] ring-2 ring-[var(--color-noxe-ring)]/30" : "border-[var(--color-noxe-border)]"}`}>
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"
-          onClick={() => onOpen(note)}
+          onClick={(event) => {
+            if (onSelectClick?.(event, note)) {
+              return;
+            }
+            onOpen(note);
+          }}
           className="min-w-0 flex-1 text-left focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
         >
           <span className="block truncate font-medium text-[var(--color-noxe-ink)]">{note.title}</span>
