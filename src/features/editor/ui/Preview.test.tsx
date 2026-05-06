@@ -72,4 +72,20 @@ describe("Preview", () => {
     expect(callout).toHaveAttribute("data-kind", "warning");
     expect(screen.getByText("Back up the vault.")).toBeInTheDocument();
   });
+
+  it("renders footnote references and definitions", () => {
+    render(<Preview markdown={"A sentence with a footnote.[^1]\n\n[^1]: Footnote text."} />);
+
+    const reference = screen.getByRole("link", { name: "1" });
+    expect(reference).toHaveAttribute("href", "#fn-1");
+    expect(reference).toHaveAttribute("id", "fnref-1");
+    expect(screen.getByText(/Footnote text/).closest("section")).toHaveClass("footnotes");
+  });
+
+  it("omits orphan footnote definitions", () => {
+    render(<Preview markdown={"Body without a reference.\n\n[^orphan]: This definition is not referenced."} />);
+
+    expect(screen.getByText("Body without a reference.")).toBeInTheDocument();
+    expect(screen.queryByText(/This definition is not referenced/)).not.toBeInTheDocument();
+  });
 });
