@@ -78,20 +78,20 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Breadcrumb + Back-to-Home in top bar
 - AI suggestion card (UI stub only)
 
-**[F09 — Wikilinks & Backlinks](../features/F09-wikilinks-backlinks/spec.md)** — PLANNED
+**[F09 — Wikilinks & Backlinks](../features/F09-wikilinks-backlinks/spec.md)** — COMPLETE
 - Wikilink resolution (title → note id) via index
 - Click-to-navigate
 - Create-on-click for missing notes
 - Backlinks query + panel data
 
-**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — IN PROGRESS — T11 deferred to F10-T11
+**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — COMPLETE
 - Tauri `asset://` protocol w/ runtime-scoped vault path
 - `assets` SQLite table populated by extended F02 walker
 - Inline image rendering (`![[image.png]]` and `![alt](path)`)
 - Drop / paste image → write into attachments folder
 - Click non-image asset opens with OS handler (safelist + confirm)
 
-**[F12 — Folder Ops & Rename UX](../features/F12-folder-ops/spec.md)** — IN PROGRESS — T10 deferred to F09 completion
+**[F12 — Folder Ops & Rename UX](../features/F12-folder-ops/spec.md)** — COMPLETE
 - `folders.create/rename/move/trash` IPC
 - FoldersDrawer context menu + inline rename
 - Drag-and-drop notes between folders (`@dnd-kit/core`)
@@ -129,7 +129,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ### Features
 
-**[F10 — Daily Notes & Multi-vault](../features/F10-daily-multivault/spec.md)** — PLANNED
+**[F10 — Daily Notes & Multi-vault](../features/F10-daily-multivault/spec.md)** — COMPLETE
 - Daily note creation + template
 - Multi-vault list & switcher
 - Active-vault persistence

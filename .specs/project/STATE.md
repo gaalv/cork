@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T18:15-03:00
-**Current Work:** F11 asset pipeline remaining tasks complete except T11 deferred to F10-T11
+**Last Updated:** 2026-05-06T19:05-03:00
+**Current Work:** F10 vault management, F11 attachments config, and F12 topbar rename complete; next planned work is F13/F14
 
 ---
 
@@ -179,6 +179,20 @@ src-tauri/
 **Trade-off:** Browser E2E validates frontend integration with a fixture writer; Rust `assets.write_attachment` remains covered by cargo tests.
 **Impact:** Production builds do not expose the bridge outside non-production/localhost test runs.
 
+### AD-031: Multi-vault recents and switch tests use web-safe bridges (2026-05-06)
+
+**Decision:** F10 persists recent vaults in the existing app-data `vault.json` and exposes a localhost-only `window.__noxe_test_setRecentVaults` bridge for browser E2E.
+**Reason:** Playwright cannot drive native folder pickers or Tauri IPC in Vite preview, but switcher UX still needs deterministic no-data-loss coverage.
+**Trade-off:** Browser E2E validates UI/store behavior and failed IPC resilience; Rust tests cover persistence and native settings loading.
+**Impact:** Production builds do not expose the recent-vault test bridge outside non-production/localhost runs.
+
+### AD-032: Per-vault attachments default aligns with Rust writer (2026-05-06)
+
+**Decision:** Asset ingest now defaults to `_attachments` and treats an empty `attachmentsFolder` per-vault setting as same-folder mode.
+**Reason:** Rust `assets.write_attachment` already used `_attachments`; aligning TS and Rust avoids divergent attachment destinations when config is absent.
+**Trade-off:** Existing browser E2E expectations moved from `attachments/` to `_attachments/`.
+**Impact:** F11/F13 settings should present `_attachments` as the default attachment folder.
+
 ---
 
 ## Active Blockers
@@ -199,6 +213,8 @@ _None._
 - **L-008:** Browser editor E2E should use contenteditable `fill()` for deterministic large text insertion; raw keyboard typing can be dropped by CM6 under fast automation.
 - **L-009:** CM6 drop tests in jsdom may resolve coordinates to position 0; assert insertion and service calls rather than relying on pixel layout.
 - **L-010:** Browser Home E2E needs fixture-backed note reads/frontmatter toggles because Playwright preview cannot call Tauri IPC.
+- **L-011:** NoteView must not reload a dirty existing buffer when navigating away and back during a failed vault switch; otherwise fixture/native reads can overwrite unsaved edits.
+- **L-012:** Home E2E note locators should target the intended section because Recents, All Notes, and card menus can expose duplicate note-title buttons.
 
 ---
 
@@ -225,6 +241,7 @@ _None._
 | 017 | Implement F06 Home Dashboard (query-backed hero, pinned/recents/tags/all notes, pin flow E2E) | 2026-05-06 | multiple | ✅ Done |
 | 018 | Implement F08 Note View + Meta Panel (store, outline/backlinks/hooks, responsive meta panel, NoteView composition) | 2026-05-06 | multiple | ✅ Done |
 | 017 | Complete F11 remaining asset pipeline tasks (preview image rendering, CM6 image drop/paste, drop-render E2E); T11 deferred pending F10-T11 | 2026-05-06 | multiple | ✅ Partial |
+| 019 | Complete F10 vault management (close/recent, switcher, per-vault config, switch chaos E2E) plus unblock F11 attachments config and F12 topbar rename | 2026-05-06 | multiple | ✅ Done |
 
 ---
 

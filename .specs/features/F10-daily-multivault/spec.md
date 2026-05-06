@@ -15,18 +15,18 @@ Two often-requested features tied together because both touch vault-level concep
 
 ### Daily
 
-- [ ] ⌘D shortcut creates/opens today's daily note.
-- [ ] Path pattern configurable (default: `Daily/YYYY/MM/YYYY-MM-DD.md`).
-- [ ] Template stored in `<vault>/.noxe/templates/daily.md`.
-- [ ] Template variables: `{{date}}`, `{{time}}`, `{{weekday}}`, `{{vault}}`.
-- [ ] If today's daily exists → just open it.
+- [x] ⌘D shortcut creates/opens today's daily note.
+- [x] Path pattern configurable (default: `Daily/YYYY/MM/YYYY-MM-DD.md`).
+- [x] Template stored in `<vault>/.noxe/templates/daily.md`.
+- [x] Template variables: `{{date}}`, `{{time}}`, `{{weekday}}`, `{{vault}}`.
+- [x] If today's daily exists → just open it.
 
 ### Multi-vault
 
-- [ ] Persist a list of recent vaults (max 8) in app config.
-- [ ] Vault switcher in TopBar: dropdown of recent + "Open another vault…".
-- [ ] Switching vaults stops the current watcher + closes the index DB and starts the new ones.
-- [ ] Each vault has its own SQLite at `<app_data>/vaults/<vault_hash>/index.sqlite` (already true from F03).
+- [x] Persist a list of recent vaults (max 10) in app config.
+- [x] Vault switcher in TopBar: dropdown of recent + "Open another vault…".
+- [x] Switching vaults stops the current watcher + closes the index DB and starts the new ones.
+- [x] Each vault has its own SQLite at `<app_data>/vaults/<vault_hash>/index.sqlite` (already true from F03).
 
 ## Out of Scope
 
@@ -58,7 +58,7 @@ Two often-requested features tied together because both touch vault-level concep
 
 ### P1 (Multi-vault): Switcher ⭐ MVP
 
-1. WHEN user clicks vault name in TopBar THEN dropdown SHALL list up to 8 recent vaults + "Open another vault…".
+1. WHEN user clicks vault name in TopBar THEN dropdown SHALL list up to 10 recent vaults + "Open another vault…".
 2. WHEN user picks one THEN system SHALL: pause editor auto-save → flush → call `vault.open(path)` → reset stores → resume.
 3. WHEN vault open fails THEN show toast and remain on the previous vault.
 
@@ -83,17 +83,17 @@ Two often-requested features tied together because both touch vault-level concep
 
 | ID       | AC                          | Status  |
 | -------- | --------------------------- | ------- |
-| DAILY-01 | ⌘D creates/opens today      | Pending |
-| DAILY-02 | Default template fallback   | Pending |
-| DAILY-03 | Path pattern configurable   | Pending |
-| DAILY-04 | Variables substitution      | Pending |
-| DAILY-05 | Palette command             | Pending |
-| MV-01    | Recent vaults list          | Pending |
-| MV-02    | TopBar switcher             | Pending |
-| MV-03    | Switch flow (flush, reset)  | Pending |
-| MV-04    | Recent persistence          | Pending |
-| MV-05    | Missing-vault detection     | Pending |
-| MV-06    | Per-vault settings file     | Pending |
+| DAILY-01 | ⌘D creates/opens today      | Verified |
+| DAILY-02 | Default template fallback   | Verified |
+| DAILY-03 | Path pattern configurable   | Verified |
+| DAILY-04 | Variables substitution      | Verified |
+| DAILY-05 | Palette command             | Verified |
+| MV-01    | Recent vaults list          | Verified |
+| MV-02    | TopBar switcher             | Verified |
+| MV-03    | Switch flow (flush, reset)  | Verified |
+| MV-04    | Recent persistence          | Verified |
+| MV-05    | Missing-vault detection     | Verified |
+| MV-06    | Per-vault settings file     | Verified |
 
 ## Success Criteria
 
