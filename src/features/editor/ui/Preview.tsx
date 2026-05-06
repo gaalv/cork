@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { baseRehypePlugins, baseRemarkPlugins } from "@/features/editor/preview/plugins";
+import { highlightCode } from "@/features/editor/preview/shikiHighlighter";
 
 import type { ComponentProps } from "react";
 
@@ -37,6 +38,13 @@ export function Preview({ noteId, markdown, onWikilinkClick }: PreviewProps) {
             {children}
           </a>
         );
+      },
+      code: ({ children, className }: ComponentProps<"code">) => {
+        const match = /language-([\w-]+)/.exec(className ?? "");
+        if (!match) {
+          return <code className={className}>{children}</code>;
+        }
+        return <HighlightedCode code={childrenToText(children)} lang={match[1] ?? "text"} />;
       },
       input: ({ checked, type, ...props }: ComponentProps<"input">) => {
         if (type !== "checkbox") {
@@ -95,4 +103,22 @@ function slugify(value: string) {
 
 function toggleFirstTask(source: string, checked: boolean) {
   return source.replace(checked ? /- \[x\]/ : /- \[ \]/, checked ? "- [ ]" : "- [x]");
+}
+
+function HighlightedCode({ code, lang }: { code: string; lang: string }) {
+  const [html, setHtml] = useState<string>(`<pre><code>${code}</code></pre>`);
+
+  useEffect(() => {
+    let cancelled = false;
+    void highlightCode(code, lang).then((nextHtml) => {
+      if (!cancelled) {
+        setHtml(nextHtml);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [code, lang]);
+
+  return <span data-shiki-code dangerouslySetInnerHTML={{ __html: html }} />;
 }
