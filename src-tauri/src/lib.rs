@@ -34,10 +34,14 @@ fn ensure_window_visible(window: &WebviewWindow) -> Result<(), tauri::Error> {
     });
 
     if !is_visible {
-        let target = monitors
-            .first()
-            .map(|monitor| *monitor.position())
-            .unwrap_or(PhysicalPosition { x: 100, y: 100 });
+        let target = monitors.first().map_or(PhysicalPosition { x: 100, y: 100 }, |monitor| {
+            let monitor_position = monitor.position();
+            let monitor_size = monitor.size();
+            PhysicalPosition {
+                x: monitor_position.x + ((monitor_size.width.saturating_sub(size.width)) / 2) as i32,
+                y: monitor_position.y + ((monitor_size.height.saturating_sub(size.height)) / 2) as i32,
+            }
+        });
         window.set_position(Position::Physical(target))?;
     }
 
