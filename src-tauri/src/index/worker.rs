@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Sender};
@@ -13,6 +14,7 @@ use walkdir::WalkDir;
 
 use crate::index::migrate::open_index_at;
 use crate::index::parser::{parse, ParsedNote};
+use crate::index::resolver;
 use crate::vault::list::{asset_kind, is_markdown};
 use crate::IpcError;
 
@@ -112,6 +114,7 @@ pub fn build_all(
             last_emit = Instant::now();
         }
     }
+    resolve_all_links(conn)?;
     if total == 0 {
         emit_progress(progress_sink, 0, 0, IndexPhase::Building);
     }
@@ -124,9 +127,14 @@ pub fn upsert_path(
     path: &Path,
     progress_sink: Option<&(dyn Fn(IndexProgress) + Send + Sync + 'static)>,
 ) -> Result<(), IpcError> {
+    let id = note_id(path);
+    let mut affected_terms = collect_note_terms(conn, &id)?;
     let tx = conn.transaction().map_err(sql_error)?;
     upsert_path_in_tx(&tx, vault_path, path)?;
     tx.commit().map_err(sql_error)?;
+    affected_terms.extend(collect_note_terms(conn, &id)?);
+    resolve_links_for_source(conn, &id)?;
+    resolve_links_matching_targets(conn, &affected_terms)?;
     emit_progress(progress_sink, 1, 1, IndexPhase::Updating);
     Ok(())
 }
@@ -137,6 +145,7 @@ pub fn remove_path(
     progress_sink: Option<&(dyn Fn(IndexProgress) + Send + Sync + 'static)>,
 ) -> Result<(), IpcError> {
     let id = note_id(path);
+    let affected_terms = collect_note_terms(conn, &id)?;
     let tx = conn.transaction().map_err(sql_error)?;
     tx.execute("DELETE FROM notes_fts WHERE id = ?1", [&id])
         .map_err(sql_error)?;
@@ -145,6 +154,7 @@ pub fn remove_path(
     tx.execute("DELETE FROM assets WHERE path = ?1", [path_string(path)])
         .map_err(sql_error)?;
     tx.commit().map_err(sql_error)?;
+    resolve_links_matching_targets(conn, &affected_terms)?;
     emit_progress(progress_sink, 1, 1, IndexPhase::Removing);
     Ok(())
 }
@@ -170,6 +180,7 @@ pub fn rename_path(
     }
 
     let old_id = note_id(old_path);
+    let mut affected_terms = collect_note_terms(conn, &old_id)?;
     let metadata = fs::metadata(new_path)?;
     let folder = folder_for(vault_path, new_path);
     let title = new_path
@@ -189,6 +200,8 @@ pub fn rename_path(
         ],
     )
     .map_err(sql_error)?;
+    affected_terms.extend(collect_note_terms(conn, &old_id)?);
+    resolve_links_matching_targets(conn, &affected_terms)?;
     emit_progress(progress_sink, 1, 1, IndexPhase::Renaming);
     Ok(())
 }
@@ -302,6 +315,128 @@ fn replace_note_rows(
     )
     .map_err(sql_error)?;
     Ok(())
+}
+
+fn resolve_all_links(conn: &Connection) -> Result<(), IpcError> {
+    let links = collect_link_rows(
+        conn,
+        "SELECT l.rowid, l.target_text, COALESCE(n.folder, '')
+         FROM links l
+         LEFT JOIN notes n ON n.id = l.src_note_id",
+        [],
+    )?;
+    resolve_link_rows(conn, links)
+}
+
+fn resolve_links_for_source(conn: &Connection, note_id: &str) -> Result<(), IpcError> {
+    let links = collect_link_rows(
+        conn,
+        "SELECT l.rowid, l.target_text, COALESCE(n.folder, '')
+         FROM links l
+         LEFT JOIN notes n ON n.id = l.src_note_id
+         WHERE l.src_note_id = ?1",
+        [note_id],
+    )?;
+    resolve_link_rows(conn, links)
+}
+
+fn resolve_links_matching_targets(
+    conn: &Connection,
+    targets: &BTreeSet<String>,
+) -> Result<(), IpcError> {
+    for target in targets {
+        let links = collect_link_rows(
+            conn,
+            "SELECT l.rowid, l.target_text, COALESCE(n.folder, '')
+             FROM links l
+             LEFT JOIN notes n ON n.id = l.src_note_id
+             WHERE LOWER(l.target_text) = LOWER(?1)",
+            [target.as_str()],
+        )?;
+        resolve_link_rows(conn, links)?;
+    }
+    Ok(())
+}
+
+fn collect_link_rows<P: rusqlite::Params>(
+    conn: &Connection,
+    sql: &str,
+    params: P,
+) -> Result<Vec<(i64, String, String)>, IpcError> {
+    let mut stmt = conn.prepare(sql).map_err(sql_error)?;
+    let rows = stmt
+        .query_map(params, |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })
+        .map_err(sql_error)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)
+}
+
+fn resolve_link_rows(conn: &Connection, links: Vec<(i64, String, String)>) -> Result<(), IpcError> {
+    for (rowid, target_text, source_folder) in links {
+        let resolved = resolver::resolve(&target_text, conn, &source_folder)?;
+        match resolved {
+            Some(resolution) => {
+                conn.execute(
+                    "UPDATE links SET target_id = ?1, ambiguous = ?2 WHERE rowid = ?3",
+                    params![resolution.target_id, i64::from(resolution.ambiguous), rowid],
+                )
+                .map_err(sql_error)?;
+            }
+            None => {
+                conn.execute(
+                    "UPDATE links SET target_id = NULL, ambiguous = 0 WHERE rowid = ?1",
+                    [rowid],
+                )
+                .map_err(sql_error)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn collect_note_terms(conn: &Connection, note_id: &str) -> Result<BTreeSet<String>, IpcError> {
+    let mut terms = BTreeSet::new();
+    let note = conn
+        .query_row(
+            "SELECT path, title FROM notes WHERE id = ?1",
+            [note_id],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .optional()
+        .map_err(sql_error)?;
+    if let Some((path, title)) = note {
+        terms.insert(filename_stem(&path).to_string());
+        terms.insert(title);
+    }
+    let aliases = conn
+        .query_row(
+            "SELECT value FROM frontmatter WHERE note_id = ?1 AND key = 'aliases'",
+            [note_id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(sql_error)?;
+    if let Some(value) = aliases {
+        if let Ok(values) = serde_json::from_str::<Vec<String>>(&value) {
+            terms.extend(values);
+        }
+    }
+    Ok(terms
+        .into_iter()
+        .filter(|term| !term.trim().is_empty())
+        .collect())
+}
+
+fn filename_stem(path: &str) -> &str {
+    Path::new(path)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or(path)
 }
 
 fn indexable_files(root: &Path) -> Result<Vec<PathBuf>, IpcError> {
@@ -447,12 +582,11 @@ mod tests {
             .unwrap();
         assert_eq!(asset_count, 1);
         assert_eq!(query::by_tag(&conn, "dev").unwrap().len(), 2);
-        assert_eq!(
-            query::links_outgoing(&conn, &note_id(&alpha))
-                .unwrap()
-                .len(),
-            1
-        );
+        let beta_id = note_id(&beta);
+        let outgoing = query::links_outgoing(&conn, &note_id(&alpha)).unwrap();
+        assert_eq!(outgoing.len(), 1);
+        assert_eq!(outgoing[0].target_id.as_deref(), Some(beta_id.as_str()));
+        assert_eq!(query::links_incoming(&conn, &beta_id).unwrap().len(), 1);
 
         fs::write(&alpha, "# Alpha changed\n#idea").unwrap();
         upsert_path(&mut conn, &vault, &alpha, None).unwrap();
