@@ -52,8 +52,50 @@ export type RenameNoteInput = {
   newName: string;
 };
 
+export type MoveNoteInput = {
+  notePath: string;
+  destFolder: string;
+};
+
+export type FolderPath = {
+  path: string;
+};
+
+export type FolderCreateInput = {
+  parent: string;
+  name: string;
+};
+
+export type FolderRenameInput = {
+  oldPath: string;
+  newName: string;
+};
+
+export type FolderMoveInput = {
+  srcPath: string;
+  destParent: string;
+};
+
+export type BulkFailure = {
+  path: string;
+  error: IpcErrorPayload;
+};
+
+export type BulkPathResult = {
+  ok: string[];
+  failed: BulkFailure[];
+};
+
+export type BulkMoveResult = {
+  ok: FolderPath[];
+  failed: BulkFailure[];
+};
+
+export type BulkFrontmatterResult = BulkPathResult;
+
 export type FileChangeKind = "created" | "modified" | "removed";
 export type FileChangeSource = "internal" | "external";
+export type FolderChangeKind = "created" | "renamed" | "removed" | "moved";
 
 export type VaultOpenedEvent = VaultPath;
 
@@ -68,4 +110,11 @@ export type VaultFileChangedEvent = {
 export type VaultFileRenamedEvent = {
   oldPath: string;
   newPath: string;
+};
+
+export type VaultFolderChangedEvent = {
+  path: string;
+  oldPath?: string;
+  kind: FolderChangeKind;
+  source: FileChangeSource;
 };

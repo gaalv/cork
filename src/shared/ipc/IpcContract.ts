@@ -1,5 +1,14 @@
 import type {
+  BulkFrontmatterResult,
+  BulkMoveResult,
+  BulkPathResult,
   CreateNoteInput,
+  FolderCreateInput,
+  FolderMoveInput,
+  FolderPath,
+  FolderRenameInput,
+  JsonRecord,
+  MoveNoteInput,
   NoteEntry,
   NoteFile,
   RenameNoteInput,
@@ -7,6 +16,7 @@ import type {
   SaveResult,
   VaultFileChangedEvent,
   VaultFileRenamedEvent,
+  VaultFolderChangedEvent,
   VaultOpenedEvent,
   VaultPath,
 } from "./types";
@@ -71,6 +81,23 @@ export type IpcCommandMap = {
     args: undefined;
     result: void;
   };
+  // === F12 Folder Ops ===
+  "folders.create": {
+    args: FolderCreateInput;
+    result: FolderPath;
+  };
+  "folders.rename": {
+    args: FolderRenameInput;
+    result: FolderPath;
+  };
+  "folders.move": {
+    args: FolderMoveInput;
+    result: FolderPath;
+  };
+  "folders.trash": {
+    args: { path: string };
+    result: void;
+  };
   "notes.read": {
     args: { path: string };
     result: NoteFile;
@@ -90,6 +117,23 @@ export type IpcCommandMap = {
   "notes.trash": {
     args: { path: string };
     result: void;
+  };
+  // === F12 Bulk Ops ===
+  "notes.move": {
+    args: MoveNoteInput;
+    result: FolderPath;
+  };
+  "notes.bulkMove": {
+    args: { paths: string[]; destFolder: string };
+    result: BulkMoveResult;
+  };
+  "notes.bulkTrash": {
+    args: { paths: string[] };
+    result: BulkPathResult;
+  };
+  "notes.bulkSetFrontmatter": {
+    args: { paths: string[]; patch: JsonRecord };
+    result: BulkFrontmatterResult;
   };
   "notes.recent": {
     args: { limit?: number };
@@ -141,6 +185,7 @@ export type IpcEventMap = {
   "vault.opened": VaultOpenedEvent;
   "vault.fileChanged": VaultFileChangedEvent;
   "vault.fileRenamed": VaultFileRenamedEvent;
+  "vault.folderChanged": VaultFolderChangedEvent;
   "index.progress": IndexProgressEvent;
   "index.ready": IndexStatus;
   "index.error": IndexErrorEvent;

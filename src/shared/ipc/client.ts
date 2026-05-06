@@ -8,7 +8,16 @@ import type {
   IpcEventName,
   IpcEventPayload,
 } from "./IpcContract";
-import type { CreateNoteInput, RenameNoteInput, SaveInput } from "./types";
+import type {
+  CreateNoteInput,
+  FolderCreateInput,
+  FolderMoveInput,
+  FolderRenameInput,
+  JsonRecord,
+  MoveNoteInput,
+  RenameNoteInput,
+  SaveInput,
+} from "./types";
 
 const commandNames: Record<IpcCommandName, string> = {
   health: "health",
@@ -17,11 +26,19 @@ const commandNames: Record<IpcCommandName, string> = {
   "vault.list": "vault_list",
   "vault.watcherStart": "vault_watcher_start",
   "vault.watcherStop": "vault_watcher_stop",
+  "folders.create": "folders_create",
+  "folders.rename": "folders_rename",
+  "folders.move": "folders_move",
+  "folders.trash": "folders_trash",
   "notes.read": "notes_read",
   "notes.save": "notes_save",
   "notes.create": "notes_create",
   "notes.rename": "notes_rename",
   "notes.trash": "notes_trash",
+  "notes.move": "notes_move",
+  "notes.bulkMove": "notes_bulk_move",
+  "notes.bulkTrash": "notes_bulk_trash",
+  "notes.bulkSetFrontmatter": "notes_bulk_set_frontmatter",
   "notes.recent": "notes_recent",
   "notes.byTag": "notes_by_tag",
   "notes.byFolder": "notes_by_folder",
@@ -52,12 +69,23 @@ export const client = {
     watcherStart: () => invokeCommand("vault.watcherStart", undefined),
     watcherStop: () => invokeCommand("vault.watcherStop", undefined),
   },
+  folders: {
+    create: (input: FolderCreateInput) => invokeCommand("folders.create", input),
+    rename: (input: FolderRenameInput) => invokeCommand("folders.rename", input),
+    move: (input: FolderMoveInput) => invokeCommand("folders.move", input),
+    trash: (path: string) => invokeCommand("folders.trash", { path }),
+  },
   notes: {
     read: (path: string) => invokeCommand("notes.read", { path }),
     save: (input: SaveInput) => invokeCommand("notes.save", input),
     create: (input: CreateNoteInput) => invokeCommand("notes.create", input),
     rename: (input: RenameNoteInput) => invokeCommand("notes.rename", input),
     trash: (path: string) => invokeCommand("notes.trash", { path }),
+    move: (input: MoveNoteInput) => invokeCommand("notes.move", input),
+    bulkMove: (paths: string[], destFolder: string) => invokeCommand("notes.bulkMove", { paths, destFolder }),
+    bulkTrash: (paths: string[]) => invokeCommand("notes.bulkTrash", { paths }),
+    bulkSetFrontmatter: (paths: string[], patch: JsonRecord) =>
+      invokeCommand("notes.bulkSetFrontmatter", { paths, patch }),
     recent: (limit?: number) => invokeCommand("notes.recent", { limit }),
     byTag: (tag: string) => invokeCommand("notes.byTag", { tag }),
     byFolder: (folder: string) => invokeCommand("notes.byFolder", { folder }),
@@ -95,6 +123,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.status":
     case "index.rebuild":
       return undefined;
+    case "folders.trash":
     case "notes.read":
     case "notes.trash":
     case "notes.recent":
@@ -121,6 +150,26 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
       const input = args as RenameNoteInput;
       return { oldPath: input.oldPath, newName: input.newName };
     }
+    case "folders.create": {
+      const input = args as FolderCreateInput;
+      return { parent: input.parent, name: input.name };
+    }
+    case "folders.rename": {
+      const input = args as FolderRenameInput;
+      return { oldPath: input.oldPath, newName: input.newName };
+    }
+    case "folders.move": {
+      const input = args as FolderMoveInput;
+      return { srcPath: input.srcPath, destParent: input.destParent };
+    }
+    case "notes.move": {
+      const input = args as MoveNoteInput;
+      return { notePath: input.notePath, destFolder: input.destFolder };
+    }
+    case "notes.bulkMove":
+    case "notes.bulkTrash":
+    case "notes.bulkSetFrontmatter":
+      return args as RustArgs;
   }
 }
 
