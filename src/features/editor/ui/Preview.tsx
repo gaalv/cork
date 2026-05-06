@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { baseRehypePlugins, baseRemarkPlugins } from "@/features/editor/preview/plugins";
+import { MermaidDiagram } from "@/features/editor/preview/mermaidRenderer";
 import { highlightCode } from "@/features/editor/preview/shikiHighlighter";
 
 import type { ComponentProps } from "react";
@@ -44,7 +45,11 @@ export function Preview({ noteId, markdown, onWikilinkClick }: PreviewProps) {
         if (!match) {
           return <code className={className}>{children}</code>;
         }
-        return <HighlightedCode code={childrenToText(children)} lang={match[1] ?? "text"} />;
+        const lang = match[1] ?? "text";
+        if (lang === "mermaid") {
+          return <MermaidDiagram source={childrenToText(children)} />;
+        }
+        return <HighlightedCode code={childrenToText(children)} lang={lang} />;
       },
       input: ({ checked, type, ...props }: ComponentProps<"input">) => {
         if (type !== "checkbox") {
