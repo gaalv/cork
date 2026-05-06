@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::sync::OnceLock;
 
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use regex::Regex;
@@ -39,11 +40,6 @@ pub struct ParsedNote {
 
 pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
     let (frontmatter, body) = frontmatter::parse(markdown)?;
-    let tag_regex = Regex::new(r"(^|[^A-Za-z0-9/_-])#([A-Za-z0-9][A-Za-z0-9/_-]{0,63})")
-        .map_err(|err| IpcError::Parse(err.to_string()))?;
-    let link_regex = Regex::new(r"\[\[([^\[\]\|]+?)(?:\|([^\[\]]+?))?\]\]")
-        .map_err(|err| IpcError::Parse(err.to_string()))?;
-
     let mut tags = BTreeSet::new();
     collect_frontmatter_tags(&frontmatter, &mut tags);
     let mut links = Vec::new();
@@ -98,8 +94,8 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
         }
     }
 
-    collect_tags(&body, &tag_regex, &skip_ranges, &mut tags);
-    collect_links(&body, &link_regex, &skip_ranges, &mut links);
+    collect_tags(&body, tag_regex(), &skip_ranges, &mut tags);
+    collect_links(&body, link_regex(), &skip_ranges, &mut links);
 
     Ok(ParsedNote {
         title: first_h1.unwrap_or_else(|| fallback_title(filename)),
@@ -117,6 +113,21 @@ struct HeadingAccumulator {
     level: u8,
     position: usize,
     text: String,
+}
+
+fn tag_regex() -> &'static Regex {
+    static TAG_REGEX: OnceLock<Regex> = OnceLock::new();
+    TAG_REGEX.get_or_init(|| {
+        Regex::new(r"(^|[^A-Za-z0-9/_-])#([A-Za-z0-9][A-Za-z0-9/_-]{0,63})")
+            .expect("tag regex compiles")
+    })
+}
+
+fn link_regex() -> &'static Regex {
+    static LINK_REGEX: OnceLock<Regex> = OnceLock::new();
+    LINK_REGEX.get_or_init(|| {
+        Regex::new(r"\[\[([^\[\]\|]+?)(?:\|([^\[\]]+?))?\]\]").expect("link regex compiles")
+    })
 }
 
 fn collect_tags(
