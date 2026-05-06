@@ -26,6 +26,14 @@ pub struct ParsedLink {
     pub position: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParsedMarkdownExtension {
+    pub kind: String,
+    pub value: String,
+    pub position: usize,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ParsedNote {
@@ -35,6 +43,7 @@ pub struct ParsedNote {
     pub tags: Vec<String>,
     pub links: Vec<ParsedLink>,
     pub headings: Vec<ParsedHeading>,
+    pub markdown_extensions: Vec<ParsedMarkdownExtension>,
     pub frontmatter: Value,
 }
 
@@ -44,6 +53,7 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
     collect_frontmatter_tags(&frontmatter, &mut tags);
     let mut links = Vec::new();
     let mut headings = Vec::new();
+    let mut markdown_extensions = Vec::new();
     let mut first_h1 = None;
     let mut in_code_block = false;
     let mut skip_ranges = Vec::new();
@@ -97,6 +107,7 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
 
     collect_tags(&body, tag_regex(), &skip_ranges, &mut tags);
     collect_links(&body, link_regex(), &skip_ranges, &mut links);
+    collect_callouts(&body, &skip_ranges, true, &mut markdown_extensions);
 
     Ok(ParsedNote {
         title: first_h1.unwrap_or_else(|| fallback_title(filename)),
@@ -105,6 +116,7 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
         tags: tags.into_iter().collect(),
         links,
         headings,
+        markdown_extensions,
         frontmatter,
     })
 }
@@ -128,6 +140,13 @@ fn link_regex() -> &'static Regex {
     static LINK_REGEX: OnceLock<Regex> = OnceLock::new();
     LINK_REGEX.get_or_init(|| {
         Regex::new(r"\[\[([^\[\]\|]+?)(?:\|([^\[\]]+?))?\]\]").expect("link regex compiles")
+    })
+}
+
+fn callout_regex() -> &'static Regex {
+    static CALLOUT_REGEX: OnceLock<Regex> = OnceLock::new();
+    CALLOUT_REGEX.get_or_init(|| {
+        Regex::new(r"(?m)^(?:>\s*)+\[!([A-Za-z][\w-]*)\]\s*([^\r\n]*)").expect("callout regex compiles")
     })
 }
 
@@ -169,6 +188,62 @@ fn collect_links(
                 .map(|alias| alias.as_str().trim().to_string()),
             position: full_match.start(),
         });
+    }
+}
+
+fn collect_callouts(
+    text: &str,
+    skip_ranges: &[std::ops::Range<usize>],
+    enabled: bool,
+    extensions: &mut Vec<ParsedMarkdownExtension>,
+) {
+    if !enabled {
+        return;
+    }
+    for captures in callout_regex().captures_iter(text) {
+        let Some(full_match) = captures.get(0) else {
+            continue;
+        };
+        if is_skipped(full_match.start(), skip_ranges) {
+            continue;
+        }
+        let raw_kind = captures
+            .get(1)
+            .map(|kind| kind.as_str().to_ascii_lowercase())
+            .unwrap_or_else(|| "note".to_string());
+        let kind = normalize_callout_kind(&raw_kind);
+        let title = captures
+            .get(2)
+            .map(|title| title.as_str().trim().to_string())
+            .filter(|title| !title.is_empty())
+            .unwrap_or_else(|| default_callout_title(&kind).to_string());
+        extensions.push(ParsedMarkdownExtension {
+            kind: "callout".to_string(),
+            value: format!("{kind}:{title}"),
+            position: full_match.start(),
+        });
+    }
+}
+
+fn normalize_callout_kind(kind: &str) -> String {
+    match kind {
+        "note" | "info" | "tip" | "warning" | "danger" | "success" | "quote" | "abstract"
+        | "example" => kind.to_string(),
+        _ => "note".to_string(),
+    }
+}
+
+fn default_callout_title(kind: &str) -> &'static str {
+    match kind {
+        "info" => "Info",
+        "tip" => "Tip",
+        "warning" => "Warning",
+        "danger" => "Danger",
+        "success" => "Success",
+        "quote" => "Quote",
+        "abstract" => "Abstract",
+        "example" => "Example",
+        _ => "Note",
     }
 }
 
@@ -331,5 +406,39 @@ mod tests {
         let parsed = parse("---\ntags: dev\n---\nBody", "a.md").unwrap();
         assert_eq!(parsed.body, "Body");
         assert_eq!(parsed.body_hash.len(), 40);
+    }
+
+    #[test]
+    fn extracts_callout_markers() {
+        let parsed = parse("> [!warning] Heads up\n> Body", "a.md").unwrap();
+        assert_eq!(parsed.markdown_extensions.len(), 1);
+        assert_eq!(parsed.markdown_extensions[0].kind, "callout");
+        assert_eq!(parsed.markdown_extensions[0].value, "warning:Heads up");
+    }
+
+    #[test]
+    fn falls_back_unknown_callout_kind_to_note() {
+        let parsed = parse("> [!custom] Custom title\n> Body", "a.md").unwrap();
+        assert_eq!(parsed.markdown_extensions[0].value, "note:Custom title");
+    }
+
+    #[test]
+    fn ignores_callouts_when_disabled() {
+        let mut extensions = Vec::new();
+        collect_callouts("> [!note] Hidden", &[], false, &mut extensions);
+        assert!(extensions.is_empty());
+    }
+
+    #[test]
+    fn extracts_nested_callout_markers() {
+        let parsed = parse("> [!note] Outer\n> > [!tip] Inner", "a.md").unwrap();
+        assert_eq!(
+            parsed
+                .markdown_extensions
+                .iter()
+                .map(|extension| extension.value.as_str())
+                .collect::<Vec<_>>(),
+            vec!["note:Outer", "tip:Inner"]
+        );
     }
 }
