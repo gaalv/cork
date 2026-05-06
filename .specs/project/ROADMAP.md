@@ -84,7 +84,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Create-on-click for missing notes
 - Backlinks query + panel data
 
-**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — IN PROGRESS — T07/T09/T10/T11/T12 deferred to F05/F10
+**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — IN PROGRESS — T11 deferred to F10-T11
 - Tauri `asset://` protocol w/ runtime-scoped vault path
 - `assets` SQLite table populated by extended F02 walker
 - Inline image rendering (`![[image.png]]` and `![alt](path)`)

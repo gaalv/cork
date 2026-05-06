@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T18:00-03:00
-**Current Work:** F05 Editor complete; F11 continues in parallel
+**Last Updated:** 2026-05-06T18:15-03:00
+**Current Work:** F11 asset pipeline remaining tasks complete except T11 deferred to F10-T11
 
 ---
 
@@ -172,6 +172,13 @@ src-tauri/
 **Trade-off:** Browser E2E validates UI/data-loss behavior, while Rust IPC correctness remains covered by unit/cargo tests.
 **Impact:** `ViewRouter` mounts the real editor for note routes without requiring native IPC during web tests.
 
+### AD-030: F11 browser E2E writes attachments through a localhost-only test bridge (2026-05-06)
+
+**Decision:** Asset drop E2E uses `window.__noxe_test_writeAttachment` to route browser-file bytes to a Playwright-exposed Node writer under `test-results/`.
+**Reason:** Playwright runs Vite preview without Tauri IPC, but F11 needs to verify the real CM6 drop path, attachment-link insertion, preview image rendering, and on-disk attachment output together.
+**Trade-off:** Browser E2E validates frontend integration with a fixture writer; Rust `assets.write_attachment` remains covered by cargo tests.
+**Impact:** Production builds do not expose the bridge outside non-production/localhost test runs.
+
 ---
 
 ## Active Blockers
@@ -190,6 +197,7 @@ _None._
 - **L-006:** Browser drawer E2E needs web-safe fallbacks for native IPC-backed queries; keep the fallback deterministic and fixture-shaped.
 - **L-007:** CM6 autocompletion sources must be merged into a single `autocompletion({ override })` extension; stacking multiple override facets causes config merge conflicts.
 - **L-008:** Browser editor E2E should use contenteditable `fill()` for deterministic large text insertion; raw keyboard typing can be dropped by CM6 under fast automation.
+- **L-009:** CM6 drop tests in jsdom may resolve coordinates to position 0; assert insertion and service calls rather than relying on pixel layout.
 
 ---
 
@@ -213,6 +221,7 @@ _None._
 | 014 | Partially implement F11 Asset Pipeline (asset DB/walker, scoped protocol, attachment IPC, resolver/url/open helpers); T07/T09/T10/T11/T12 deferred to F05/F10 | 2026-05-06 | multiple | ✅ Partial |
 | 015 | Implement F07 Drawers (FTS search, folders, recent, starred, tags, a11y, E2E) | 2026-05-06 | multiple | ✅ Done |
 | 016 | Implement F05 Editor (CM6, autosave/conflicts, Markdown preview, Shiki/KaTeX/Mermaid, completions, split view, search, chaos E2E) | 2026-05-06 | multiple | ✅ Done |
+| 017 | Complete F11 remaining asset pipeline tasks (preview image rendering, CM6 image drop/paste, drop-render E2E); T11 deferred pending F10-T11 | 2026-05-06 | multiple | ✅ Partial |
 
 ---
 
