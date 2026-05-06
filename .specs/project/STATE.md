@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T17:27-03:00
-**Current Work:** F04 Shell complete; F12 is partially landed in parallel
+**Last Updated:** 2026-05-06T17:47-03:00
+**Current Work:** F11 Asset Pipeline partial complete for T01/T02/T03/T04/T05/T06/T08; T07/T09/T10/T11/T12 deferred
 
 ---
 
@@ -185,6 +185,7 @@ _None._
 | 011 | Implement F03 Index (SQLite schema/migrations, Rust+TS markdown parser parity, worker, IPC, store/UI integration, crash safety) | 2026-05-06 | de3de18 | ✅ Done |
 | 012 | Implement F04 Shell (Zustand shell store, rail/topbar/drawers, cmdk palette, shortcuts/help/toasts, empty state, router, window-state, E2E) | 2026-05-06 | multiple | ✅ Done |
 | 013 | Partially land F12 Folder Ops & Bulk Operations (folder/bulk IPC, legacy folder UI, drag/drop, bulk selection, auto-close, E2E); T10 deferred pending F09-T03 | 2026-05-06 | multiple | ✅ Partial |
+| 014 | Partially implement F11 Asset Pipeline (asset DB/walker, scoped protocol, attachment IPC, resolver/url/open helpers); T07/T09/T10/T11/T12 deferred to F05/F10 | 2026-05-06 | multiple | ✅ Partial |
 
 ---
 
