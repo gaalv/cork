@@ -14,7 +14,22 @@ fn health() -> Result<&'static str, IpcError> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![health])
+        .plugin(tauri_plugin_dialog::init())
+        .manage(vault::VaultState::default())
+        .setup(|app| vault::setup(app))
+        .invoke_handler(tauri::generate_handler![
+            health,
+            vault::vault_open,
+            vault::vault_current,
+            vault::vault_list,
+            vault::vault_watcher_start,
+            vault::vault_watcher_stop,
+            vault::notes_read,
+            vault::notes_save,
+            vault::notes_create,
+            vault::notes_rename,
+            vault::notes_trash
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
