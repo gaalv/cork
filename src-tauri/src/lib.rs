@@ -1,12 +1,13 @@
 pub mod assets;
 pub mod error;
 pub mod index;
+pub mod menu;
 pub mod settings;
 pub mod vault;
 
 pub use error::IpcError;
 
-use tauri::{Manager, PhysicalPosition, Position, WebviewWindow};
+use tauri::{Emitter, Manager, PhysicalPosition, Position, WebviewWindow};
 
 /// Health check for the IPC bridge — used by the smoke test and as a
 /// reference for typed IPC contracts.
@@ -55,6 +56,11 @@ pub fn run() {
         .setup(|app| {
             vault::setup(app)?;
             index::setup(app)?;
+            let menu = menu::build_app_menu(app.handle())?;
+            app.set_menu(menu)?;
+            app.on_menu_event(|app, event| {
+                app.emit("menu.action", event.id().0.as_str()).ok();
+            });
             if let Some(window) = app.get_webview_window("main") {
                 ensure_window_visible(&window)?;
             }

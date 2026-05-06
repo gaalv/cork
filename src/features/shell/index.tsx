@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { useIndexStore } from "@/features/index/state/indexStore";
 import { useShortcuts } from "@/features/shell/hooks/useShortcuts";
+import { startMenuActionListener, stopMenuActionListener } from "@/features/shell/menu/menuActions";
 import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { BulkActionsBar } from "@/features/folder-ops/ui/BulkActionsBar";
 import { CommandPalette } from "@/features/shell/ui/CommandPalette";
@@ -23,6 +24,13 @@ export function Shell() {
   const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration);
   const startIndexIntegration = useIndexStore((state) => state.startIndexIntegration);
   const loadVaultSettings = useAppSettingsStore((state) => state.loadVaultSettings);
+
+  useEffect(() => {
+    startMenuActionListener();
+    return () => {
+      void stopMenuActionListener();
+    };
+  }, []);
 
   useEffect(() => {
     void loadNotes()
