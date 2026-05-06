@@ -1,4 +1,5 @@
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { WikilinkHoverCard } from "@/features/wikilinks/ui/WikilinkHoverCard";
 import { cn } from "@/shared/utils/cn";
 
 import type { LinkRow } from "@/shared/ipc/IpcContract";
@@ -15,7 +16,7 @@ export function WikilinkComponent({ target, link, children, onUnresolvedClick }:
   const navigate = useShellStore((state) => state.navigate);
   const resolved = Boolean(link?.targetId);
 
-  return (
+  const button = (
     <button
       type="button"
       data-wikilink={target}
@@ -37,4 +38,6 @@ export function WikilinkComponent({ target, link, children, onUnresolvedClick }:
       {children}
     </button>
   );
+
+  return link?.targetId ? <WikilinkHoverCard link={link}>{button}</WikilinkHoverCard> : button;
 }
