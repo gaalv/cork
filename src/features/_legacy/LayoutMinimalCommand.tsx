@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { DndContext } from '@dnd-kit/core'
 import {
   MagnifyingGlass,
   Notebook,
@@ -21,6 +22,8 @@ import {
   Tag,
   FolderSimple,
 } from '@phosphor-icons/react'
+import { useDragDropFolder, useFolderDragSource, useFolderDropTarget, useNoteDragSource } from '@/features/folder-ops/hooks/useDragDropFolder'
+import { bulkOps } from '@/features/folder-ops/services/bulkOps'
 import { folderOps, validateFolderName } from '@/features/folder-ops/services/folderOps'
 import { InlineRename } from '@/features/folder-ops/ui/InlineRename'
 import { NewFolderDialog } from '@/features/folder-ops/ui/NewFolderDialog'
@@ -588,7 +591,12 @@ function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; q
     }
     void refreshAfter(() => folderOps.trash(folder)).then(() => setMenu(null))
   }
+  const dnd = useDragDropFolder({
+    onMoveNote: (notePath, destFolder) => refreshAfter(() => bulkOps.moveNote(notePath, destFolder)),
+    onMoveFolder: (srcPath, destParent) => refreshAfter(() => folderOps.move({ srcPath, destParent })),
+  })
   return (
+    <DndContext onDragEnd={(event) => void dnd.onDragEnd(event)}>
     <div className="relative text-[13px]" onClick={() => setMenu(null)}>
       <button
         onClick={() => setNewFolderParent('')}
@@ -620,14 +628,7 @@ function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; q
               {isOpen && (
                 <div className="ml-4 border-l border-[var(--color-noxe-border)] pl-1">
                   {filteredNotes(f.id).map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => onOpenNote(n.id)}
-                      className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left hover:bg-[var(--color-noxe-panel-2)]"
-                    >
-                      <Article size={11} className="text-[var(--color-noxe-muted)]" />
-                      <span className="truncate">{n.title}</span>
-                    </button>
+                    <FolderNoteRow key={n.id} note={n} onOpenNote={onOpenNote} />
                   ))}
                   {children.map((c) => {
                     const sOpen = open[c.id]
@@ -650,14 +651,7 @@ function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; q
                         {sOpen && (
                           <div className="ml-4 border-l border-[var(--color-noxe-border)] pl-1">
                             {filteredNotes(c.id).map((n) => (
-                              <button
-                                key={n.id}
-                                onClick={() => onOpenNote(n.id)}
-                                className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left hover:bg-[var(--color-noxe-panel-2)]"
-                              >
-                                <Article size={11} className="text-[var(--color-noxe-muted)]" />
-                                <span className="truncate">{n.title}</span>
-                              </button>
+                              <FolderNoteRow key={n.id} note={n} onOpenNote={onOpenNote} />
                             ))}
                           </div>
                         )}
@@ -693,10 +687,12 @@ function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; q
         onCreate={(parent, name) => refreshAfter(() => folderOps.create({ parent, name }))}
       />
     </div>
+    </DndContext>
   )
 }
 
 function FolderRow({
+  folder,
   name,
   count,
   isOpen,
@@ -716,6 +712,12 @@ function FolderRow({
   onCancelRename: () => void
   onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => void
 }) {
+  const draggable = useFolderDragSource(folder)
+  const droppable = useFolderDropTarget(folder)
+  const setNodeRef = (node: HTMLButtonElement | null) => {
+    draggable.setNodeRef(node)
+    droppable.setNodeRef(node)
+  }
   if (isRenaming) {
     return (
       <InlineRename
@@ -730,14 +732,33 @@ function FolderRow({
   }
   return (
     <button
+      ref={setNodeRef}
+      {...draggable.attributes}
+      {...draggable.listeners}
       onClick={onToggle}
       onContextMenu={onContextMenu}
-      className="flex w-full items-center gap-1 rounded px-2 py-1 hover:bg-[var(--color-noxe-panel-2)]"
+      className={`flex w-full items-center gap-1 rounded px-2 py-1 hover:bg-[var(--color-noxe-panel-2)] ${droppable.isOver ? 'bg-[var(--color-noxe-accent-soft)]' : ''}`}
     >
       {isOpen ? <CaretDown size={11} /> : <CaretRight size={11} />}
       <FolderSimple size={12} className="text-[var(--color-noxe-muted)]" />
       <span className="truncate font-medium">{name}</span>
       {count !== undefined && <span className="ml-auto text-[11px] text-[var(--color-noxe-subtle)]">{count}</span>}
+    </button>
+  )
+}
+
+function FolderNoteRow({ note, onOpenNote }: { note: Note; onOpenNote: (id: string) => void }) {
+  const draggable = useNoteDragSource(note.path)
+  return (
+    <button
+      ref={draggable.setNodeRef}
+      {...draggable.attributes}
+      {...draggable.listeners}
+      onClick={() => onOpenNote(note.id)}
+      className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left hover:bg-[var(--color-noxe-panel-2)]"
+    >
+      <Article size={11} className="text-[var(--color-noxe-muted)]" />
+      <span className="truncate">{note.title}</span>
     </button>
   )
 }
