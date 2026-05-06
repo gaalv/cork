@@ -2,7 +2,7 @@
 
 **Owner phase:** M1
 **Depends on:** F02
-**Status:** Draft
+**Status:** Complete
 
 ## Problem Statement
 
@@ -10,11 +10,11 @@ Reading raw `.md` files is fine for one note, but expensive for search, backlink
 
 ## Goals
 
-- [ ] On vault open, build/refresh the index in under 3 s for 1 000 notes.
-- [ ] Persist index in `<app-data>/vaults/<vault-hash>/index.sqlite`.
-- [ ] On file change, update index incrementally in < 200 ms.
-- [ ] Provide query commands: `notes.recent`, `notes.byTag`, `notes.byFolder`, `notes.byId`, `tags.list`, `links.outgoing`, `links.incoming`.
-- [ ] Use FTS5 for body+title search (consumed by F07).
+- [x] On vault open, build/refresh the index in under 3 s for 1 000 notes.
+- [x] Persist index in `<app-data>/vaults/<vault-hash>/index.sqlite`.
+- [x] On file change, update index incrementally in < 200 ms.
+- [x] Provide query commands: `notes.recent`, `notes.byTag`, `notes.byFolder`, `notes.byId`, `tags.list`, `links.outgoing`, `links.incoming`.
+- [x] Use FTS5 for body+title search (consumed by F07).
 
 ## Out of Scope
 
@@ -78,30 +78,30 @@ Reading raw `.md` files is fine for one note, but expensive for search, backlink
 
 | ID       | Story                       | Phase  | Status  |
 | -------- | --------------------------- | ------ | ------- |
-| INDEX-01 | Build on open               | Tasks  | Pending |
-| INDEX-02 | Build perf 1k <3s           | Tasks  | Pending |
-| INDEX-03 | Schema + migrations         | Tasks  | Pending |
-| INDEX-04 | Frontmatter columns         | Tasks  | Pending |
-| INDEX-05 | Tag extraction              | Tasks  | Pending |
-| INDEX-06 | Link extraction             | Tasks  | Pending |
-| INDEX-07 | FTS body+title              | Tasks  | Pending |
-| INDEX-08 | Incremental modify          | Tasks  | Pending |
-| INDEX-09 | Incremental create          | Tasks  | Pending |
-| INDEX-10 | Incremental remove          | Tasks  | Pending |
-| INDEX-11 | Rename row                  | Tasks  | Pending |
-| INDEX-12 | notes.recent                | Tasks  | Pending |
-| INDEX-13 | notes.byTag                 | Tasks  | Pending |
-| INDEX-14 | notes.byFolder              | Tasks  | Pending |
-| INDEX-15 | tags.list                   | Tasks  | Pending |
-| INDEX-16 | links.outgoing/incoming     | Tasks  | Pending |
-| INDEX-17 | WAL + crash safety          | Tasks  | Pending |
-| INDEX-18 | Rebuild on corruption       | Tasks  | Pending |
-| INDEX-19 | Two-parser parity test      | Tasks  | Pending |
-| INDEX-20 | Progress events             | Tasks  | Pending |
+| INDEX-01 | Build on open               | Tasks  | Verified |
+| INDEX-02 | Build perf 1k <3s           | Tasks  | Verified |
+| INDEX-03 | Schema + migrations         | Tasks  | Verified |
+| INDEX-04 | Frontmatter columns         | Tasks  | Verified |
+| INDEX-05 | Tag extraction              | Tasks  | Verified |
+| INDEX-06 | Link extraction             | Tasks  | Verified |
+| INDEX-07 | FTS body+title              | Tasks  | Verified |
+| INDEX-08 | Incremental modify          | Tasks  | Verified |
+| INDEX-09 | Incremental create          | Tasks  | Verified |
+| INDEX-10 | Incremental remove          | Tasks  | Verified |
+| INDEX-11 | Rename row                  | Tasks  | Verified |
+| INDEX-12 | notes.recent                | Tasks  | Verified |
+| INDEX-13 | notes.byTag                 | Tasks  | Verified |
+| INDEX-14 | notes.byFolder              | Tasks  | Verified |
+| INDEX-15 | tags.list                   | Tasks  | Verified |
+| INDEX-16 | links.outgoing/incoming     | Tasks  | Verified |
+| INDEX-17 | WAL + crash safety          | Tasks  | Verified |
+| INDEX-18 | Rebuild on corruption       | Tasks  | Verified |
+| INDEX-19 | Two-parser parity test      | Tasks  | Verified |
+| INDEX-20 | Progress events             | Tasks  | Verified |
 
 ## Success Criteria
 
-- [ ] 1 k-note vault: full build < 3 s; per-file update < 200 ms.
-- [ ] FTS query for a 3-letter prefix returns < 50 ms on 1 k notes.
-- [ ] Killing the app mid-build leaves the DB recoverable on next launch.
-- [ ] Parser parity test passes for the fixture vault.
+- [x] 1 k-note vault: full build < 3 s; per-file update < 200 ms.
+- [x] FTS query for a 3-letter prefix returns < 50 ms on 1 k notes.
+- [x] Killing the app mid-build leaves the DB recoverable on next launch.
+- [x] Parser parity test passes for the fixture vault.

@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T15:45-03:00
-**Current Work:** F02 Vault FS complete; F03 Index is next
+**Last Updated:** 2026-05-06T16:54-03:00
+**Current Work:** F03 Index complete; F04 Shell is next
 
 ---
 
@@ -127,6 +127,14 @@ src-tauri/
 **Trade-off:** The E2E validates UI wiring/listing with a fixture-shaped payload; Rust IPC/file walking remain covered by cargo tests.
 **Impact:** Production desktop builds do not expose the hook unless served on localhost for tests.
 
+
+### AD-024: Index bench split between Rust correctness and CI summary (2026-05-06)
+
+**Decision:** F03 keeps the authoritative SQLite/indexer performance checks in Rust worker tests, while `scripts/bench-index.mjs` provides a deterministic non-blocking CI summary without launching the desktop IPC runtime.
+**Reason:** The GitHub Actions browser/Node environment cannot reliably drive Tauri desktop IPC headlessly, but the Rust tests exercise the real parser, WAL database, FTS tables, and incremental worker path.
+**Trade-off:** The CI summary numbers are synthetic JS-side timings; use Rust test timings for release gating.
+**Impact:** Future desktop IPC benchmarks can replace the JS harness when Tauri E2E automation is available.
+
 ---
 
 ## Active Blockers
@@ -139,6 +147,7 @@ _None._
 
 - **L-001:** Vite preview serves the last `dist/`; E2E scripts that target preview should build first so browser tests exercise current source.
 - **L-002:** Watcher echo suppression needs canonical paths because macOS temp paths may differ between `/var` and `/private/var`.
+- **L-003:** Vitest on Node 24 can report Tinypool worker termination failures after all tests pass; running Vitest in a single thread keeps the suite deterministic.
 
 ---
 
@@ -156,6 +165,7 @@ _None._
 | 008 | Author F11–F14 (assets, folder ops, settings, markdown ext.) + mini-tasks F05-T18 / F04-T14 | 2026-05-06 | — | ✅ Done |
 | 009 | Implement F01 Foundation (Tauri + React + tooling + CI + legacy migration); typecheck/lint/test/build/cargo test/e2e all green | 2026-05-06 | — | ✅ Done |
 | 010 | Implement F02 Vault FS (typed IPC, Rust vault IO/list/watch, vault store, legacy UI bridge, E2E fixture flow) | 2026-05-06 | f68ef01 | ✅ Done |
+| 011 | Implement F03 Index (SQLite schema/migrations, Rust+TS markdown parser parity, worker, IPC, store/UI integration, crash safety) | 2026-05-06 | de3de18 | ✅ Done |
 
 ---
 

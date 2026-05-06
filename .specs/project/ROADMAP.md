@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M1 — Vault & Index
-**Status:** F02 complete; F03 planned
+**Status:** F03 complete; M1 index shipped
 
 Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
@@ -34,7 +34,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Read/write `.md` files via Rust IPC
 - File watcher (Rust `notify`) emitting Tauri events to frontend
 
-**[F03 — Index (SQLite)](../features/F03-index/spec.md)** — PLANNED
+**[F03 — Index (SQLite)](../features/F03-index/spec.md)** — COMPLETE
 - SQLite schema: `notes`, `links`, `tags`, `note_tags`
 - Markdown parser (Rust `pulldown-cmark`) extracting title, tags, wikilinks
 - Incremental indexer reactive to file watcher events
