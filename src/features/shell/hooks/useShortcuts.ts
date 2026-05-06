@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
 
+import { openOrCreateToday } from "@/features/daily/services/dailyService";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
@@ -50,6 +51,13 @@ export function useShortcuts() {
         }
         event.preventDefault();
         void openVault();
+      },
+      "$mod+d": (event) => {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+        void openOrCreateToday();
       },
       "$mod+\\": (event) => {
         if (isEditableTarget(event.target)) {
