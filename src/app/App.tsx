@@ -1,4 +1,4 @@
-import { LayoutMinimalCommand } from "@/features/_legacy/LayoutMinimalCommand";
+import { Shell } from "@/features/shell";
 
 /**
  * Root app component. Currently renders the migrated Layout C as a single
@@ -8,7 +8,7 @@ import { LayoutMinimalCommand } from "@/features/_legacy/LayoutMinimalCommand";
 export function App() {
   return (
     <div className="flex h-full flex-col">
-      <LayoutMinimalCommand />
+      <Shell />
     </div>
   );
 }
