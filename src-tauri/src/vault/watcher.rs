@@ -107,7 +107,10 @@ impl WatcherController {
     }
 
     pub fn is_running(&self) -> bool {
-        self.handle.lock().expect("watcher mutex poisoned").is_some()
+        self.handle
+            .lock()
+            .expect("watcher mutex poisoned")
+            .is_some()
     }
 }
 
@@ -171,7 +174,7 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use crate::vault::io::{save_atomic, metadata_mtime_ms};
+    use crate::vault::io::{metadata_mtime_ms, save_atomic};
     use crate::vault::SaveInput;
 
     use super::*;
@@ -184,9 +187,15 @@ mod tests {
         let sink: VaultEventSink = Arc::new(|_| {});
 
         controller
-            .start(dir.path().to_path_buf(), Arc::clone(&cache), Arc::clone(&sink))
+            .start(
+                dir.path().to_path_buf(),
+                Arc::clone(&cache),
+                Arc::clone(&sink),
+            )
             .unwrap();
-        controller.start(dir.path().to_path_buf(), cache, sink).unwrap();
+        controller
+            .start(dir.path().to_path_buf(), cache, sink)
+            .unwrap();
         assert!(controller.is_running());
         controller.stop();
         controller.stop();
@@ -207,14 +216,20 @@ mod tests {
             .unwrap();
 
         for index in 0..50 {
-            fs::write(dir.path().join(format!("note-{index}.md")), format!("# {index}")).unwrap();
+            fs::write(
+                dir.path().join(format!("note-{index}.md")),
+                format!("# {index}"),
+            )
+            .unwrap();
         }
 
         thread::sleep(Duration::from_millis(700));
         let events = rx.try_iter().collect::<Vec<_>>();
         assert!(!events.is_empty());
         assert!(events.len() <= 50);
-        assert!(events.iter().all(|event| event.source == FileChangeSource::External));
+        assert!(events
+            .iter()
+            .all(|event| event.source == FileChangeSource::External));
     }
 
     #[test]

@@ -35,7 +35,9 @@ pub struct SearchResult {
 pub fn recent(conn: &Connection, limit: Option<usize>) -> Result<Vec<NoteEntry>, IpcError> {
     let limit = limit.unwrap_or(20).min(200) as i64;
     let mut stmt = conn
-        .prepare("SELECT id, path, folder, title, size, mtime FROM notes ORDER BY mtime DESC LIMIT ?1")
+        .prepare(
+            "SELECT id, path, folder, title, size, mtime FROM notes ORDER BY mtime DESC LIMIT ?1",
+        )
         .map_err(sql_error)?;
     let rows = stmt.query_map([limit], note_from_row).map_err(sql_error)?;
     collect_notes(rows)
@@ -52,7 +54,9 @@ pub fn by_tag(conn: &Connection, tag: &str) -> Result<Vec<NoteEntry>, IpcError> 
              ORDER BY n.mtime DESC",
         )
         .map_err(sql_error)?;
-    let rows = stmt.query_map(params![tag, descendant], note_from_row).map_err(sql_error)?;
+    let rows = stmt
+        .query_map(params![tag, descendant], note_from_row)
+        .map_err(sql_error)?;
     collect_notes(rows)
 }
 
@@ -70,7 +74,9 @@ pub fn by_folder(conn: &Connection, folder: &str) -> Result<Vec<NoteEntry>, IpcE
              ORDER BY mtime DESC",
         )
         .map_err(sql_error)?;
-    let rows = stmt.query_map(params![folder, prefix], note_from_row).map_err(sql_error)?;
+    let rows = stmt
+        .query_map(params![folder, prefix], note_from_row)
+        .map_err(sql_error)?;
     collect_notes(rows)
 }
 
@@ -141,7 +147,11 @@ pub fn links_incoming(conn: &Connection, note_id: &str) -> Result<Vec<LinkRow>, 
     )
 }
 
-pub fn search(conn: &Connection, query: &str, limit: Option<usize>) -> Result<Vec<SearchResult>, IpcError> {
+pub fn search(
+    conn: &Connection,
+    query: &str,
+    limit: Option<usize>,
+) -> Result<Vec<SearchResult>, IpcError> {
     let limit = limit.unwrap_or(20).min(200) as i64;
     let mut stmt = conn
         .prepare(
@@ -167,7 +177,9 @@ pub fn search(conn: &Connection, query: &str, limit: Option<usize>) -> Result<Ve
     rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)
 }
 
-fn collect_notes(rows: impl Iterator<Item = rusqlite::Result<NoteEntry>>) -> Result<Vec<NoteEntry>, IpcError> {
+fn collect_notes(
+    rows: impl Iterator<Item = rusqlite::Result<NoteEntry>>,
+) -> Result<Vec<NoteEntry>, IpcError> {
     rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)
 }
 
@@ -231,8 +243,16 @@ mod tests {
 
         let tags = tags_list(&conn).unwrap();
 
-        assert_eq!(tags[0], TagCount { tag: "dev".to_string(), count: 1 });
-        assert!(tags.iter().any(|tag| tag.tag == "dev/rust" && tag.count == 1));
+        assert_eq!(
+            tags[0],
+            TagCount {
+                tag: "dev".to_string(),
+                count: 1
+            }
+        );
+        assert!(tags
+            .iter()
+            .any(|tag| tag.tag == "dev/rust" && tag.count == 1));
     }
 
     #[test]
@@ -265,8 +285,11 @@ mod tests {
             [],
         )
         .unwrap();
-        conn.execute("INSERT INTO tags (tag) VALUES ('dev'), ('dev/rust'), ('idea')", [])
-            .unwrap();
+        conn.execute(
+            "INSERT INTO tags (tag) VALUES ('dev'), ('dev/rust'), ('idea')",
+            [],
+        )
+        .unwrap();
         conn.execute(
             "INSERT INTO note_tags (note_id, tag) VALUES ('n1', 'dev'), ('n2', 'dev/rust'), ('n3', 'idea')",
             [],

@@ -40,9 +40,7 @@ pub fn save_atomic(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveRe
         .expected_mtime
         .is_some_and(|expected_mtime| expected_mtime != current_mtime)
     {
-        return Err(IpcError::Conflict {
-            current_mtime,
-        });
+        return Err(IpcError::Conflict { current_mtime });
     }
 
     let dir = input
@@ -52,10 +50,15 @@ pub fn save_atomic(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveRe
     let mut temp_file = NamedTempFile::new_in(dir)?;
     temp_file.write_all(serialize_note(&input.frontmatter, &input.body)?.as_bytes())?;
     temp_file.flush()?;
-    temp_file.persist(&input.path).map_err(|err| IpcError::Io(err.to_string()))?;
+    temp_file
+        .persist(&input.path)
+        .map_err(|err| IpcError::Io(err.to_string()))?;
 
     let metadata = fs::metadata(&input.path)?;
-    let fingerprint_path = input.path.canonicalize().unwrap_or_else(|_| input.path.clone());
+    let fingerprint_path = input
+        .path
+        .canonicalize()
+        .unwrap_or_else(|_| input.path.clone());
     cache.record(fingerprint_path, metadata.len(), metadata.modified()?);
 
     Ok(SaveResult {
@@ -67,7 +70,11 @@ pub fn save_atomic(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveRe
 pub fn create_note(input: &CreateNoteInput) -> Result<PathBuf, IpcError> {
     fs::create_dir_all(&input.folder)?;
     let base_title = input.title.as_deref().unwrap_or("Untitled").trim();
-    let base_title = if base_title.is_empty() { "Untitled" } else { base_title };
+    let base_title = if base_title.is_empty() {
+        "Untitled"
+    } else {
+        base_title
+    };
     let path = unique_note_path(&input.folder, base_title);
     let mut frontmatter = Map::new();
     frontmatter.insert("created".to_string(), Value::String(iso_utc_now()));
@@ -126,7 +133,10 @@ fn write_new_note(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveRes
         }
     })?;
     let metadata = fs::metadata(&input.path)?;
-    let fingerprint_path = input.path.canonicalize().unwrap_or_else(|_| input.path.clone());
+    let fingerprint_path = input
+        .path
+        .canonicalize()
+        .unwrap_or_else(|_| input.path.clone());
     cache.record(fingerprint_path, metadata.len(), metadata.modified()?);
     Ok(SaveResult {
         path: input.path.clone(),
@@ -167,8 +177,13 @@ fn serialize_note(frontmatter: &Value, body: &str) -> Result<String, IpcError> {
     if frontmatter.as_object().is_some_and(Map::is_empty) {
         return Ok(body.to_string());
     }
-    let yaml = serde_yaml::to_string(frontmatter).map_err(|err| IpcError::Parse(err.to_string()))?;
-    Ok(format!("---\n{}---\n{}", yaml.trim_start_matches("---\n"), body))
+    let yaml =
+        serde_yaml::to_string(frontmatter).map_err(|err| IpcError::Parse(err.to_string()))?;
+    Ok(format!(
+        "---\n{}---\n{}",
+        yaml.trim_start_matches("---\n"),
+        body
+    ))
 }
 
 pub fn metadata_mtime_ms(metadata: &fs::Metadata) -> Result<i64, IpcError> {
@@ -255,8 +270,14 @@ mod tests {
         let metadata = fs::metadata(&path).unwrap();
 
         assert_eq!(result.path, path);
-        assert!(fs::read_to_string(&input.path).unwrap().contains("title: Saved"));
-        assert!(cache.pop_recent(&input.path.canonicalize().unwrap(), metadata.len(), metadata.modified().unwrap()));
+        assert!(fs::read_to_string(&input.path)
+            .unwrap()
+            .contains("title: Saved"));
+        assert!(cache.pop_recent(
+            &input.path.canonicalize().unwrap(),
+            metadata.len(),
+            metadata.modified().unwrap()
+        ));
     }
 
     #[test]
@@ -272,7 +293,10 @@ mod tests {
             expected_mtime: Some(1),
         };
 
-        assert!(matches!(save_atomic(&input, &cache), Err(IpcError::Conflict { .. })));
+        assert!(matches!(
+            save_atomic(&input, &cache),
+            Err(IpcError::Conflict { .. })
+        ));
     }
 
     #[test]
@@ -298,7 +322,10 @@ mod tests {
         fs::write(&old_path, "old").unwrap();
         fs::write(&existing, "existing").unwrap();
 
-        assert!(matches!(rename_note(&old_path, "existing"), Err(IpcError::Conflict { .. })));
+        assert!(matches!(
+            rename_note(&old_path, "existing"),
+            Err(IpcError::Conflict { .. })
+        ));
         let new_path = rename_note(&old_path, "new").unwrap();
         assert!(new_path.ends_with("new.md"));
         assert!(new_path.exists());
@@ -331,7 +358,10 @@ mod tests {
             .map(|handle| handle.join().unwrap())
             .collect::<Vec<_>>();
         assert_eq!(bodies.len(), 100);
-        assert!(bodies.iter().enumerate().all(|(index, body)| body == &format!("body {index}")));
+        assert!(bodies
+            .iter()
+            .enumerate()
+            .all(|(index, body)| body == &format!("body {index}")));
     }
 
     #[test]

@@ -22,7 +22,11 @@ fn parser_fixtures_emit_stable_ast_json() {
         let root = repo_root();
         let out_path = root.join("target/parser-parity-rust.json");
         fs::create_dir_all(out_path.parent().unwrap()).unwrap();
-        fs::write(out_path, format!("{}\n", serde_json::to_string_pretty(&output).unwrap())).unwrap();
+        fs::write(
+            out_path,
+            format!("{}\n", serde_json::to_string_pretty(&output).unwrap()),
+        )
+        .unwrap();
     }
 }
 

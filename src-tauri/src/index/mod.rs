@@ -45,13 +45,19 @@ pub struct IndexStatus {
 
 impl IndexState {
     pub fn set_app_data_dir(&self, path: PathBuf) {
-        *self.app_data_dir.lock().expect("index app-data mutex poisoned") = Some(path);
+        *self
+            .app_data_dir
+            .lock()
+            .expect("index app-data mutex poisoned") = Some(path);
     }
 
     pub fn configure_for_vault(&self, app: &AppHandle, vault_path: &Path) -> Result<(), IpcError> {
         let vault_path = vault_path.canonicalize()?;
         let mut runtime = self.runtime.lock().expect("index runtime mutex poisoned");
-        if runtime.as_ref().is_some_and(|current| current.vault_path == vault_path) {
+        if runtime
+            .as_ref()
+            .is_some_and(|current| current.vault_path == vault_path)
+        {
             return Ok(());
         }
 
@@ -94,12 +100,20 @@ impl IndexState {
         Ok(())
     }
 
-    fn with_conn<T>(&self, app: &AppHandle, vault: &VaultState, f: impl FnOnce(&Connection) -> Result<T, IpcError>) -> Result<T, IpcError> {
+    fn with_conn<T>(
+        &self,
+        app: &AppHandle,
+        vault: &VaultState,
+        f: impl FnOnce(&Connection) -> Result<T, IpcError>,
+    ) -> Result<T, IpcError> {
         let vault_path = vault.current_path().ok_or(IpcError::NotFound)?;
         self.configure_for_vault(app, &vault_path)?;
         let runtime = self.runtime.lock().expect("index runtime mutex poisoned");
         let runtime = runtime.as_ref().ok_or(IpcError::NotFound)?;
-        let conn = runtime.conn.lock().expect("index connection mutex poisoned");
+        let conn = runtime
+            .conn
+            .lock()
+            .expect("index connection mutex poisoned");
         f(&conn)
     }
 
@@ -168,7 +182,9 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             let state = app_handle.state::<IndexState>();
             let vault = app_handle.state::<VaultState>();
             let job = match payload.kind {
-                FileChangeKind::Created | FileChangeKind::Modified => IndexJob::Upsert(payload.path),
+                FileChangeKind::Created | FileChangeKind::Modified => {
+                    IndexJob::Upsert(payload.path)
+                }
                 FileChangeKind::Removed => IndexJob::Remove(payload.path),
             };
             let _ = state.send_job(&app_handle, &vault, job);
@@ -194,7 +210,8 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let vault = app.state::<VaultState>();
     if let Some(path) = vault.current_path() {
         let app_handle = app.handle().clone();
-        app.state::<IndexState>().configure_for_vault(&app_handle, &path)?;
+        app.state::<IndexState>()
+            .configure_for_vault(&app_handle, &path)?;
     }
     Ok(())
 }

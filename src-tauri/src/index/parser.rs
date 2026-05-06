@@ -49,7 +49,8 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
     let mut skip_ranges = Vec::new();
     let mut heading: Option<HeadingAccumulator> = None;
 
-    let options = Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS;
+    let options =
+        Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS;
     for (event, range) in Parser::new_ext(&body, options).into_offset_iter() {
         match event {
             Event::Start(Tag::CodeBlock(_)) => in_code_block = true,
@@ -145,7 +146,12 @@ fn collect_tags(
     }
 }
 
-fn collect_links(text: &str, regex: &Regex, skip_ranges: &[std::ops::Range<usize>], links: &mut Vec<ParsedLink>) {
+fn collect_links(
+    text: &str,
+    regex: &Regex,
+    skip_ranges: &[std::ops::Range<usize>],
+    links: &mut Vec<ParsedLink>,
+) {
     for captures in regex.captures_iter(text) {
         let Some(target) = captures.get(1) else {
             continue;
@@ -158,7 +164,9 @@ fn collect_links(text: &str, regex: &Regex, skip_ranges: &[std::ops::Range<usize
         }
         links.push(ParsedLink {
             target_text: target.as_str().trim().to_string(),
-            alias: captures.get(2).map(|alias| alias.as_str().trim().to_string()),
+            alias: captures
+                .get(2)
+                .map(|alias| alias.as_str().trim().to_string()),
             position: full_match.start(),
         });
     }
@@ -177,13 +185,21 @@ fn collect_frontmatter_tags(frontmatter: &Value, tags: &mut BTreeSet<String>) {
     match value {
         Value::Array(values) => {
             for value in values {
-                if let Some(tag) = value.as_str().map(normalize_tag).filter(|tag| is_valid_tag(tag)) {
+                if let Some(tag) = value
+                    .as_str()
+                    .map(normalize_tag)
+                    .filter(|tag| is_valid_tag(tag))
+                {
                     tags.insert(tag);
                 }
             }
         }
         Value::String(value) => {
-            for tag in value.split(',').map(normalize_tag).filter(|tag| is_valid_tag(tag)) {
+            for tag in value
+                .split(',')
+                .map(normalize_tag)
+                .filter(|tag| is_valid_tag(tag))
+            {
                 tags.insert(tag);
             }
         }

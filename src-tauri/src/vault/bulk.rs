@@ -52,7 +52,10 @@ pub fn notes_bulk_move(
 ) -> Result<BulkPathResult, IpcError> {
     let root = state.current_path().ok_or(IpcError::NotFound)?;
     let dest_folder = resolve_existing_folder(&root, &dest_folder)?;
-    let mut result = BulkPathResult { ok: Vec::new(), failed: Vec::new() };
+    let mut result = BulkPathResult {
+        ok: Vec::new(),
+        failed: Vec::new(),
+    };
     for path in paths {
         let resolved = match resolve_existing_file(&root, &path) {
             Ok(path) => path,
@@ -66,7 +69,10 @@ pub fn notes_bulk_move(
                 emit_file_renamed(&app, resolved, new_path.clone())?;
                 result.ok.push(new_path);
             }
-            Err(error) => result.failed.push(BulkFailure { path: resolved, error }),
+            Err(error) => result.failed.push(BulkFailure {
+                path: resolved,
+                error,
+            }),
         }
     }
     Ok(result)
@@ -79,7 +85,10 @@ pub fn notes_bulk_trash(
     paths: Vec<PathBuf>,
 ) -> Result<BulkPathResult, IpcError> {
     let root = state.current_path().ok_or(IpcError::NotFound)?;
-    let mut result = BulkPathResult { ok: Vec::new(), failed: Vec::new() };
+    let mut result = BulkPathResult {
+        ok: Vec::new(),
+        failed: Vec::new(),
+    };
     for path in paths {
         let resolved = match resolve_existing_file(&root, &path) {
             Ok(path) => path,
@@ -93,7 +102,10 @@ pub fn notes_bulk_trash(
                 emit_file_changed(&app, resolved.clone(), FileChangeKind::Removed, 0, 0)?;
                 result.ok.push(resolved);
             }
-            Err(error) => result.failed.push(BulkFailure { path: resolved, error }),
+            Err(error) => result.failed.push(BulkFailure {
+                path: resolved,
+                error,
+            }),
         }
     }
     Ok(result)
@@ -107,7 +119,10 @@ pub fn notes_bulk_set_frontmatter(
     patch: FrontmatterPatch,
 ) -> Result<BulkPathResult, IpcError> {
     let root = state.current_path().ok_or(IpcError::NotFound)?;
-    let mut result = BulkPathResult { ok: Vec::new(), failed: Vec::new() };
+    let mut result = BulkPathResult {
+        ok: Vec::new(),
+        failed: Vec::new(),
+    };
     for path in paths {
         let resolved = match resolve_existing_file(&root, &path) {
             Ok(path) => path,
@@ -128,7 +143,10 @@ pub fn notes_bulk_set_frontmatter(
                 )?;
                 result.ok.push(resolved);
             }
-            Err(error) => result.failed.push(BulkFailure { path: resolved, error }),
+            Err(error) => result.failed.push(BulkFailure {
+                path: resolved,
+                error,
+            }),
         }
     }
     Ok(result)
@@ -151,7 +169,11 @@ pub fn move_note(note_path: &Path, dest_folder: &Path) -> Result<PathBuf, IpcErr
     Ok(dest)
 }
 
-pub fn apply_frontmatter_patch(path: &Path, patch: &Map<String, Value>, state: &VaultState) -> Result<(), IpcError> {
+pub fn apply_frontmatter_patch(
+    path: &Path,
+    patch: &Map<String, Value>,
+    state: &VaultState,
+) -> Result<(), IpcError> {
     let mut note = read_note(path)?;
     let mut frontmatter = note.frontmatter.as_object().cloned().unwrap_or_default();
     for (key, value) in patch {
@@ -187,7 +209,11 @@ fn resolve_existing_folder(root: &Path, input: &Path) -> Result<PathBuf, IpcErro
 }
 
 fn resolve_under_root(root: &Path, input: &Path) -> Result<PathBuf, IpcError> {
-    let path = if input.is_absolute() { input.to_path_buf() } else { root.join(input) };
+    let path = if input.is_absolute() {
+        input.to_path_buf()
+    } else {
+        root.join(input)
+    };
     let canonical = path.canonicalize().map_err(map_not_found)?;
     let root = root.canonicalize()?;
     if canonical.starts_with(root) {
@@ -236,9 +262,16 @@ fn move_file_with_fallback(src: &Path, dest: &Path) -> Result<(), IpcError> {
     }
 }
 
-fn emit_file_renamed(app: &AppHandle, old_path: PathBuf, new_path: PathBuf) -> Result<(), IpcError> {
-    app.emit("vault.fileRenamed", VaultFileRenamedEvent { old_path, new_path })
-        .map_err(|err| IpcError::Other(err.to_string()))
+fn emit_file_renamed(
+    app: &AppHandle,
+    old_path: PathBuf,
+    new_path: PathBuf,
+) -> Result<(), IpcError> {
+    app.emit(
+        "vault.fileRenamed",
+        VaultFileRenamedEvent { old_path, new_path },
+    )
+    .map_err(|err| IpcError::Other(err.to_string()))
 }
 
 fn emit_file_changed(
@@ -250,7 +283,13 @@ fn emit_file_changed(
 ) -> Result<(), IpcError> {
     app.emit(
         "vault.fileChanged",
-        VaultFileChangedEvent { path, kind, source: FileChangeSource::Internal, mtime, size },
+        VaultFileChangedEvent {
+            path,
+            kind,
+            source: FileChangeSource::Internal,
+            mtime,
+            size,
+        },
     )
     .map_err(|err| IpcError::Other(err.to_string()))
 }
@@ -297,7 +336,10 @@ mod tests {
         fs::write(&src, "body").unwrap();
         fs::write(dest_folder.join("note.md"), "existing").unwrap();
 
-        assert!(matches!(move_note(&src, &dest_folder), Err(IpcError::Conflict { .. })));
+        assert!(matches!(
+            move_note(&src, &dest_folder),
+            Err(IpcError::Conflict { .. })
+        ));
     }
 
     #[test]

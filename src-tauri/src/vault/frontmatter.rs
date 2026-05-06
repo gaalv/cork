@@ -41,7 +41,8 @@ mod tests {
 
     #[test]
     fn parses_yaml_frontmatter() {
-        let (frontmatter, body) = parse("---\ntitle: Hello\ntags:\n  - rust\n---\n# Hello").unwrap();
+        let (frontmatter, body) =
+            parse("---\ntitle: Hello\ntags:\n  - rust\n---\n# Hello").unwrap();
         assert_eq!(frontmatter["title"], "Hello");
         assert_eq!(frontmatter["tags"][0], "rust");
         assert_eq!(body, "# Hello");

@@ -50,7 +50,12 @@ pub fn folders_rename(
     let root = state.current_path().ok_or(IpcError::NotFound)?;
     let old_path = resolve_folder_path(&root, &old_path)?;
     let path = rename_folder(&old_path, &new_name)?;
-    emit_folder_changed(&app, path.clone(), Some(old_path), FolderChangeKind::Renamed)?;
+    emit_folder_changed(
+        &app,
+        path.clone(),
+        Some(old_path),
+        FolderChangeKind::Renamed,
+    )?;
     Ok(VaultPath { path })
 }
 
@@ -70,7 +75,11 @@ pub fn folders_move(
 }
 
 #[tauri::command]
-pub fn folders_trash(app: AppHandle, state: tauri::State<'_, VaultState>, path: PathBuf) -> Result<(), IpcError> {
+pub fn folders_trash(
+    app: AppHandle,
+    state: tauri::State<'_, VaultState>,
+    path: PathBuf,
+) -> Result<(), IpcError> {
     let root = state.current_path().ok_or(IpcError::NotFound)?;
     let path = resolve_folder_path(&root, &path)?;
     trash_folder(&path)?;
@@ -251,19 +260,28 @@ mod tests {
     fn create_rejects_existing_folder() {
         let dir = tempdir().unwrap();
         fs::create_dir(dir.path().join("Projects")).unwrap();
-        assert!(matches!(create_folder(dir.path(), "Projects"), Err(IpcError::Conflict { .. })));
+        assert!(matches!(
+            create_folder(dir.path(), "Projects"),
+            Err(IpcError::Conflict { .. })
+        ));
     }
 
     #[test]
     fn rejects_hidden_folder_name() {
         let dir = tempdir().unwrap();
-        assert!(matches!(create_folder(dir.path(), ".hidden"), Err(IpcError::Io(_))));
+        assert!(matches!(
+            create_folder(dir.path(), ".hidden"),
+            Err(IpcError::Io(_))
+        ));
     }
 
     #[test]
     fn rejects_names_with_separators() {
         let dir = tempdir().unwrap();
-        assert!(matches!(create_folder(dir.path(), "bad/name"), Err(IpcError::Io(_))));
+        assert!(matches!(
+            create_folder(dir.path(), "bad/name"),
+            Err(IpcError::Io(_))
+        ));
     }
 
     #[test]
@@ -280,7 +298,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let old = create_folder(dir.path(), "Old").unwrap();
         create_folder(dir.path(), "New").unwrap();
-        assert!(matches!(rename_folder(&old, "New"), Err(IpcError::Conflict { .. })));
+        assert!(matches!(
+            rename_folder(&old, "New"),
+            Err(IpcError::Conflict { .. })
+        ));
     }
 
     #[test]
@@ -299,7 +320,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let src = create_folder(dir.path(), "Src").unwrap();
         let child = create_folder(&src, "Child").unwrap();
-        assert!(matches!(move_folder(&src, &child), Err(IpcError::Conflict { .. })));
+        assert!(matches!(
+            move_folder(&src, &child),
+            Err(IpcError::Conflict { .. })
+        ));
     }
 
     #[test]
@@ -308,7 +332,10 @@ mod tests {
         let src = create_folder(dir.path(), "Src").unwrap();
         let dest_parent = create_folder(dir.path(), "Dest").unwrap();
         create_folder(&dest_parent, "Src").unwrap();
-        assert!(matches!(move_folder(&src, &dest_parent), Err(IpcError::Conflict { .. })));
+        assert!(matches!(
+            move_folder(&src, &dest_parent),
+            Err(IpcError::Conflict { .. })
+        ));
     }
 
     #[test]
@@ -319,12 +346,18 @@ mod tests {
         fs::write(nested.join("note.md"), "body").unwrap();
         let dest = dir.path().join("Copied");
         copy_dir_all(&src, &dest).unwrap();
-        assert_eq!(fs::read_to_string(dest.join("Nested/note.md")).unwrap(), "body");
+        assert_eq!(
+            fs::read_to_string(dest.join("Nested/note.md")).unwrap(),
+            "body"
+        );
     }
 
     #[test]
     fn trash_rejects_missing_folder() {
         let dir = tempdir().unwrap();
-        assert!(matches!(trash_folder(&dir.path().join("missing")), Err(IpcError::NotFound)));
+        assert!(matches!(
+            trash_folder(&dir.path().join("missing")),
+            Err(IpcError::NotFound)
+        ));
     }
 }
