@@ -22,6 +22,16 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.create": "notes_create",
   "notes.rename": "notes_rename",
   "notes.trash": "notes_trash",
+  "notes.recent": "notes_recent",
+  "notes.byTag": "notes_by_tag",
+  "notes.byFolder": "notes_by_folder",
+  "notes.byId": "notes_by_id",
+  "tags.list": "tags_list",
+  "links.outgoing": "links_outgoing",
+  "links.incoming": "links_incoming",
+  "index.search": "index_search",
+  "index.status": "index_status",
+  "index.rebuild": "index_rebuild",
 };
 
 type RustArgs = Record<string, unknown> | undefined;
@@ -65,10 +75,26 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "vault.list":
     case "vault.watcherStart":
     case "vault.watcherStop":
+    case "tags.list":
+    case "index.status":
+    case "index.rebuild":
       return undefined;
     case "notes.read":
     case "notes.trash":
+    case "notes.recent":
+    case "notes.byId":
+    case "links.outgoing":
+    case "links.incoming":
+    case "index.search":
       return args as RustArgs;
+    case "notes.byTag": {
+      const input = args as { tag: string };
+      return { tag: input.tag };
+    }
+    case "notes.byFolder": {
+      const input = args as { folder: string };
+      return { folder: input.folder };
+    }
     case "notes.save":
       return { input: args };
     case "notes.create": {
