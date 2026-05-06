@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M1 — Vault & Index
-**Status:** F14 complete; v1 roadmap markdown extensions shipped
+**Status:** F13 complete; M5 polish settings/search/menu shipped
 
 Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
@@ -134,7 +134,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Multi-vault list & switcher
 - Active-vault persistence
 
-**[F13 — Settings + In-note Search + App Menu](../features/F13-settings-search-menu/spec.md)** — PLANNED
+**[F13 — Settings + In-note Search + App Menu](../features/F13-settings-search-menu/spec.md)** — COMPLETE
 - Settings panel (General/Editor/Files/Markdown/Daily/Advanced)
 - Per-vault overrides in `<vault>/.noxe/config.json`
 - ⌘F / ⌘⇧F via `@codemirror/search`

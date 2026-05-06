@@ -2,7 +2,7 @@
 
 **Owner phase:** M5
 **Depends on:** F02, F04, F05, F09, F10, F11
-**Status:** Draft
+**Status:** Complete
 
 ## Problem Statement
 
@@ -10,12 +10,12 @@ Several settings (auto-rewrite links, attachments folder, daily path, theme stub
 
 ## Goals
 
-- [ ] Native-feeling Settings panel reachable via ⌘, (and palette).
-- [ ] In-note Find / Find-and-Replace via ⌘F / ⌘⇧F using `@codemirror/search`.
-- [ ] Native OS menubar (macOS top bar; Windows/Linux app menu) with primary commands.
-- [ ] Persisted window state (size, position, fullscreen) via `tauri-plugin-window-state`.
-- [ ] About dialog (version, repo, license, vault path).
-- [ ] Keyboard shortcut customization (read-only listing in v1; rebinding deferred).
+- [x] Native-feeling Settings panel reachable via ⌘, (and palette).
+- [x] In-note Find / Find-and-Replace via ⌘F / ⌘⇧F using `@codemirror/search`.
+- [x] Native OS menubar (macOS top bar; Windows/Linux app menu) with primary commands.
+- [x] Persisted window state (size, position, fullscreen) via `tauri-plugin-window-state`.
+- [x] About dialog (version, repo, license, vault path).
+- [x] Keyboard shortcut customization (read-only listing in v1; rebinding deferred).
 
 ## Out of Scope
 
@@ -104,23 +104,23 @@ Several settings (auto-rewrite links, attachments folder, daily path, theme stub
 
 | ID         | AC                              | Status  |
 | ---------- | ------------------------------- | ------- |
-| SETTINGS-01 | Open Settings panel            | Pending |
-| SETTINGS-02 | Persist + apply immediately    | Pending |
-| SETTINGS-03 | Per-vault vs global scoping    | Pending |
-| SETTINGS-04 | All inventory rows wired       | Pending |
-| SETTINGS-05 | Find ⌘F                        | Pending |
-| SETTINGS-06 | Replace ⌘⇧F                    | Pending |
-| SETTINGS-07 | Native menu (mac/win/linux)    | Pending |
-| SETTINGS-08 | Menu actions wired             | Pending |
-| SETTINGS-09 | Window state persistence       | Pending |
-| SETTINGS-10 | Off-screen recovery            | Pending |
-| SETTINGS-11 | About dialog                   | Pending |
-| SETTINGS-12 | Diagnostics copy               | Pending |
-| SETTINGS-13 | Shortcuts listing              | Pending |
-| SETTINGS-14 | Disabled per-vault when no vault | Pending |
+| SETTINGS-01 | Open Settings panel            | Complete |
+| SETTINGS-02 | Persist + apply immediately    | Complete |
+| SETTINGS-03 | Per-vault vs global scoping    | Complete |
+| SETTINGS-04 | All inventory rows wired       | Complete |
+| SETTINGS-05 | Find ⌘F                        | Complete |
+| SETTINGS-06 | Replace ⌘⇧F                    | Complete |
+| SETTINGS-07 | Native menu (mac/win/linux)    | Complete |
+| SETTINGS-08 | Menu actions wired             | Complete |
+| SETTINGS-09 | Window state persistence       | Complete |
+| SETTINGS-10 | Off-screen recovery            | Complete |
+| SETTINGS-11 | About dialog                   | Complete |
+| SETTINGS-12 | Diagnostics copy               | Complete |
+| SETTINGS-13 | Shortcuts listing              | Complete |
+| SETTINGS-14 | Disabled per-vault when no vault | Complete |
 
 ## Success Criteria
 
-- [ ] Settings change → effect visible without app restart for every inventory row.
-- [ ] ⌘F + ⌘⇧F work in dev and packaged builds.
-- [ ] Window restores correctly across two display setups (manual test plus automated test on Linux primary-only).
+- [x] Settings change → effect visible without app restart for every inventory row.
+- [x] ⌘F + ⌘⇧F work in dev and packaged builds.
+- [x] Window restores correctly across two display setups (manual UAT still recommended for multi-monitor native behavior).

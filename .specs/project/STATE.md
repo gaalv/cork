@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T19:30-03:00
-**Current Work:** F14 Markdown Extensions complete; F13 is owned by the parallel settings-shell agent
+**Last Updated:** 2026-05-06T20:00-03:00
+**Current Work:** F13 Settings + Search + App Menu complete
 
 ---
 
@@ -200,6 +200,20 @@ src-tauri/
 **Trade-off:** HTML shape remains covered by TS preview component tests and markdown/html fixtures, while Rust validates indexing semantics.
 **Impact:** Future Markdown extensions should add a stable token shape first, then renderer-specific tests.
 
+### AD-034: F13 settings UI uses a dedicated UI store and reuses the settings bridge (2026-05-06)
+
+**Decision:** Settings modal visibility/section state lives in `useSettingsUiStore`, while persisted values continue through the F13 app/vault settings stores and `settingsBridge`.
+**Reason:** Keeps shell commands, shortcuts, palette, and native menu actions able to open specific settings sections without coupling to panel internals.
+**Trade-off:** The settings panel is not route-addressable yet; deep links can be added later if needed.
+**Impact:** Menu, palette, and keyboard shortcuts dispatch to the same UI store.
+
+### AD-035: Native menu forwards stable action IDs to the existing command layer (2026-05-06)
+
+**Decision:** Tauri menu events emit `menu.action` string IDs and TypeScript dispatches those IDs into shell/settings/vault actions.
+**Reason:** Keeps Rust menu construction simple and avoids duplicating business logic in native code.
+**Trade-off:** Native menu behavior needs manual UAT on macOS/Windows/Linux because browser tests cannot exercise OS menubars.
+**Impact:** New menu actions should add a stable ID in `src-tauri/src/menu.rs` and a matching branch in `menuActions.ts`.
+
 ---
 
 ## Active Blockers
@@ -223,6 +237,7 @@ _None._
 - **L-011:** NoteView must not reload a dirty existing buffer when navigating away and back during a failed vault switch; otherwise fixture/native reads can overwrite unsaved edits.
 - **L-012:** Home E2E note locators should target the intended section because Recents, All Notes, and card menus can expose duplicate note-title buttons.
 - **L-013:** Parser parity is more robust when Markdown extensions expose stable semantic tokens rather than comparing renderer-specific HTML across different parser stacks.
+- **L-014:** Browser tests must guard Tauri event listeners behind `window.__TAURI_INTERNALS__`; otherwise jsdom shells report unhandled rejections from `@tauri-apps/api/event`.
 
 ---
 
@@ -251,6 +266,7 @@ _None._
 | 017 | Complete F11 remaining asset pipeline tasks (preview image rendering, CM6 image drop/paste, drop-render E2E); T11 deferred pending F10-T11 | 2026-05-06 | multiple | ✅ Partial |
 | 019 | Complete F10 vault management (close/recent, switcher, per-vault config, switch chaos E2E) plus unblock F11 attachments config and F12 topbar rename | 2026-05-06 | multiple | ✅ Done |
 | 020 | Implement F14 Markdown Extensions (callouts, footnotes, highlights, semantic parser parity, CM6 decorations) | 2026-05-06 | multiple | ✅ Done |
+| 021 | Implement F13 Settings + Search + App Menu (settings panel rows, in-note search, native menu, window recovery, about/diagnostics/shortcuts) | 2026-05-06 | multiple | ✅ Done |
 
 ---
 
