@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
-import type { JsonRecord, NoteFile, SaveResult } from "@/shared/ipc/types";
+import { client } from "@/shared/ipc/client";
+
+import type { JsonRecord, NoteFile, SaveInput, SaveResult } from "@/shared/ipc/types";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -41,6 +43,7 @@ type EditorStore = {
   setConflict: (noteId: string, conflict: EditorConflict) => void;
   resolveConflict: (noteId: string, strategy: "reload" | "keep", file?: NoteFile) => void;
   replaceFromDisk: (noteId: string, file: NoteFile) => void;
+  flushAll: () => Promise<void>;
 };
 
 export const useEditorStore = create<EditorStore>((set) => ({
@@ -110,6 +113,13 @@ export const useEditorStore = create<EditorStore>((set) => ({
   replaceFromDisk(noteId, file) {
     updateBuffer(set, noteId, () => createBuffer(noteId, file));
   },
+
+  async flushAll() {
+    const dirtyBuffers = [...useEditorStore.getState().buffers.values()].filter(
+      (buffer) => buffer.dirty && !buffer.conflict,
+    );
+    await Promise.all(dirtyBuffers.map((buffer) => flushBuffer(buffer.noteId)));
+  },
 }));
 
 function createBuffer(noteId: string, file: NoteFile): EditorBuffer {
@@ -130,6 +140,44 @@ function createBuffer(noteId: string, file: NoteFile): EditorBuffer {
 
 function cloneBuffers(buffers: Map<string, EditorBuffer>) {
   return new Map(buffers);
+}
+
+async function flushBuffer(noteId: string): Promise<void> {
+  const buffer = useEditorStore.getState().buffers.get(noteId);
+  if (!buffer || !buffer.dirty || buffer.conflict) {
+    return;
+  }
+  useEditorStore.getState().markSaving(noteId);
+  try {
+    useEditorStore.getState().setPendingSave(noteId, false);
+    const result = await client.notes.save(saveInput(buffer));
+    useEditorStore.getState().markSaved(noteId, result);
+  } catch (error) {
+    useEditorStore.getState().markSaveError(noteId, errorMessage(error));
+    throw error;
+  }
+}
+
+function saveInput(buffer: EditorBuffer): SaveInput {
+  return {
+    path: buffer.path,
+    frontmatter: buffer.frontmatter,
+    body: buffer.body,
+    expectedMtime: buffer.loadedMtime,
+  };
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+  return "Unable to save note";
 }
 
 type SetEditorState = (updater: (state: EditorStore) => Partial<EditorStore>) => void;

@@ -1,6 +1,18 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useEditorStore } from "./editorStore";
+
+const { clientMock } = vi.hoisted(() => ({
+  clientMock: {
+    notes: {
+      save: vi.fn(),
+    },
+  },
+}));
+
+vi.mock("@/shared/ipc/client", () => ({
+  client: clientMock,
+}));
 
 import type { NoteFile } from "@/shared/ipc/types";
 
@@ -12,6 +24,7 @@ const file: NoteFile = {
 };
 
 beforeEach(() => {
+  clientMock.notes.save.mockReset();
   useEditorStore.setState({ activeNoteId: null, buffers: new Map() });
 });
 
@@ -58,5 +71,19 @@ describe("editorStore", () => {
     expect(buffer?.body).toBe("Disk");
     expect(buffer?.dirty).toBe(false);
     expect(buffer?.conflict).toBeNull();
+  });
+
+  it("flushes every dirty buffer", async () => {
+    clientMock.notes.save.mockImplementation(async ({ path }) => ({ path, mtime: 20 }));
+    useEditorStore.getState().openBuffer({ noteId: "n1", file });
+    useEditorStore.getState().updateBody("n1", "Hello one");
+    useEditorStore.getState().openBuffer({ noteId: "n2", file: { ...file, path: "notes/two.md" } });
+    useEditorStore.getState().updateBody("n2", "Hello two");
+
+    await useEditorStore.getState().flushAll();
+
+    expect(clientMock.notes.save).toHaveBeenCalledTimes(2);
+    expect(useEditorStore.getState().buffers.get("n1")?.dirty).toBe(false);
+    expect(useEditorStore.getState().buffers.get("n2")?.dirty).toBe(false);
   });
 });
