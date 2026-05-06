@@ -7,6 +7,7 @@ import { katexRehypePlugin, katexRemarkPlugin } from "./katexRenderer";
 
 import { rehypeFootnotes } from "./rehypeFootnotes";
 import { remarkCallouts } from "./remarkCallouts";
+import { remarkHighlight } from "./remarkHighlight";
 import { remarkWikilink } from "./remarkWikilink";
 
 import type { PluggableList } from "unified";
@@ -24,5 +25,5 @@ const markdownSanitizeSchema = {
   },
 };
 
-export const baseRemarkPlugins: PluggableList = [remarkFrontmatter, remarkGfm, katexRemarkPlugin, remarkCallouts, remarkWikilink];
+export const baseRemarkPlugins: PluggableList = [remarkFrontmatter, remarkGfm, katexRemarkPlugin, remarkCallouts, remarkHighlight, remarkWikilink];
 export const baseRehypePlugins: PluggableList = [rehypeRaw, rehypeFootnotes, [rehypeSanitize, markdownSanitizeSchema], katexRehypePlugin];

@@ -88,4 +88,17 @@ describe("Preview", () => {
     expect(screen.getByText("Body without a reference.")).toBeInTheDocument();
     expect(screen.queryByText(/This definition is not referenced/)).not.toBeInTheDocument();
   });
+
+  it("renders highlight markers as mark elements", () => {
+    render(<Preview markdown={"This is ==important== text."} />);
+
+    expect(screen.getByText("important").tagName).toBe("MARK");
+  });
+
+  it("keeps escaped highlight markers literal", () => {
+    render(<Preview markdown={"This keeps \\==literal== markers."} />);
+
+    expect(screen.getByText(/==literal==/)).toBeInTheDocument();
+    expect(screen.queryByText("literal")?.tagName).not.toBe("MARK");
+  });
 });
