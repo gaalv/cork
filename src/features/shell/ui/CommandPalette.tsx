@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Command } from "cmdk";
 import fuzzysort from "fuzzysort";
 
+import { openOrCreateToday } from "@/features/daily/services/dailyService";
 import { commandsRegistry } from "@/features/shell/commands/registry";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useIndexStore } from "@/features/index/state/indexStore";
@@ -103,7 +104,7 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
                   key={itemKey(item)}
                   item={item}
                   onSelect={() => {
-                    runPaletteItem(item, { closePalette, navigate, toggleDrawer, openVault, rebuild });
+                    runPaletteItem(item, { closePalette, navigate, toggleDrawer, openVault, rebuild, openDaily: openOrCreateToday });
                   }}
                 />
               ))}
@@ -218,6 +219,7 @@ function runPaletteItem(
     toggleDrawer: (drawer: "search" | "folders" | "recent" | "starred" | "tags") => void;
     openVault: () => Promise<void>;
     rebuild: () => Promise<void>;
+    openDaily: () => Promise<void>;
   },
 ) {
   if (item.kind === "note") {
@@ -236,6 +238,7 @@ function runCommand(
     navigate: (view: { kind: "home" } | { kind: "note"; id: string }) => void;
     openVault: () => Promise<void>;
     rebuild: () => Promise<void>;
+    openDaily: () => Promise<void>;
   },
 ) {
   if (id === "go-home") {
@@ -246,6 +249,9 @@ function runCommand(
   }
   if (id === "open-vault") {
     void actions.openVault();
+  }
+  if (id === "open-daily") {
+    void actions.openDaily();
   }
   if (id === "rebuild-index") {
     void actions.rebuild();
