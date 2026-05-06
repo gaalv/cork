@@ -32,6 +32,22 @@ export const noxeEditorTheme = EditorView.theme({
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
     backgroundColor: "color-mix(in oklab, var(--color-noxe-accent, #7c5cff) 24%, transparent)",
   },
+  ".cm-callout-line": {
+    backgroundColor: "color-mix(in oklab, var(--color-noxe-accent, #7c5cff) 8%, transparent)",
+    borderLeft: "3px solid var(--color-noxe-accent, #7c5cff)",
+  },
+  ".cm-footnote-def": {
+    backgroundColor: "color-mix(in oklab, var(--color-noxe-muted, #7a736b) 8%, transparent)",
+  },
+  ".cm-footnote-ref": {
+    color: "var(--color-noxe-accent, #7c5cff)",
+    fontSize: "0.82em",
+    verticalAlign: "super",
+  },
+  ".cm-highlight-mark": {
+    backgroundColor: "color-mix(in oklab, var(--color-noxe-warning, #f59e0b) 22%, transparent)",
+    borderRadius: "0.2rem",
+  },
 });
 
 export const noxeHighlightStyle = syntaxHighlighting(

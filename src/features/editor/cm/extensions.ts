@@ -5,8 +5,11 @@ import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from "@cod
 import { EditorState } from "@codemirror/state";
 import { EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
 
+import { calloutHintExtension } from "./calloutHint";
 import { concealedBrackets } from "./concealedBrackets";
+import { footnoteDefExtension } from "./footnoteDef";
 import { headingSizes } from "./headingSizes";
+import { highlightMarkExtension } from "./highlightMark";
 import { searchExtension } from "./searchExtension";
 import { slashCompletionSource } from "./slashMenu";
 import { tagCompletionSource } from "./tagAutocomplete";
@@ -30,6 +33,9 @@ export function createEditorExtensions(options: EditorExtensionOptions = {}): Ex
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     noxeHighlightStyle,
     headingSizes,
+    calloutHintExtension,
+    footnoteDefExtension,
+    highlightMarkExtension,
     concealedBrackets,
     searchExtension,
     autocompletion({ override: [wikilinkCompletionSource, tagCompletionSource, slashCompletionSource] }),

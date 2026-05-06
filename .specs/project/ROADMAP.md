@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M1 — Vault & Index
-**Status:** F03 complete; M1 index shipped
+**Status:** F14 complete; v1 roadmap markdown extensions shipped
 
 Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
@@ -142,7 +142,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - `tauri-plugin-window-state` window persistence + off-screen recovery
 - About + diagnostics + shortcuts list
 
-**[F14 — Markdown Extensions](../features/F14-markdown-extensions/spec.md)** — PLANNED
+**[F14 — Markdown Extensions](../features/F14-markdown-extensions/spec.md)** — COMPLETE
 - Obsidian-style callouts (`> [!note]` etc.)
 - Footnotes (`[^1]`)
 - Highlight (`==text==`)

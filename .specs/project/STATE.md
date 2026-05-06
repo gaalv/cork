@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T19:05-03:00
-**Current Work:** F10 vault management, F11 attachments config, and F12 topbar rename complete; next planned work is F13/F14
+**Last Updated:** 2026-05-06T19:30-03:00
+**Current Work:** F14 Markdown Extensions complete; F13 is owned by the parallel settings-shell agent
 
 ---
 
@@ -193,6 +193,13 @@ src-tauri/
 **Trade-off:** Existing browser E2E expectations moved from `attachments/` to `_attachments/`.
 **Impact:** F11/F13 settings should present `_attachments` as the default attachment folder.
 
+### AD-033: Markdown extension parity tracks semantic extension tokens (2026-05-06)
+
+**Decision:** F14 extends the F03 parser parity contract with `markdownExtensions` semantic tokens instead of byte-identical HTML snapshots for the Rust indexer.
+**Reason:** The Rust path indexes Markdown semantics and does not render preview HTML; token parity validates callout, footnote, and highlight recognition without coupling the index to React preview markup.
+**Trade-off:** HTML shape remains covered by TS preview component tests and markdown/html fixtures, while Rust validates indexing semantics.
+**Impact:** Future Markdown extensions should add a stable token shape first, then renderer-specific tests.
+
 ---
 
 ## Active Blockers
@@ -215,6 +222,7 @@ _None._
 - **L-010:** Browser Home E2E needs fixture-backed note reads/frontmatter toggles because Playwright preview cannot call Tauri IPC.
 - **L-011:** NoteView must not reload a dirty existing buffer when navigating away and back during a failed vault switch; otherwise fixture/native reads can overwrite unsaved edits.
 - **L-012:** Home E2E note locators should target the intended section because Recents, All Notes, and card menus can expose duplicate note-title buttons.
+- **L-013:** Parser parity is more robust when Markdown extensions expose stable semantic tokens rather than comparing renderer-specific HTML across different parser stacks.
 
 ---
 
@@ -242,6 +250,7 @@ _None._
 | 018 | Implement F08 Note View + Meta Panel (store, outline/backlinks/hooks, responsive meta panel, NoteView composition) | 2026-05-06 | multiple | ✅ Done |
 | 017 | Complete F11 remaining asset pipeline tasks (preview image rendering, CM6 image drop/paste, drop-render E2E); T11 deferred pending F10-T11 | 2026-05-06 | multiple | ✅ Partial |
 | 019 | Complete F10 vault management (close/recent, switcher, per-vault config, switch chaos E2E) plus unblock F11 attachments config and F12 topbar rename | 2026-05-06 | multiple | ✅ Done |
+| 020 | Implement F14 Markdown Extensions (callouts, footnotes, highlights, semantic parser parity, CM6 decorations) | 2026-05-06 | multiple | ✅ Done |
 
 ---
 
