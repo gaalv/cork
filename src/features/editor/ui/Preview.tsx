@@ -2,11 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { AssetImage } from "@/features/assets/preview/AssetImage";
+import { WikilinkComponent } from "@/features/editor/preview/WikilinkComponent";
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { baseRehypePlugins, baseRemarkPlugins } from "@/features/editor/preview/plugins";
 import { MermaidDiagram } from "@/features/editor/preview/mermaidRenderer";
 import { highlightCode } from "@/features/editor/preview/shikiHighlighter";
+import { client } from "@/shared/ipc/client";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+
+import type { LinkRow } from "@/shared/ipc/IpcContract";
 
 import type { ComponentProps } from "react";
 
@@ -23,7 +27,33 @@ export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: Prev
   const buffer = useEditorStore((state) => (resolvedNoteId ? state.buffers.get(resolvedNoteId) : null));
   const updateBody = useEditorStore((state) => state.updateBody);
   const vaultRoot = useVaultStore((state) => state.path);
+  const [outgoingLinks, setOutgoingLinks] = useState<LinkRow[]>([]);
   const source = markdown ?? buffer?.body ?? "";
+
+  useEffect(() => {
+    if (!resolvedNoteId || markdown !== undefined) {
+      setOutgoingLinks([]);
+      return undefined;
+    }
+    let cancelled = false;
+    void client.links
+      .outgoing(resolvedNoteId)
+      .then((links) => {
+        if (!cancelled) {
+          setOutgoingLinks(links);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOutgoingLinks([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [markdown, resolvedNoteId]);
+
+  const linksByTarget = useMemo(() => linkMap(outgoingLinks), [outgoingLinks]);
   const components = useMemo(
     () => ({
       h1: heading("h1"),
@@ -33,9 +63,9 @@ export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: Prev
         if (href?.startsWith("/wiki/")) {
           const target = decodeURIComponent(href.slice("/wiki/".length));
           return (
-            <button type="button" data-wikilink={target} onClick={() => onWikilinkClick?.(target)}>
+            <WikilinkComponent target={target} link={linksByTarget.get(normalizeTarget(target))} onUnresolvedClick={onWikilinkClick}>
               {children}
-            </button>
+            </WikilinkComponent>
           );
         }
         return (
@@ -76,7 +106,7 @@ export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: Prev
         );
       },
     }),
-    [assetExists, buffer?.path, onWikilinkClick, resolvedNoteId, source, updateBody, vaultRoot],
+    [assetExists, buffer?.path, linksByTarget, onWikilinkClick, resolvedNoteId, source, updateBody, vaultRoot],
   );
 
   return (
@@ -86,6 +116,14 @@ export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: Prev
       </ReactMarkdown>
     </article>
   );
+}
+
+function linkMap(links: LinkRow[]): Map<string, LinkRow> {
+  return new Map(links.map((link) => [normalizeTarget(link.targetText), link]));
+}
+
+function normalizeTarget(target: string): string {
+  return target.trim().toLowerCase();
 }
 
 function heading(Tag: "h1" | "h2" | "h3") {
