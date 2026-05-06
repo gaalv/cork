@@ -28,6 +28,12 @@ export type AppSettings = {
   editor: {
     autoSaveDebounceMs: number;
     previewDefault: boolean;
+    lineWrap: boolean;
+    showLineNumbers: boolean;
+    fontFamily: string;
+    fontSize: number;
+    tabSize: number;
+    showInvisibles: boolean;
   };
   vault: {
     recentLimit: number;

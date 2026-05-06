@@ -20,12 +20,18 @@ import type { Extension } from "@codemirror/state";
 
 export type EditorExtensionOptions = {
   extraExtensions?: Extension[];
+  lineWrap?: boolean;
+  showLineNumbers?: boolean;
+  fontFamily?: string;
+  fontSize?: number;
+  tabSize?: number;
 };
 
 export function createEditorExtensions(options: EditorExtensionOptions = {}): Extension[] {
+  const showLineNumbers = options.showLineNumbers ?? true;
+  const tabSize = options.tabSize ?? 2;
   return [
-    lineNumbers(),
-    highlightActiveLineGutter(),
+    ...(showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : []),
     highlightActiveLine(),
     history(),
     bracketMatching(),
@@ -40,9 +46,19 @@ export function createEditorExtensions(options: EditorExtensionOptions = {}): Ex
     searchExtension,
     autocompletion({ override: [wikilinkCompletionSource, tagCompletionSource, slashCompletionSource] }),
     keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
-    EditorState.tabSize.of(2),
-    EditorView.lineWrapping,
+    EditorState.tabSize.of(tabSize),
+    ...(options.lineWrap ?? true ? [EditorView.lineWrapping] : []),
+    editorFontTheme(options.fontFamily, options.fontSize),
     noxeEditorTheme,
     ...(options.extraExtensions ?? []),
   ];
+}
+
+function editorFontTheme(fontFamily = "system-ui", fontSize = 14): Extension {
+  return EditorView.theme({
+    "& .cm-content": {
+      fontFamily,
+      fontSize: `${fontSize}px`,
+    },
+  });
 }

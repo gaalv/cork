@@ -175,6 +175,12 @@ export function normalizeAppSettings(value: unknown): AppSettings {
     editor: {
       autoSaveDebounceMs: numberOr(editor.autoSaveDebounceMs, DEFAULT_APP_SETTINGS.editor.autoSaveDebounceMs),
       previewDefault: booleanOr(editor.previewDefault, DEFAULT_APP_SETTINGS.editor.previewDefault),
+      lineWrap: booleanOr(editor.lineWrap, DEFAULT_APP_SETTINGS.editor.lineWrap),
+      showLineNumbers: booleanOr(editor.showLineNumbers, DEFAULT_APP_SETTINGS.editor.showLineNumbers),
+      fontFamily: stringOr(editor.fontFamily, DEFAULT_APP_SETTINGS.editor.fontFamily),
+      fontSize: numberOr(editor.fontSize, DEFAULT_APP_SETTINGS.editor.fontSize),
+      tabSize: numberOr(editor.tabSize, DEFAULT_APP_SETTINGS.editor.tabSize),
+      showInvisibles: booleanOr(editor.showInvisibles, DEFAULT_APP_SETTINGS.editor.showInvisibles),
     },
     vault: { recentLimit: numberOr(vault.recentLimit, DEFAULT_APP_SETTINGS.vault.recentLimit) },
     markdown: {
@@ -195,4 +201,8 @@ function numberOr(value: unknown, fallback: number): number {
 
 function booleanOr(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
+}
+
+function stringOr(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
 }

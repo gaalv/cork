@@ -9,6 +9,12 @@ export type AppSettings = {
   editor: {
     autoSaveDebounceMs: number;
     previewDefault: boolean;
+    lineWrap: boolean;
+    showLineNumbers: boolean;
+    fontFamily: string;
+    fontSize: number;
+    tabSize: number;
+    showInvisibles: boolean;
   };
   vault: {
     recentLimit: number;
@@ -47,7 +53,16 @@ export type SettingKey =
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   appearance: { density: "comfortable", theme: "light" },
-  editor: { autoSaveDebounceMs: 500, previewDefault: true },
+  editor: {
+    autoSaveDebounceMs: 500,
+    previewDefault: true,
+    lineWrap: true,
+    showLineNumbers: true,
+    fontFamily: "system-ui",
+    fontSize: 14,
+    tabSize: 2,
+    showInvisibles: false,
+  },
   vault: { recentLimit: 8 },
   markdown: { callouts: true, footnotes: true },
   assets: { offlineMode: false },

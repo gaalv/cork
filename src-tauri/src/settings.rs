@@ -39,6 +39,18 @@ pub struct EditorSettings {
     pub auto_save_debounce_ms: u32,
     #[serde(default = "default_preview_default")]
     pub preview_default: bool,
+    #[serde(default = "default_true")]
+    pub line_wrap: bool,
+    #[serde(default = "default_true")]
+    pub show_line_numbers: bool,
+    #[serde(default = "default_font_family")]
+    pub font_family: String,
+    #[serde(default = "default_font_size")]
+    pub font_size: u32,
+    #[serde(default = "default_tab_size")]
+    pub tab_size: u32,
+    #[serde(default)]
+    pub show_invisibles: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -90,6 +102,12 @@ impl Default for EditorSettings {
         Self {
             auto_save_debounce_ms: default_auto_save_debounce_ms(),
             preview_default: default_preview_default(),
+            line_wrap: true,
+            show_line_numbers: true,
+            font_family: default_font_family(),
+            font_size: default_font_size(),
+            tab_size: default_tab_size(),
+            show_invisibles: false,
         }
     }
 }
@@ -183,6 +201,18 @@ fn default_preview_default() -> bool {
 
 fn default_recent_limit() -> u32 {
     8
+}
+
+fn default_font_family() -> String {
+    "system-ui".to_string()
+}
+
+fn default_font_size() -> u32 {
+    14
+}
+
+fn default_tab_size() -> u32 {
+    2
 }
 
 fn default_true() -> bool {
