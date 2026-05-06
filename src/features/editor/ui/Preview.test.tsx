@@ -63,4 +63,13 @@ describe("Preview", () => {
       "File not found: missing.png",
     );
   });
+
+  it("renders Obsidian-style callouts", () => {
+    render(<Preview markdown={"> [!warning] Heads up\n> Back up the vault."} />);
+
+    const callout = screen.getByText("Heads up").closest("aside");
+    expect(callout).toHaveClass("callout", "callout-warning");
+    expect(callout).toHaveAttribute("data-kind", "warning");
+    expect(screen.getByText("Back up the vault.")).toBeInTheDocument();
+  });
 });
