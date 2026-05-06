@@ -1,3 +1,4 @@
+pub mod fingerprint;
 pub mod frontmatter;
 pub mod list;
 
