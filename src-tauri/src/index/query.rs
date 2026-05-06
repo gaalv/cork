@@ -84,6 +84,20 @@ pub fn by_id(conn: &Connection, id: &str) -> Result<Option<NoteEntry>, IpcError>
     .map_err(sql_error)
 }
 
+pub fn starred(conn: &Connection) -> Result<Vec<NoteEntry>, IpcError> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime
+             FROM notes n
+             JOIN frontmatter fm ON fm.note_id = n.id
+             WHERE fm.key = 'starred' AND fm.value = 'true'
+             ORDER BY n.mtime DESC",
+        )
+        .map_err(sql_error)?;
+    let rows = stmt.query_map([], note_from_row).map_err(sql_error)?;
+    collect_notes(rows)
+}
+
 pub fn tags_list(conn: &Connection) -> Result<Vec<TagCount>, IpcError> {
     let mut stmt = conn
         .prepare(
@@ -207,6 +221,7 @@ mod tests {
         assert_eq!(by_folder(&conn, "work").unwrap().len(), 2);
         assert_eq!(by_id(&conn, "n1").unwrap().unwrap().title, "Alpha");
         assert!(by_id(&conn, "missing").unwrap().is_none());
+        assert_eq!(starred(&conn).unwrap()[0].id, "n2");
     }
 
     #[test]
@@ -259,6 +274,11 @@ mod tests {
         .unwrap();
         conn.execute(
             "INSERT INTO links (src_note_id, target_text, target_id, position, alias) VALUES ('n1', 'Beta', 'n2', 7, 'B')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO frontmatter (note_id, key, value) VALUES ('n2', 'starred', 'true'), ('n3', 'starred', 'false')",
             [],
         )
         .unwrap();

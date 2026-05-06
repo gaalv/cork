@@ -240,6 +240,15 @@ pub fn notes_by_id(
 }
 
 #[tauri::command]
+pub fn notes_starred(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+) -> Result<Vec<NoteEntry>, IpcError> {
+    state.with_conn(&app, &vault, query::starred)
+}
+
+#[tauri::command]
 pub fn tags_list(
     app: AppHandle,
     vault: tauri::State<'_, VaultState>,
