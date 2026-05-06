@@ -57,6 +57,7 @@ export function resolvedVaultSettings(settings: VaultScopedSettings): Required<V
     autoRewriteLinksOnRename: settings.autoRewriteLinksOnRename ?? DEFAULT_VAULT_SETTINGS.autoRewriteLinksOnRename,
     dailyPathPattern: settings.dailyPathPattern ?? DEFAULT_VAULT_SETTINGS.dailyPathPattern,
     dailyTemplatePath: settings.dailyTemplatePath ?? DEFAULT_VAULT_SETTINGS.dailyTemplatePath,
+    offlineMode: settings.offlineMode ?? DEFAULT_VAULT_SETTINGS.offlineMode,
   };
 }
 
@@ -70,6 +71,7 @@ export function normalizeVaultSettings(value: unknown): VaultScopedSettings {
     autoRewriteLinksOnRename: booleanOrUndefined(candidate.autoRewriteLinksOnRename),
     dailyPathPattern: stringOrUndefined(candidate.dailyPathPattern),
     dailyTemplatePath: stringOrUndefined(candidate.dailyTemplatePath),
+    offlineMode: booleanOrUndefined(candidate.offlineMode),
   };
 }
 

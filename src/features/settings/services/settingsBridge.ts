@@ -37,7 +37,7 @@ export const settingsBridge = {
       case "daily.templatePath":
         return vault.dailyTemplatePath;
       case "assets.offlineMode":
-        return app.assets.offlineMode;
+        return useVaultSettingsStore.getState().settings.offlineMode ?? app.assets.offlineMode;
     }
   },
 
@@ -111,6 +111,10 @@ async function setVaultSetting(key: SettingKey, value: SettingValue): Promise<vo
     case "daily.templatePath":
       await store.update({ dailyTemplatePath: String(value) });
       return;
+    case "assets.offlineMode":
+      await store.update({ offlineMode: Boolean(value) });
+      useAppSettingsStore.getState().applyVaultSettings({ ...(useAppSettingsStore.getState().vaultSettings ?? {}), offlineMode: Boolean(value) });
+      return;
     case "appearance.density":
     case "appearance.theme":
     case "editor.autoSaveDebounceMs":
@@ -119,7 +123,6 @@ async function setVaultSetting(key: SettingKey, value: SettingValue): Promise<vo
     case "markdown.callouts":
     case "markdown.footnotes":
     case "markdown.highlight":
-    case "assets.offlineMode":
       throw new Error(`${key} is a global setting`);
   }
 }

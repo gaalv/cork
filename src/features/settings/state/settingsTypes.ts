@@ -34,6 +34,7 @@ export type VaultScopedSettings = {
   dailyTemplatePath?: string;
   attachmentsFolder?: string;
   autoRewriteLinksOnRename?: boolean;
+  offlineMode?: boolean;
 };
 
 export type SettingScope = "global" | "vault";
@@ -75,6 +76,7 @@ export const DEFAULT_VAULT_SETTINGS: Required<VaultScopedSettings> = {
   autoRewriteLinksOnRename: true,
   dailyPathPattern: "Daily/YYYY/MM/YYYY-MM-DD.md",
   dailyTemplatePath: ".noxe/templates/daily.md",
+  offlineMode: false,
 };
 
 export type SettingsChangedDetail = {

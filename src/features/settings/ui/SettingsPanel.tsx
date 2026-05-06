@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { X } from "@phosphor-icons/react";
 
+import { useIndexStore } from "@/features/index/state/indexStore";
 import { settingsBridge } from "@/features/settings/services/settingsBridge";
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
@@ -40,6 +41,8 @@ export function SettingsPanel() {
   const applyVaultSettings = useAppSettingsStore((state) => state.applyVaultSettings);
   const vaultPath = useVaultStore((state) => state.path);
   const pushToast = useShellStore((state) => state.pushToast);
+  const rebuildIndex = useIndexStore((state) => state.rebuild);
+  const [rebuilding, setRebuilding] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -114,6 +117,9 @@ export function SettingsPanel() {
               applyVaultSettings,
               vaultPath,
               pushToast,
+              rebuildIndex,
+              rebuilding,
+              setRebuilding,
             })}
           </main>
         </div>
@@ -131,10 +137,13 @@ type SectionContext = {
   applyVaultSettings: (settings: Parameters<typeof resolvedVaultSettings>[0]) => void;
   vaultPath: string | null;
   pushToast: (toast: { title: string; description?: string }) => void;
+  rebuildIndex: () => Promise<void>;
+  rebuilding: boolean;
+  setRebuilding: (rebuilding: boolean) => void;
 };
 
 function renderSection(section: SettingsSectionId, context: SectionContext) {
-  const { settings, updateSettings, patchEditor, vaultSettings, hasVaultSettings, applyVaultSettings, vaultPath, pushToast } = context;
+  const { settings, updateSettings, patchEditor, vaultSettings, hasVaultSettings, applyVaultSettings, vaultPath, pushToast, rebuildIndex, rebuilding, setRebuilding } = context;
   if (section === "general") {
     return (
       <div className="space-y-3">
@@ -330,6 +339,52 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
     );
   }
 
+  if (section === "advanced") {
+    const resolved = resolvedVaultSettings(vaultSettings);
+    const runRebuild = async () => {
+      setRebuilding(true);
+      try {
+        await rebuildIndex();
+        pushToast({ title: "Index rebuild started", description: "Noxe is rebuilding the current vault index." });
+      } catch (error) {
+        pushToast({ title: "Index rebuild failed", description: error instanceof Error ? error.message : "Unknown error" });
+        console.error(error);
+      } finally {
+        setRebuilding(false);
+      }
+    };
+    const setOfflineMode = (offlineMode: boolean) => {
+      applyVaultSettings({ ...vaultSettings, offlineMode });
+      void settingsBridge.set("assets.offlineMode", offlineMode, "vault");
+    };
+
+    return (
+      <div className="space-y-3">
+        <SettingRow
+          label="Rebuild Index"
+          description="Re-scan the current vault and refresh search, backlinks, tags, and recents."
+          scope="vault"
+          control={
+            <button
+              type="button"
+              className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm font-medium text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={rebuilding || !vaultPath}
+              onClick={() => void runRebuild()}
+            >
+              {rebuilding ? "Rebuilding…" : "Rebuild Index"}
+            </button>
+          }
+        />
+        <SettingRow
+          label="Offline mode"
+          description={hasVaultSettings ? "Prefer locally cached assets for this vault." : "Open a vault to edit this per-vault setting."}
+          scope="vault"
+          control={<Toggle checked={resolved.offlineMode} label="Offline mode" onChange={setOfflineMode} disabled={!hasVaultSettings} />}
+        />
+      </div>
+    );
+  }
+
   if (section === "daily") {
     const resolved = resolvedVaultSettings(vaultSettings);
     const setDailySetting = (patch: { dailyPathPattern?: string; dailyTemplatePath?: string }) => {
@@ -379,8 +434,8 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
   return <Placeholder title={sections.find((item) => item.id === section)?.label ?? "Settings"} />;
 }
 
-function Toggle({ checked, label, onChange }: { checked: boolean; label: string; onChange: (checked: boolean) => void }) {
-  return <input type="checkbox" aria-label={label} checked={checked} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.checked)} />;
+function Toggle({ checked, disabled = false, label, onChange }: { checked: boolean; disabled?: boolean; label: string; onChange: (checked: boolean) => void }) {
+  return <input type="checkbox" aria-label={label} checked={checked} disabled={disabled} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.checked)} />;
 }
 
 function Placeholder({ title }: { title: string }) {
