@@ -21,6 +21,9 @@ import {
   Tag,
   FolderSimple,
 } from '@phosphor-icons/react'
+import { folderOps, validateFolderName } from '@/features/folder-ops/services/folderOps'
+import { InlineRename } from '@/features/folder-ops/ui/InlineRename'
+import { NewFolderDialog } from '@/features/folder-ops/ui/NewFolderDialog'
 import { MockMarkdown } from '@/features/editor/ui/MockMarkdown'
 import { useIndexStore } from '@/features/index/state/indexStore'
 import { useVaultStore } from '@/features/vault/state/vaultStore'
@@ -563,15 +566,36 @@ function Drawer({
 
 function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; query: string }) {
   const { notes, folders } = useLegacyData()
+  const loadNotes = useVaultStore((state) => state.loadNotes)
   const [open, setOpen] = useState<Record<string, boolean>>({ projects: true, 'projects/noxe': true })
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const [menu, setMenu] = useState<{ folder: string; x: number; y: number } | null>(null)
+  const [newFolderParent, setNewFolderParent] = useState<string | null>(null)
   const filteredNotes = (folder: string) =>
     notes.filter(
       (n) =>
         n.folder === folder &&
         (!query || n.title.toLowerCase().includes(query.toLowerCase())),
     )
+  const refreshAfter = async (action: () => Promise<unknown>) => {
+    await action()
+    await loadNotes()
+  }
+  const trashFolder = (folder: string) => {
+    const affected = notes.filter((note) => note.folder === folder || note.folder.startsWith(folder + '/')).length
+    if (!window.confirm(`Move ${folder} and ${affected} note${affected === 1 ? '' : 's'} to trash?`)) {
+      return
+    }
+    void refreshAfter(() => folderOps.trash(folder)).then(() => setMenu(null))
+  }
   return (
-    <div className="text-[13px]">
+    <div className="relative text-[13px]" onClick={() => setMenu(null)}>
+      <button
+        onClick={() => setNewFolderParent('')}
+        className="mb-2 flex w-full items-center justify-center rounded-md border border-dashed border-[var(--color-noxe-border)] px-2 py-1.5 text-[12px] text-[var(--color-noxe-muted)] hover:border-[var(--color-noxe-border-strong)] hover:text-[var(--color-noxe-ink)]"
+      >
+        <Plus size={12} /> New folder
+      </button>
       {folders
         .filter((f) => !f.id.includes('/'))
         .map((f) => {
@@ -579,15 +603,20 @@ function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; q
           const children = folders.filter((c) => c.id.startsWith(f.id + '/'))
           return (
             <div key={f.id}>
-              <button
-                onClick={() => setOpen((o) => ({ ...o, [f.id]: !isOpen }))}
-                className="flex w-full items-center gap-1 rounded px-2 py-1 hover:bg-[var(--color-noxe-panel-2)]"
-              >
-                {isOpen ? <CaretDown size={11} /> : <CaretRight size={11} />}
-                <FolderSimple size={12} className="text-[var(--color-noxe-muted)]" />
-                <span className="truncate font-medium">{f.name}</span>
-                <span className="ml-auto text-[11px] text-[var(--color-noxe-subtle)]">{f.count}</span>
-              </button>
+              <FolderRow
+                folder={f.id}
+                name={f.name}
+                count={f.count}
+                isOpen={isOpen}
+                isRenaming={renaming === f.id}
+                onToggle={() => setOpen((o) => ({ ...o, [f.id]: !isOpen }))}
+                onRename={(name) => refreshAfter(() => folderOps.rename({ oldPath: f.id, newName: name })).then(() => setRenaming(null))}
+                onCancelRename={() => setRenaming(null)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setMenu({ folder: f.id, x: event.clientX, y: event.clientY })
+                }}
+              />
               {isOpen && (
                 <div className="ml-4 border-l border-[var(--color-noxe-border)] pl-1">
                   {filteredNotes(f.id).map((n) => (
@@ -604,14 +633,20 @@ function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; q
                     const sOpen = open[c.id]
                     return (
                       <div key={c.id}>
-                        <button
-                          onClick={() => setOpen((o) => ({ ...o, [c.id]: !sOpen }))}
-                          className="flex w-full items-center gap-1 rounded px-2 py-1 hover:bg-[var(--color-noxe-panel-2)]"
-                        >
-                          {sOpen ? <CaretDown size={11} /> : <CaretRight size={11} />}
-                          <FolderSimple size={12} className="text-[var(--color-noxe-muted)]" />
-                          <span className="truncate">{c.name.split('/').pop()}</span>
-                        </button>
+                        <FolderRow
+                          folder={c.id}
+                          name={c.name.split('/').pop() ?? c.name}
+                          count={c.count}
+                          isOpen={sOpen}
+                          isRenaming={renaming === c.id}
+                          onToggle={() => setOpen((o) => ({ ...o, [c.id]: !sOpen }))}
+                          onRename={(name) => refreshAfter(() => folderOps.rename({ oldPath: c.id, newName: name })).then(() => setRenaming(null))}
+                          onCancelRename={() => setRenaming(null)}
+                          onContextMenu={(event) => {
+                            event.preventDefault()
+                            setMenu({ folder: c.id, x: event.clientX, y: event.clientY })
+                          }}
+                        />
                         {sOpen && (
                           <div className="ml-4 border-l border-[var(--color-noxe-border)] pl-1">
                             {filteredNotes(c.id).map((n) => (
@@ -634,7 +669,76 @@ function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; q
             </div>
           )
         })}
+      {menu && (
+        <div
+          className="fixed z-50 w-40 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-1 text-[12px] shadow-xl"
+          style={{ left: menu.x, top: menu.y }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button className="w-full rounded-lg px-2 py-1.5 text-left hover:bg-[var(--color-noxe-panel-2)]" onClick={() => setNewFolderParent(menu.folder)}>
+            New folder
+          </button>
+          <button className="w-full rounded-lg px-2 py-1.5 text-left hover:bg-[var(--color-noxe-panel-2)]" onClick={() => { setRenaming(menu.folder); setMenu(null) }}>
+            Rename
+          </button>
+          <button className="w-full rounded-lg px-2 py-1.5 text-left text-red-600 hover:bg-[var(--color-noxe-panel-2)]" onClick={() => trashFolder(menu.folder)}>
+            Move to Trash
+          </button>
+        </div>
+      )}
+      <NewFolderDialog
+        parent={newFolderParent ?? ''}
+        open={newFolderParent !== null}
+        onClose={() => setNewFolderParent(null)}
+        onCreate={(parent, name) => refreshAfter(() => folderOps.create({ parent, name }))}
+      />
     </div>
+  )
+}
+
+function FolderRow({
+  name,
+  count,
+  isOpen,
+  isRenaming,
+  onToggle,
+  onRename,
+  onCancelRename,
+  onContextMenu,
+}: {
+  folder: string
+  name: string
+  count?: number
+  isOpen?: boolean
+  isRenaming: boolean
+  onToggle: () => void
+  onRename: (name: string) => Promise<void>
+  onCancelRename: () => void
+  onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => void
+}) {
+  if (isRenaming) {
+    return (
+      <InlineRename
+        initial={name}
+        label={`Rename ${name}`}
+        validate={validateFolderName}
+        onCommit={onRename}
+        onCancel={onCancelRename}
+        className="w-full"
+      />
+    )
+  }
+  return (
+    <button
+      onClick={onToggle}
+      onContextMenu={onContextMenu}
+      className="flex w-full items-center gap-1 rounded px-2 py-1 hover:bg-[var(--color-noxe-panel-2)]"
+    >
+      {isOpen ? <CaretDown size={11} /> : <CaretRight size={11} />}
+      <FolderSimple size={12} className="text-[var(--color-noxe-muted)]" />
+      <span className="truncate font-medium">{name}</span>
+      {count !== undefined && <span className="ml-auto text-[11px] text-[var(--color-noxe-subtle)]">{count}</span>}
+    </button>
   )
 }
 
