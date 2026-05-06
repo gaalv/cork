@@ -20,8 +20,30 @@ export type RecentVault = {
   missing: boolean;
 };
 
+export type AppSettings = {
+  appearance: {
+    density: "comfortable" | "compact";
+    theme: "light";
+  };
+  editor: {
+    autoSaveDebounceMs: number;
+    previewDefault: boolean;
+  };
+  vault: {
+    recentLimit: number;
+  };
+  markdown: {
+    callouts: boolean;
+    footnotes: boolean;
+  };
+  assets: {
+    offlineMode: boolean;
+  };
+};
+
 export type VaultSettings = {
   dailyPathPattern?: string;
+  dailyTemplatePath?: string;
   attachmentsFolder?: string;
   offlineMode?: boolean;
   autoRewriteLinksOnRename?: boolean;

@@ -22,6 +22,7 @@ import type {
   VaultOpenedEvent,
   VaultPath,
   VaultSettings,
+  AppSettings,
 } from "./types";
 
 export type TagCount = {
@@ -100,6 +101,23 @@ export type IpcCommandMap = {
   };
   "vault.settings": {
     args: undefined;
+    result: VaultSettings;
+  };
+  // === F13 Settings ===
+  "settings.appLoad": {
+    args: undefined;
+    result: AppSettings;
+  };
+  "settings.appSave": {
+    args: { settings: AppSettings };
+    result: AppSettings;
+  };
+  "settings.vaultLoad": {
+    args: undefined;
+    result: VaultSettings;
+  };
+  "settings.vaultSave": {
+    args: { settings: VaultSettings };
     result: VaultSettings;
   };
   // === F11 Assets ===

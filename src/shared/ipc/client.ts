@@ -17,6 +17,8 @@ import type {
   MoveNoteInput,
   RenameNoteInput,
   SaveInput,
+  AppSettings,
+  VaultSettings,
 } from "./types";
 
 const commandNames: Record<IpcCommandName, string> = {
@@ -30,6 +32,10 @@ const commandNames: Record<IpcCommandName, string> = {
   "vault.recent": "vault_recent",
   "vault.removeRecent": "vault_remove_recent",
   "vault.settings": "vault_settings",
+  "settings.appLoad": "settings_app_load",
+  "settings.appSave": "settings_app_save",
+  "settings.vaultLoad": "settings_vault_load",
+  "settings.vaultSave": "settings_vault_save",
   "assets.setScope": "assets_set_scope",
   "assets.writeAttachment": "assets_write_attachment",
   "folders.create": "folders_create",
@@ -81,6 +87,12 @@ export const client = {
     recent: () => invokeCommand("vault.recent", undefined),
     removeRecent: (path: string) => invokeCommand("vault.removeRecent", { path }),
     settings: () => invokeCommand("vault.settings", undefined),
+  },
+  settings: {
+    appLoad: () => invokeCommand("settings.appLoad", undefined),
+    appSave: (settings: AppSettings) => invokeCommand("settings.appSave", { settings }),
+    vaultLoad: () => invokeCommand("settings.vaultLoad", undefined),
+    vaultSave: (settings: VaultSettings) => invokeCommand("settings.vaultSave", { settings }),
   },
   assets: {
     setScope: (vaultRoot: string) => invokeCommand("assets.setScope", { vaultRoot }),
@@ -142,6 +154,8 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "vault.close":
     case "vault.recent":
     case "vault.settings":
+    case "settings.appLoad":
+    case "settings.vaultLoad":
     case "tags.list":
     case "index.status":
     case "index.rebuild":
@@ -168,6 +182,9 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
       const input = args as { folder: string };
       return { folder: input.folder };
     }
+    case "settings.appSave":
+    case "settings.vaultSave":
+      return args as RustArgs;
     case "assets.setScope":
     case "assets.writeAttachment":
       return { input: args };

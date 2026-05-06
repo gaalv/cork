@@ -9,6 +9,7 @@ use crate::IpcError;
 #[serde(rename_all = "camelCase")]
 pub struct VaultSettings {
     pub daily_path_pattern: Option<String>,
+    pub daily_template_path: Option<String>,
     pub attachments_folder: Option<String>,
     pub offline_mode: Option<bool>,
     pub auto_rewrite_links_on_rename: Option<bool>,
@@ -21,6 +22,14 @@ pub fn load_vault_settings(vault_root: &Path) -> Result<VaultSettings, IpcError>
     }
     let text = fs::read_to_string(config_path)?;
     serde_json::from_str(&text).map_err(|err| IpcError::Parse(err.to_string()))
+}
+
+pub fn save_vault_settings(vault_root: &Path, settings: &VaultSettings) -> Result<(), IpcError> {
+    let config_dir = vault_root.join(".noxe");
+    fs::create_dir_all(&config_dir)?;
+    let text = serde_json::to_string_pretty(settings).map_err(|err| IpcError::Parse(err.to_string()))?;
+    fs::write(config_dir.join("config.json"), text)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -49,6 +58,7 @@ mod tests {
             config_dir.join("config.json"),
             r#"{
               "dailyPathPattern": "Journal/YYYY-MM-DD.md",
+              "dailyTemplatePath": "Templates/Daily.md",
               "attachmentsFolder": "media",
               "offlineMode": true,
               "autoRewriteLinksOnRename": false
@@ -62,8 +72,26 @@ mod tests {
             settings.daily_path_pattern.as_deref(),
             Some("Journal/YYYY-MM-DD.md")
         );
+        assert_eq!(settings.daily_template_path.as_deref(), Some("Templates/Daily.md"));
         assert_eq!(settings.attachments_folder.as_deref(), Some("media"));
         assert_eq!(settings.offline_mode, Some(true));
         assert_eq!(settings.auto_rewrite_links_on_rename, Some(false));
+    }
+
+    #[test]
+    fn saves_vault_settings_file() {
+        let dir = tempdir().unwrap();
+        let settings = VaultSettings {
+            daily_path_pattern: Some("Journal/YYYY-MM-DD.md".to_string()),
+            daily_template_path: Some("Templates/Daily.md".to_string()),
+            attachments_folder: Some("_attachments".to_string()),
+            offline_mode: None,
+            auto_rewrite_links_on_rename: Some(true),
+        };
+
+        save_vault_settings(dir.path(), &settings).unwrap();
+        let loaded = load_vault_settings(dir.path()).unwrap();
+
+        assert_eq!(loaded, settings);
     }
 }

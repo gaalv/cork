@@ -1,6 +1,7 @@
 pub mod assets;
 pub mod error;
 pub mod index;
+pub mod settings;
 pub mod vault;
 
 pub use error::IpcError;
@@ -71,6 +72,11 @@ pub fn run() {
             vault::vault_recent,
             vault::vault_remove_recent,
             vault::vault_settings,
+            // === F13 Settings ===
+            settings::settings_app_load,
+            settings::settings_app_save,
+            settings::settings_vault_load,
+            settings::settings_vault_save,
             // === F11 Assets ===
             assets::assets_set_scope,
             assets::assets_write_attachment,
