@@ -2,7 +2,7 @@
 
 **Owner phase:** M2
 **Depends on:** F02, F03, F09 (resolution; can stub initially)
-**Status:** Draft
+**Status:** Verified
 
 ## Problem Statement
 
@@ -93,28 +93,28 @@ We need a developer-grade Markdown editor: monospaced editing with Markdown-awar
 
 | ID         | AC                                  | Phase | Status  |
 | ---------- | ----------------------------------- | ----- | ------- |
-| EDITOR-01  | Open buffer fast                    | Tasks | Pending |
-| EDITOR-02  | Typing latency                      | Tasks | Pending |
-| EDITOR-03  | Auto-save 500ms                     | Tasks | Pending |
-| EDITOR-04  | Save indicator                      | Tasks | Pending |
-| EDITOR-05  | Conflict banner                     | Tasks | Pending |
-| EDITOR-06  | Flush on navigate-away              | Tasks | Pending |
-| EDITOR-07  | Md highlighting                     | Tasks | Pending |
-| EDITOR-08  | Heading sizes                       | Tasks | Pending |
-| EDITOR-09  | Wikilink concealed brackets         | Tasks | Pending |
-| EDITOR-10  | Preview toggle                      | Tasks | Pending |
-| EDITOR-11  | Preview debounced                   | Tasks | Pending |
-| EDITOR-12  | Wikilink navigation in preview      | Tasks | Pending |
-| EDITOR-13  | Shiki                               | Tasks | Pending |
-| EDITOR-14  | KaTeX                               | Tasks | Pending |
-| EDITOR-15  | Mermaid                             | Tasks | Pending |
-| EDITOR-16  | Task list toggle                    | Tasks | Pending |
-| EDITOR-17  | Wikilink autocomplete               | Tasks | Pending |
-| EDITOR-18  | Tag autocomplete                    | Tasks | Pending |
-| EDITOR-19  | Slash menu                          | Tasks | Pending |
-| EDITOR-20  | Outline updates                     | Tasks | Pending |
-| EDITOR-21  | External-change reconciliation      | Tasks | Pending |
-| EDITOR-22  | Large-file degraded mode            | Tasks | Pending |
+| EDITOR-01  | Open buffer fast                    | Tasks | Verified |
+| EDITOR-02  | Typing latency                      | Tasks | Verified |
+| EDITOR-03  | Auto-save 500ms                     | Tasks | Verified |
+| EDITOR-04  | Save indicator                      | Tasks | Verified |
+| EDITOR-05  | Conflict banner                     | Tasks | Verified |
+| EDITOR-06  | Flush on navigate-away              | Tasks | Verified |
+| EDITOR-07  | Md highlighting                     | Tasks | Verified |
+| EDITOR-08  | Heading sizes                       | Tasks | Verified |
+| EDITOR-09  | Wikilink concealed brackets         | Tasks | Verified |
+| EDITOR-10  | Preview toggle                      | Tasks | Verified |
+| EDITOR-11  | Preview debounced                   | Tasks | Verified |
+| EDITOR-12  | Wikilink navigation in preview      | Tasks | Verified |
+| EDITOR-13  | Shiki                               | Tasks | Verified |
+| EDITOR-14  | KaTeX                               | Tasks | Verified |
+| EDITOR-15  | Mermaid                             | Tasks | Verified |
+| EDITOR-16  | Task list toggle                    | Tasks | Verified |
+| EDITOR-17  | Wikilink autocomplete               | Tasks | Verified |
+| EDITOR-18  | Tag autocomplete                    | Tasks | Verified |
+| EDITOR-19  | Slash menu                          | Tasks | Verified |
+| EDITOR-20  | Outline updates                     | Tasks | Verified |
+| EDITOR-21  | External-change reconciliation      | Tasks | Verified |
+| EDITOR-22  | Large-file degraded mode            | Tasks | Verified |
 
 ## Success Criteria
 

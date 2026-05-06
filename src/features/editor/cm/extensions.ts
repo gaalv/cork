@@ -7,6 +7,7 @@ import { EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lin
 
 import { concealedBrackets } from "./concealedBrackets";
 import { headingSizes } from "./headingSizes";
+import { searchExtension } from "./searchExtension";
 import { slashCompletionSource } from "./slashMenu";
 import { tagCompletionSource } from "./tagAutocomplete";
 import { noxeEditorTheme, noxeHighlightStyle } from "./theme";
@@ -30,6 +31,7 @@ export function createEditorExtensions(options: EditorExtensionOptions = {}): Ex
     noxeHighlightStyle,
     headingSizes,
     concealedBrackets,
+    searchExtension,
     autocompletion({ override: [wikilinkCompletionSource, tagCompletionSource, slashCompletionSource] }),
     keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
     EditorState.tabSize.of(2),

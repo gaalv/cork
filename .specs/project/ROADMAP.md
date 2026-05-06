@@ -64,7 +64,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ### Features
 
-**[F05 — Editor](../features/F05-editor/spec.md)** — PLANNED
+**[F05 — Editor](../features/F05-editor/spec.md)** — COMPLETE
 - CodeMirror 6 setup (markdown lang, theme, save-on-change debounced)
 - Shiki-powered code blocks in preview
 - KaTeX math rendering

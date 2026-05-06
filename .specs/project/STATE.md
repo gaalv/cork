@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T17:51-03:00
-**Current Work:** F07 Drawers complete; F05/F11 continue in parallel
+**Last Updated:** 2026-05-06T18:00-03:00
+**Current Work:** F05 Editor complete; F11 continues in parallel
 
 ---
 
@@ -157,6 +157,21 @@ src-tauri/
 **Trade-off:** Search history is WebView-local until F13 settings/store migration; starred toggles require the note to be reindexed after save.
 **Impact:** F07 `notes.starred` reads the SQLite `frontmatter` table and `starService` writes `frontmatter.starred`.
 
+
+### AD-028: F05 preview uses split-pane rendering with heavy renderers lazy-loaded (2026-05-06)
+
+**Decision:** Markdown preview ships as a toggleable split pane backed by `react-markdown`; Shiki and Mermaid are loaded lazily, and >1 MB buffers enter degraded mode that disables heavy Mermaid/KaTeX rendering.
+**Reason:** Preserves CodeMirror typing responsiveness while meeting MVP preview requirements.
+**Trade-off:** This is not hybrid live-preview editing; cursor-adjacent rendered Markdown remains deferred.
+**Impact:** F05 owns `EditorPreviewSplit`, the unified preview plugin chain, and CM6 remains the single editing surface.
+
+### AD-029: F05 browser E2E uses fixture-backed editor loading when Tauri IPC is unavailable (2026-05-06)
+
+**Decision:** The shell note route falls back to fixture-shaped note content in localhost/preview runs when `notes.read` is unavailable.
+**Reason:** Playwright targets Vite preview, not a desktop Tauri runtime; this keeps editor routing and chaos-save coverage deterministic in CI.
+**Trade-off:** Browser E2E validates UI/data-loss behavior, while Rust IPC correctness remains covered by unit/cargo tests.
+**Impact:** `ViewRouter` mounts the real editor for note routes without requiring native IPC during web tests.
+
 ---
 
 ## Active Blockers
@@ -173,6 +188,8 @@ _None._
 - **L-004:** `cmdk` needs `ResizeObserver` and `scrollIntoView` shims in jsdom component tests.
 - **L-005:** Browser E2E shortcut assertions are more reliable when shell shortcuts also listen for explicit `metaKey || ctrlKey` fallbacks in addition to `tinykeys` `$mod`.
 - **L-006:** Browser drawer E2E needs web-safe fallbacks for native IPC-backed queries; keep the fallback deterministic and fixture-shaped.
+- **L-007:** CM6 autocompletion sources must be merged into a single `autocompletion({ override })` extension; stacking multiple override facets causes config merge conflicts.
+- **L-008:** Browser editor E2E should use contenteditable `fill()` for deterministic large text insertion; raw keyboard typing can be dropped by CM6 under fast automation.
 
 ---
 
@@ -195,12 +212,13 @@ _None._
 | 013 | Partially land F12 Folder Ops & Bulk Operations (folder/bulk IPC, legacy folder UI, drag/drop, bulk selection, auto-close, E2E); T10 deferred pending F09-T03 | 2026-05-06 | multiple | ✅ Partial |
 | 014 | Partially implement F11 Asset Pipeline (asset DB/walker, scoped protocol, attachment IPC, resolver/url/open helpers); T07/T09/T10/T11/T12 deferred to F05/F10 | 2026-05-06 | multiple | ✅ Partial |
 | 015 | Implement F07 Drawers (FTS search, folders, recent, starred, tags, a11y, E2E) | 2026-05-06 | multiple | ✅ Done |
+| 016 | Implement F05 Editor (CM6, autosave/conflicts, Markdown preview, Shiki/KaTeX/Mermaid, completions, split view, search, chaos E2E) | 2026-05-06 | multiple | ✅ Done |
 
 ---
 
 ## Deferred Ideas
 
-- [ ] Hybrid editor mode (live-preview within CM6) — investigate during F05
+- [ ] Hybrid editor mode (live-preview within CM6) — deferred after F05 split-pane decision
 - [ ] Drag-to-reorder blocks UX — would require BlockNote; defer to v2
 - [ ] Real AI link suggestions backed by local embeddings — captured under "Future Considerations"
 - [ ] Graph view — captured under "Future Considerations"
@@ -209,7 +227,7 @@ _None._
 
 ## Todos
 
-- [ ] Decide on the Markdown render preview strategy: split pane vs. hybrid (handled inside F05)
+- [x] Decide on the Markdown render preview strategy: split pane selected for F05; hybrid deferred
 - [x] Decide on the wikilink resolution algorithm details — documented in F09 design
 - [x] Choose CI provider — GitHub Actions, locked in F01
 
