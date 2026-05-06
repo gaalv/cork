@@ -230,6 +230,34 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
     );
   }
 
+  if (section === "markdown") {
+    const patchMarkdown = (patch: Partial<AppSettings["markdown"]>) => {
+      void updateSettings({ markdown: { ...settings.markdown, ...patch } });
+    };
+    return (
+      <div className="space-y-3">
+        <SettingRow
+          label="Callouts"
+          description="Render Obsidian-style callout blocks in preview and indexing."
+          scope="app"
+          control={<Toggle checked={settings.markdown.callouts} label="Callouts" onChange={(checked) => patchMarkdown({ callouts: checked })} />}
+        />
+        <SettingRow
+          label="Footnotes"
+          description="Enable Markdown footnote definitions and references."
+          scope="app"
+          control={<Toggle checked={settings.markdown.footnotes} label="Footnotes" onChange={(checked) => patchMarkdown({ footnotes: checked })} />}
+        />
+        <SettingRow
+          label="Highlights"
+          description="Render ==highlight== spans in Markdown preview."
+          scope="app"
+          control={<Toggle checked={settings.markdown.highlight} label="Highlights" onChange={(checked) => patchMarkdown({ highlight: checked })} />}
+        />
+      </div>
+    );
+  }
+
   if (section === "files") {
     const resolved = resolvedVaultSettings(vaultSettings);
     const revealVault = async () => {

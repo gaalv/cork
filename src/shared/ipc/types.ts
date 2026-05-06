@@ -41,6 +41,7 @@ export type AppSettings = {
   markdown: {
     callouts: boolean;
     footnotes: boolean;
+    highlight: boolean;
   };
   assets: {
     offlineMode: boolean;

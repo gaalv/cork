@@ -30,6 +30,8 @@ export const settingsBridge = {
         return app.markdown.callouts;
       case "markdown.footnotes":
         return app.markdown.footnotes;
+      case "markdown.highlight":
+        return app.markdown.highlight;
       case "daily.pathPattern":
         return vault.dailyPathPattern;
       case "daily.templatePath":
@@ -80,6 +82,9 @@ async function setGlobalSetting(key: SettingKey, value: SettingValue): Promise<v
     case "markdown.footnotes":
       await store.updateSettings({ markdown: { ...current.markdown, footnotes: Boolean(value) } });
       return;
+    case "markdown.highlight":
+      await store.updateSettings({ markdown: { ...current.markdown, highlight: Boolean(value) } });
+      return;
     case "assets.offlineMode":
       await store.updateSettings({ assets: { offlineMode: Boolean(value) } });
       return;
@@ -113,6 +118,7 @@ async function setVaultSetting(key: SettingKey, value: SettingValue): Promise<vo
     case "vault.recentLimit":
     case "markdown.callouts":
     case "markdown.footnotes":
+    case "markdown.highlight":
     case "assets.offlineMode":
       throw new Error(`${key} is a global setting`);
   }

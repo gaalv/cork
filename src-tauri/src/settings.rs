@@ -67,6 +67,8 @@ pub struct MarkdownSettings {
     pub callouts: bool,
     #[serde(default = "default_true")]
     pub footnotes: bool,
+    #[serde(default = "default_true")]
+    pub highlight: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -125,6 +127,7 @@ impl Default for MarkdownSettings {
         Self {
             callouts: true,
             footnotes: true,
+            highlight: true,
         }
     }
 }

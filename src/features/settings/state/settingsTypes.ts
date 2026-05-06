@@ -22,6 +22,7 @@ export type AppSettings = {
   markdown: {
     callouts: boolean;
     footnotes: boolean;
+    highlight: boolean;
   };
   assets: {
     offlineMode: boolean;
@@ -47,6 +48,7 @@ export type SettingKey =
   | "wikilinks.autoRewriteOnRename"
   | "markdown.callouts"
   | "markdown.footnotes"
+  | "markdown.highlight"
   | "daily.pathPattern"
   | "daily.templatePath"
   | "assets.offlineMode";
@@ -64,7 +66,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     showInvisibles: false,
   },
   vault: { recentLimit: 8 },
-  markdown: { callouts: true, footnotes: true },
+  markdown: { callouts: true, footnotes: true, highlight: true },
   assets: { offlineMode: false },
 };
 

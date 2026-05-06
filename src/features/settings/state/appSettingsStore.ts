@@ -186,6 +186,7 @@ export function normalizeAppSettings(value: unknown): AppSettings {
     markdown: {
       callouts: booleanOr(markdown.callouts, DEFAULT_APP_SETTINGS.markdown.callouts),
       footnotes: booleanOr(markdown.footnotes, DEFAULT_APP_SETTINGS.markdown.footnotes),
+      highlight: booleanOr(markdown.highlight, DEFAULT_APP_SETTINGS.markdown.highlight),
     },
     assets: { offlineMode: booleanOr(assets.offlineMode, DEFAULT_APP_SETTINGS.assets.offlineMode) },
   };
