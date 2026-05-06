@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import {
   MagnifyingGlass,
   Notebook,
@@ -21,14 +21,25 @@ import {
   Tag,
   FolderSimple,
 } from '@phosphor-icons/react'
-import { folders, notes, recentNotes, tags } from '@/features/_mock/mockData'
-import type { Note } from '@/features/_mock/mockData'
 import { MockMarkdown } from '@/features/editor/ui/MockMarkdown'
+import { useVaultStore } from '@/features/vault/state/vaultStore'
+import { useLegacyVaultData } from './legacyAdapter'
+import type { LegacyVaultData, Note } from './legacyAdapter'
 
 type View = { kind: 'home' } | { kind: 'note'; id: string }
 type Drawer = null | 'search' | 'recent' | 'starred' | 'tags' | 'folders'
 
 const STARRED_IDS = new Set(['n1', 'n4', 'n6'])
+
+const LegacyDataContext = createContext<LegacyVaultData | null>(null)
+
+function useLegacyData() {
+  const data = useContext(LegacyDataContext)
+  if (!data) {
+    throw new Error('Legacy vault data context missing')
+  }
+  return data
+}
 
 export function LayoutMinimalCommand() {
   const [view, setView] = useState<View>({ kind: 'home' })
@@ -36,6 +47,14 @@ export function LayoutMinimalCommand() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [paletteQuery, setPaletteQuery] = useState('')
   const [drawerQuery, setDrawerQuery] = useState('')
+  const legacyData = useLegacyVaultData()
+  const loadNotes = useVaultStore((state) => state.loadNotes)
+  const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration)
+  const activeNote = view.kind === 'note' ? legacyData.notes.find((n) => n.id === view.id) : null
+
+  useEffect(() => {
+    void loadNotes().then(() => startWatcherIntegration()).catch(() => undefined)
+  }, [loadNotes, startWatcherIntegration])
 
   const openNote = (id: string) => {
     setView({ kind: 'note', id })
@@ -54,6 +73,7 @@ export function LayoutMinimalCommand() {
   }
 
   return (
+    <LegacyDataContext.Provider value={legacyData}>
     <div data-testid="shell" className="relative grid h-full grid-cols-[56px_1fr] bg-[var(--color-noxe-bg)]">
       {/* Slim icon rail */}
       <aside data-testid="rail" className="z-10 flex h-full flex-col items-center justify-between border-r border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] py-4">
@@ -85,11 +105,11 @@ export function LayoutMinimalCommand() {
               <ArrowLeft size={12} /> Home
             </button>
           ) : (
-            <span className="text-[13px] font-semibold tracking-tight">Personal Vault</span>
+            <span className="text-[13px] font-semibold tracking-tight">{legacyData.path ? 'Personal Vault' : 'No vault open'}</span>
           )}
 
-          {view.kind === 'note' && (
-            <Breadcrumb path={notes.find((n) => n.id === view.id)!.path} />
+          {view.kind === 'note' && activeNote && (
+            <Breadcrumb path={activeNote.path} />
           )}
 
           <button
@@ -103,6 +123,15 @@ export function LayoutMinimalCommand() {
               <kbd className="rounded border border-[var(--color-noxe-border)] bg-white px-1 text-[10px] font-medium">K</kbd>
             </span>
           </button>
+
+          {!legacyData.path && (
+            <button
+              onClick={() => void legacyData.openVault()}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] px-3 py-1.5 text-[12px] font-medium hover:border-[var(--color-noxe-border-strong)]"
+            >
+              Open Vault
+            </button>
+          )}
 
           <button className="flex items-center gap-1.5 rounded-full bg-[var(--color-noxe-ink)] px-3 py-1.5 text-[12px] font-medium text-white hover:opacity-90">
             <Plus size={12} weight="bold" /> Nova nota
@@ -142,6 +171,7 @@ export function LayoutMinimalCommand() {
         />
       )}
     </div>
+    </LegacyDataContext.Provider>
   )
 }
 
@@ -154,6 +184,7 @@ function HomeView({
   onOpenNote: (id: string) => void
   onOpenDrawer: (d: Drawer) => void
 }) {
+  const { notes, recentNotes, tags, path, isLoading, openVault } = useLegacyData()
   const pinned = notes.filter((n) => STARRED_IDS.has(n.id))
   const recent = recentNotes.map((id) => notes.find((n) => n.id === id)!).filter(Boolean)
 
@@ -167,14 +198,14 @@ function HomeView({
             </p>
             <h1 className="mt-1 text-[28px] font-semibold tracking-tight">Bem-vindo de volta 👋</h1>
             <p className="mt-1 text-[14px] text-[var(--color-noxe-muted)]">
-              137 notas no vault · última edição há 5 minutos
+              {path ? `${notes.length} notas no vault` : 'Abra um vault para listar suas notas Markdown'}
             </p>
           </div>
           <button
-            onClick={() => onOpenNote('n5')}
+            onClick={() => (recent[0] ? onOpenNote(recent[0].id) : void openVault())}
             className="flex items-center gap-1.5 rounded-full border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] px-3 py-1.5 text-[12px] hover:border-[var(--color-noxe-border-strong)]"
           >
-            Abrir nota de hoje <ArrowUpRight size={12} />
+            {path ? 'Abrir nota recente' : isLoading ? 'Abrindo…' : 'Open Vault'} <ArrowUpRight size={12} />
           </button>
         </div>
 
@@ -221,7 +252,7 @@ function HomeView({
           </div>
         </Section>
 
-        <Section title="Todas as notas" hint={`${notes.length} de 137`}>
+        <Section title="Todas as notas" hint={`${notes.length} no vault`}>
           <div className="grid grid-cols-2 gap-3">
             {notes.map((n) => (
               <NoteCard key={n.id} note={n} onOpen={() => onOpenNote(n.id)} compact />
@@ -300,7 +331,11 @@ function NoteCard({ note, onOpen, compact }: { note: Note; onOpen: () => void; c
 // ----- Note view -----
 
 function NoteView({ noteId, onOpenNote }: { noteId: string; onOpenNote: (id: string) => void }) {
-  const active = notes.find((n) => n.id === noteId)!
+  const { notes, recentNotes } = useLegacyData()
+  const active = notes.find((n) => n.id === noteId)
+  if (!active) {
+    return <main className="flex-1 p-10 text-[14px] text-[var(--color-noxe-muted)]">Nota não encontrada.</main>
+  }
   const outline = active.body.split('\n').filter((l) => /^#{1,3}\s/.test(l))
 
   return (
@@ -424,6 +459,7 @@ function Drawer({
   onClose: () => void
   onOpenNote: (id: string) => void
 }) {
+  const { notes, recentNotes, tags } = useLegacyData()
   const config: Record<Exclude<Drawer, null>, { title: string; placeholder: string }> = {
     search: { title: 'Buscar', placeholder: 'Buscar em todas as notas…' },
     recent: { title: 'Recentes', placeholder: 'Filtrar recentes…' },
@@ -444,7 +480,7 @@ function Drawer({
         n.excerpt.toLowerCase().includes(q) ||
         n.tags.some((t) => t.toLowerCase().includes(q)),
     )
-  }, [kind, query])
+  }, [kind, notes, query, recentNotes])
 
   return (
     <aside className="flex w-[300px] shrink-0 flex-col border-r border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)]">
@@ -514,6 +550,7 @@ function Drawer({
 }
 
 function FolderTree({ onOpenNote, query }: { onOpenNote: (id: string) => void; query: string }) {
+  const { notes, folders } = useLegacyData()
   const [open, setOpen] = useState<Record<string, boolean>>({ projects: true, 'projects/noxe': true })
   const filteredNotes = (folder: string) =>
     notes.filter(
@@ -602,11 +639,12 @@ function CommandPalette({
   onClose: () => void
   onOpenNote: (id: string) => void
 }) {
+  const { notes } = useLegacyData()
   const matches = useMemo(() => {
     if (!query) return notes.slice(0, 5)
     const q = query.toLowerCase()
     return notes.filter((n) => n.title.toLowerCase().includes(q) || n.tags.some((t) => t.includes(q))).slice(0, 6)
-  }, [query])
+  }, [notes, query])
 
   return (
     <div
