@@ -1,8 +1,13 @@
 import { useEffect } from "react";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { X } from "@phosphor-icons/react";
 
+import { settingsBridge } from "@/features/settings/services/settingsBridge";
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
+import { resolvedVaultSettings, useVaultSettingsStore } from "@/features/settings/state/vaultSettingsStore";
+import { useShellStore } from "@/features/shell/state/shellStore";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { SettingRow } from "./SettingRow";
 
 import type { ChangeEvent } from "react";
@@ -29,6 +34,12 @@ export function SettingsPanel() {
   const closeSettings = useSettingsUiStore((state) => state.closeSettings);
   const settings = useAppSettingsStore((state) => state.settings);
   const updateSettings = useAppSettingsStore((state) => state.updateSettings);
+  const vaultSettings = useVaultSettingsStore((state) => state.settings);
+  const hasVaultSettings = useVaultSettingsStore((state) => state.hasVault);
+  const appVaultSettings = useAppSettingsStore((state) => state.vaultSettings);
+  const applyVaultSettings = useAppSettingsStore((state) => state.applyVaultSettings);
+  const vaultPath = useVaultStore((state) => state.path);
+  const pushToast = useShellStore((state) => state.pushToast);
 
   useEffect(() => {
     if (!open) {
@@ -93,14 +104,37 @@ export function SettingsPanel() {
               <X size={18} />
             </button>
           </header>
-          <main className="min-h-0 overflow-y-auto p-5">{renderSection(activeSection, settings, patchEditor)}</main>
+          <main className="min-h-0 overflow-y-auto p-5">
+            {renderSection(activeSection, {
+              settings,
+              updateSettings,
+              patchEditor,
+              vaultSettings: appVaultSettings ?? vaultSettings,
+              hasVaultSettings: hasVaultSettings || appVaultSettings !== null,
+              applyVaultSettings,
+              vaultPath,
+              pushToast,
+            })}
+          </main>
         </div>
       </section>
     </div>
   );
 }
 
-function renderSection(section: SettingsSectionId, settings: AppSettings, patchEditor: (patch: Partial<AppSettings["editor"]>) => void) {
+type SectionContext = {
+  settings: AppSettings;
+  updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
+  patchEditor: (patch: Partial<AppSettings["editor"]>) => void;
+  vaultSettings: Parameters<typeof resolvedVaultSettings>[0];
+  hasVaultSettings: boolean;
+  applyVaultSettings: (settings: Parameters<typeof resolvedVaultSettings>[0]) => void;
+  vaultPath: string | null;
+  pushToast: (toast: { title: string; description?: string }) => void;
+};
+
+function renderSection(section: SettingsSectionId, context: SectionContext) {
+  const { settings, updateSettings, patchEditor, vaultSettings, hasVaultSettings, applyVaultSettings, vaultPath, pushToast } = context;
   if (section === "general") {
     return (
       <div className="space-y-3">
@@ -191,6 +225,78 @@ function renderSection(section: SettingsSectionId, settings: AppSettings, patchE
           description="Reserve a display preference for whitespace markers."
           scope="app"
           control={<Toggle checked={settings.editor.showInvisibles} label="Show invisibles" onChange={(checked) => patchEditor({ showInvisibles: checked })} />}
+        />
+      </div>
+    );
+  }
+
+  if (section === "files") {
+    const resolved = resolvedVaultSettings(vaultSettings);
+    const revealVault = async () => {
+      if (!vaultPath) {
+        pushToast({ title: "No vault open", description: "Open a vault before revealing it in the OS." });
+        return;
+      }
+      try {
+        await openPath(vaultPath);
+      } catch (error) {
+        pushToast({ title: "Could not reveal vault", description: error instanceof Error ? error.message : "Unknown error" });
+      }
+    };
+
+    return (
+      <div className="space-y-3">
+        <SettingRow
+          label="Attachments folder"
+          description={hasVaultSettings ? "Store pasted and dropped files relative to the current vault." : "Open a vault to edit this per-vault setting."}
+          scope="vault"
+          control={
+            <input
+              className={controlClass}
+              type="text"
+              aria-label="Attachments folder"
+              value={resolved.attachmentsFolder}
+              disabled={!hasVaultSettings}
+              onChange={(event) => {
+                const attachmentsFolder = event.currentTarget.value;
+                applyVaultSettings({ ...vaultSettings, attachmentsFolder });
+                void settingsBridge.set("vault.attachmentsFolder", attachmentsFolder, "vault");
+              }}
+            />
+          }
+        />
+        <SettingRow
+          label="Recent vault limit"
+          description="Choose how many recent vaults Noxe keeps in the switcher."
+          scope="app"
+          control={
+            <input
+              className={controlClass}
+              type="number"
+              min={1}
+              max={20}
+              aria-label="Recent vault limit"
+              value={settings.vault.recentLimit}
+              onChange={(event) => {
+                void updateSettings({ vault: { recentLimit: Number(event.currentTarget.value) } });
+              }}
+            />
+          }
+        />
+        <SettingRow
+          label="Reveal vault in OS"
+          description="Open the current vault folder in Finder or your platform file manager."
+          scope="vault"
+          control={
+            <button
+              type="button"
+              className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm font-medium text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!vaultPath}
+              onClick={() => void revealVault()}
+            >
+              Reveal vault
+            </button>
+          }
         />
       </div>
     );
