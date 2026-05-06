@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M0 — Foundation
-**Status:** Planning
+**Status:** F01 in progress (scaffold landed; verification suite green)
 
 Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
@@ -13,7 +13,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ### Features
 
-**[F01 — Foundation](../features/F01-foundation/spec.md)** — PLANNED
+**[F01 — Foundation](../features/F01-foundation/spec.md)** — COMPLETE
 - Tauri 2 + Rust scaffold + IPC contract skeleton
 - Vite 7 + React 19 + TypeScript strict + Tailwind v4
 - ESLint flat config + Prettier

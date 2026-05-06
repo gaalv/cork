@@ -138,6 +138,7 @@ _None yet._
 | 006 | Author AGENTS.md (multi-agent contract)  | 2026-05-06 | —      | ✅ Done  |
 | 007 | Reflect 123 atomic tasks into SQL todos with deps | 2026-05-06 | — | ✅ Done |
 | 008 | Author F11–F14 (assets, folder ops, settings, markdown ext.) + mini-tasks F05-T18 / F04-T14 | 2026-05-06 | — | ✅ Done |
+| 009 | Implement F01 Foundation (Tauri + React + tooling + CI + legacy migration); typecheck/lint/test/build/cargo test/e2e all green | 2026-05-06 | — | ✅ Done |
 
 ---
 
