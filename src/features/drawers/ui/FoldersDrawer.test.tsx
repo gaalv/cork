@@ -35,6 +35,14 @@ describe("FoldersDrawer", () => {
     expect(onOpenNote).toHaveBeenCalledWith("n1");
   });
 
+  it("expands folders with arrow keys", () => {
+    render(<FoldersDrawer />);
+
+    fireEvent.keyDown(screen.getByRole("button", { name: /work 2/i }), { key: "ArrowRight" });
+
+    expect(screen.getByRole("button", { name: /Alpha/i })).toBeInTheDocument();
+  });
+
   it("shows an empty state", () => {
     useVaultStore.setState({ notes: [] });
 

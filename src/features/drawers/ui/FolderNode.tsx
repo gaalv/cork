@@ -14,16 +14,27 @@ type FolderNodeProps = {
 export function FolderNode({ node, depth = 0, onOpenNote }: FolderNodeProps) {
   const expanded = useDrawersStore((state) => state.expandedFolders.has(node.path));
   const toggleFolder = useDrawersStore((state) => state.toggleFolder);
+  const setFolderExpanded = useDrawersStore((state) => state.setFolderExpanded);
   const hasChildren = node.children.length > 0;
   const hasNotes = node.notes.length > 0;
 
   return (
-    <li role="treeitem" aria-expanded={hasChildren || hasNotes ? expanded : undefined}>
+    <li role="treeitem" aria-expanded={hasChildren || hasNotes ? expanded : undefined} aria-level={depth + 1}>
       <button
         type="button"
         className="flex w-full items-center gap-1 rounded-md py-1.5 pr-2 text-left text-sm hover:bg-[var(--color-noxe-panel-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
         onClick={() => toggleFolder(node.path)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowRight" && (hasChildren || hasNotes) && !expanded) {
+            event.preventDefault();
+            setFolderExpanded(node.path, true);
+          }
+          if (event.key === "ArrowLeft" && expanded) {
+            event.preventDefault();
+            setFolderExpanded(node.path, false);
+          }
+        }}
       >
         <CaretRight size={13} className={cn("shrink-0 transition-transform", expanded && "rotate-90")} />
         <span className="min-w-0 flex-1 truncate">{node.name}</span>

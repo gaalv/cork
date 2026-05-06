@@ -14,11 +14,12 @@ type TagNodeProps = {
 export function TagNode({ node, depth = 0, onSelectTag }: TagNodeProps) {
   const expanded = useDrawersStore((state) => state.expandedTags.has(node.tag));
   const toggleTag = useDrawersStore((state) => state.toggleTag);
+  const setTagExpanded = useDrawersStore((state) => state.setTagExpanded);
   const selectedTag = useDrawersStore((state) => state.selectedTag);
   const hasChildren = node.children.length > 0;
 
   return (
-    <li role="treeitem" aria-expanded={hasChildren ? expanded : undefined} aria-selected={selectedTag === node.tag}>
+    <li role="treeitem" aria-expanded={hasChildren ? expanded : undefined} aria-selected={selectedTag === node.tag} aria-level={depth + 1}>
       <button
         type="button"
         className={cn(
@@ -31,6 +32,16 @@ export function TagNode({ node, depth = 0, onSelectTag }: TagNodeProps) {
             toggleTag(node.tag);
           } else {
             onSelectTag(node.tag);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowRight" && hasChildren && !expanded) {
+            event.preventDefault();
+            setTagExpanded(node.tag, true);
+          }
+          if (event.key === "ArrowLeft" && expanded) {
+            event.preventDefault();
+            setTagExpanded(node.tag, false);
           }
         }}
       >

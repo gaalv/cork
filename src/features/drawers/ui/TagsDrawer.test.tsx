@@ -46,6 +46,16 @@ describe("TagsDrawer", () => {
     expect(onOpenNote).toHaveBeenCalledWith("n1");
   });
 
+  it("expands parent tags with arrow keys", async () => {
+    clientMock.tags.list.mockResolvedValue([{ tag: "work/projects", count: 2 }]);
+
+    render(<TagsDrawer />);
+
+    fireEvent.keyDown(await screen.findByRole("button", { name: /work 2/i }), { key: "ArrowRight" });
+
+    expect(await screen.findByRole("button", { name: /projects 2/i })).toBeInTheDocument();
+  });
+
   it("renders an empty state", async () => {
     clientMock.tags.list.mockResolvedValue([]);
 
