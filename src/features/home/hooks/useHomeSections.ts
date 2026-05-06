@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
 
 import type { TagCount } from "@/shared/ipc/IpcContract";
@@ -30,6 +31,7 @@ export type HomeSections = {
 };
 
 export function useHomeSections(): HomeSections {
+  const vaultNotes = useVaultStore((state) => state.notes);
   const [pinned, setPinned] = useState<HomeNote[]>([]);
   const [recents, setRecents] = useState<NoteEntry[]>([]);
   const [tags, setTags] = useState<TagCount[]>([]);
@@ -56,11 +58,17 @@ export function useHomeSections(): HomeSections {
       setPageCount(1);
       setError(null);
     } catch (nextError) {
+      const fallback = [...vaultNotes].sort((left, right) => right.mtime - left.mtime);
+      setPinned([]);
+      setRecents(fallback.slice(0, RECENTS_LIMIT));
+      setTags([]);
+      setAllPage(fallback.slice(0, PAGE_SIZE));
+      setHasMore(fallback.length > PAGE_SIZE);
       setError(errorMessage(nextError));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [vaultNotes]);
 
   useEffect(() => {
     void load();
@@ -69,17 +77,20 @@ export function useHomeSections(): HomeSections {
   useEffect(() => {
     let cancelled = false;
     let unlisten: (() => void) | null = null;
-    void client.events.on("vault.fileChanged", () => {
-      if (!cancelled) {
-        void load();
-      }
-    }).then((nextUnlisten) => {
-      if (cancelled) {
-        nextUnlisten();
-        return;
-      }
-      unlisten = nextUnlisten;
-    });
+    void client.events
+      .on("vault.fileChanged", () => {
+        if (!cancelled) {
+          void load();
+        }
+      })
+      .then((nextUnlisten) => {
+        if (cancelled) {
+          nextUnlisten();
+          return;
+        }
+        unlisten = nextUnlisten;
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
       unlisten?.();

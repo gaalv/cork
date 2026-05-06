@@ -4,9 +4,9 @@ import { EditorPreviewSplit } from "@/features/editor/ui/EditorPreviewSplit";
 import { useAutoSave } from "@/features/editor/hooks/useAutoSave";
 import { useExternalReconciler } from "@/features/editor/hooks/useExternalReconciler";
 import { useEditorStore } from "@/features/editor/state/editorStore";
+import { HomeView } from "@/features/home/ui/HomeView";
 import { client } from "@/shared/ipc/client";
 
-import { useBulkSelection } from "@/features/folder-ops/hooks/useBulkSelection";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
@@ -44,36 +44,6 @@ export function ViewRouter() {
   }
 
   return <HomeView />;
-}
-
-function HomeView() {
-  const notes = useVaultStore((state) => state.notes);
-  const navigate = useShellStore((state) => state.navigate);
-  const bulkSelection = useBulkSelection(notes.map((note) => note.path));
-
-  return (
-    <main className="flex-1 overflow-y-auto p-10" data-testid="home-view">
-      <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Home</p>
-      <h1 className="mt-1 text-2xl font-semibold">Bem-vindo de volta 👋</h1>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {notes.map((note) => (
-          <button
-            key={note.id}
-            type="button"
-            onClick={(event) => {
-              if (!bulkSelection.handleClick(event, note.path)) {
-                navigate({ kind: "note", id: note.id });
-              }
-            }}
-            className={`rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-4 text-left hover:border-[var(--color-noxe-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none ${bulkSelection.isSelected(note.path) ? "border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-accent-soft)]" : ""}`}
-          >
-            <span className="font-medium">{note.title}</span>
-            <span className="mt-1 block text-[12px] text-[var(--color-noxe-muted)]">{note.folder || "Vault"}</span>
-          </button>
-        ))}
-      </div>
-    </main>
-  );
 }
 
 function NoteView({ noteId, title }: { noteId: string; title: string }) {
