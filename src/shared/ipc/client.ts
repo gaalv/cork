@@ -58,6 +58,22 @@ export const client = {
     create: (input: CreateNoteInput) => invokeCommand("notes.create", input),
     rename: (input: RenameNoteInput) => invokeCommand("notes.rename", input),
     trash: (path: string) => invokeCommand("notes.trash", { path }),
+    recent: (limit?: number) => invokeCommand("notes.recent", { limit }),
+    byTag: (tag: string) => invokeCommand("notes.byTag", { tag }),
+    byFolder: (folder: string) => invokeCommand("notes.byFolder", { folder }),
+    byId: (id: string) => invokeCommand("notes.byId", { id }),
+  },
+  tags: {
+    list: () => invokeCommand("tags.list", undefined),
+  },
+  links: {
+    outgoing: (noteId: string) => invokeCommand("links.outgoing", { noteId }),
+    incoming: (noteId: string) => invokeCommand("links.incoming", { noteId }),
+  },
+  index: {
+    search: (query: string, limit?: number) => invokeCommand("index.search", { query, limit }),
+    status: () => invokeCommand("index.status", undefined),
+    rebuild: () => invokeCommand("index.rebuild", undefined),
   },
   events: {
     on: <Name extends IpcEventName>(
