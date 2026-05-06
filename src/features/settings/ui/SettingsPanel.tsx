@@ -330,6 +330,52 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
     );
   }
 
+  if (section === "daily") {
+    const resolved = resolvedVaultSettings(vaultSettings);
+    const setDailySetting = (patch: { dailyPathPattern?: string; dailyTemplatePath?: string }) => {
+      applyVaultSettings({ ...vaultSettings, ...patch });
+      const [key, value] = patch.dailyPathPattern !== undefined ? ["daily.pathPattern", patch.dailyPathPattern] : ["daily.templatePath", patch.dailyTemplatePath ?? ""];
+      void settingsBridge.set(key as "daily.pathPattern" | "daily.templatePath", value, "vault");
+    };
+
+    return (
+      <div className="space-y-3">
+        <SettingRow
+          label="Daily note path pattern"
+          description={hasVaultSettings ? "Use date tokens such as YYYY, MM, DD to place daily notes." : "Open a vault to edit this per-vault setting."}
+          scope="vault"
+          control={
+            <input
+              className={controlClass}
+              type="text"
+              aria-label="Daily note path pattern"
+              value={resolved.dailyPathPattern}
+              disabled={!hasVaultSettings}
+              placeholder="Journal/YYYY-MM-DD.md"
+              onChange={(event) => setDailySetting({ dailyPathPattern: event.currentTarget.value })}
+            />
+          }
+        />
+        <SettingRow
+          label="Daily note template"
+          description={hasVaultSettings ? "Optional vault-relative template used when creating a daily note." : "Open a vault to edit this per-vault setting."}
+          scope="vault"
+          control={
+            <input
+              className={controlClass}
+              type="text"
+              aria-label="Daily note template"
+              value={resolved.dailyTemplatePath}
+              disabled={!hasVaultSettings}
+              placeholder="Templates/Daily.md"
+              onChange={(event) => setDailySetting({ dailyTemplatePath: event.currentTarget.value })}
+            />
+          }
+        />
+      </div>
+    );
+  }
+
   return <Placeholder title={sections.find((item) => item.id === section)?.label ?? "Settings"} />;
 }
 
