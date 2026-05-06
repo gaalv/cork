@@ -99,3 +99,12 @@ function errorMessage(error: unknown): string {
   }
   return "Unknown vault error";
 }
+
+if (
+  typeof window !== "undefined" &&
+  (import.meta.env.MODE !== "production" || window.location.hostname === "localhost")
+) {
+  window.__noxe_test_setVault = (path, notes = []) => {
+    useVaultStore.setState({ path, notes, isLoading: false, error: null });
+  };
+}
