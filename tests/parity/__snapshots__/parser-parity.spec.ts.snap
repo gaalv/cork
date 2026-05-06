@@ -1,0 +1,181 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
+[
+  {
+    "file": "01-basic.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Basic Note",
+      },
+    ],
+    "links": [
+      {
+        "alias": null,
+        "position": 30,
+        "targetText": "Target",
+      },
+    ],
+    "tags": [
+      "dev",
+    ],
+    "title": "Basic Note",
+  },
+  {
+    "file": "02-frontmatter-array.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Frontmatter Array",
+      },
+    ],
+    "links": [],
+    "tags": [
+      "project",
+      "rust/lang",
+    ],
+    "title": "Frontmatter Array",
+  },
+  {
+    "file": "03-frontmatter-string.md",
+    "headings": [],
+    "links": [],
+    "tags": [
+      "dev",
+      "rust",
+    ],
+    "title": "03-frontmatter-string",
+  },
+  {
+    "file": "04-tags-in-code.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Code Skip",
+      },
+    ],
+    "links": [
+      {
+        "alias": null,
+        "position": 50,
+        "targetText": "Visible",
+      },
+    ],
+    "tags": [
+      "visible",
+    ],
+    "title": "Code Skip",
+  },
+  {
+    "file": "05-inline-code.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Inline Code",
+      },
+    ],
+    "links": [],
+    "tags": [
+      "visible",
+    ],
+    "title": "Inline Code",
+  },
+  {
+    "file": "06-wikilink-alias.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Links",
+      },
+    ],
+    "links": [
+      {
+        "alias": "friendly alias",
+        "position": 13,
+        "targetText": "Target Note",
+      },
+      {
+        "alias": null,
+        "position": 48,
+        "targetText": "Other",
+      },
+    ],
+    "tags": [],
+    "title": "Links",
+  },
+  {
+    "file": "07-headings.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Top",
+      },
+      {
+        "level": 2,
+        "position": 7,
+        "text": "Middle",
+      },
+      {
+        "level": 3,
+        "position": 18,
+        "text": "Deep",
+      },
+    ],
+    "links": [],
+    "tags": [],
+    "title": "Top",
+  },
+  {
+    "file": "08-unicode.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Olá mundo dev",
+      },
+    ],
+    "links": [
+      {
+        "alias": null,
+        "position": 38,
+        "targetText": "São Paulo",
+      },
+    ],
+    "tags": [
+      "a",
+    ],
+    "title": "Olá mundo dev",
+  },
+  {
+    "file": "09-empty-frontmatter.md",
+    "headings": [],
+    "links": [],
+    "tags": [],
+    "title": "09-empty-frontmatter",
+  },
+  {
+    "file": "10-edge-tags.md",
+    "headings": [
+      {
+        "level": 1,
+        "position": 0,
+        "text": "Edge Tags",
+      },
+    ],
+    "links": [],
+    "tags": [
+      "bad",
+      "dev/rust",
+      "todo-list",
+    ],
+    "title": "Edge Tags",
+  },
+]
+`;

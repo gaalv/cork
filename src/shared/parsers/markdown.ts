@@ -148,7 +148,7 @@ function collectLinks(body: string, skipRanges: Range[]): ParsedLink[] {
     links.push({
       targetText: match[1].trim(),
       alias: match[2]?.trim() ?? null,
-      position: match.index,
+      position: byteOffset(body, match.index),
     });
   }
   return links;
@@ -211,6 +211,10 @@ function fallbackTitle(filename: string): string {
 
 function isSkipped(position: number, ranges: Range[]): boolean {
   return ranges.some((range) => position >= range.start && position < range.end);
+}
+
+function byteOffset(value: string, codeUnitOffset: number): number {
+  return new TextEncoder().encode(value.slice(0, codeUnitOffset)).length;
 }
 
 function sha1(input: string): string {

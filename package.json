@@ -19,7 +19,8 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:parity": "node scripts/check-parser-parity.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

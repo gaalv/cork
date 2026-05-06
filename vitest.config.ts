@@ -23,6 +23,8 @@ export default defineConfig({
         "src/vite-env.d.ts",
       ],
     },
+    pool: "threads",
+    poolOptions: { threads: { singleThread: true } },
     exclude: ["**/node_modules/**", "**/dist/**", "tests/e2e/**", "src-tauri/**"],
   },
 });
