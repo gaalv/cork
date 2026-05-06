@@ -32,6 +32,7 @@ export type LinkRow = {
   targetId: string | null;
   position: number;
   alias: string | null;
+  ambiguous: boolean;
 };
 
 export type SearchResult = NoteEntry & {

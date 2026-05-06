@@ -21,6 +21,7 @@ pub struct LinkRow {
     pub target_id: Option<String>,
     pub position: i64,
     pub alias: Option<String>,
+    pub ambiguous: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -128,7 +129,7 @@ pub fn tags_list(conn: &Connection) -> Result<Vec<TagCount>, IpcError> {
 pub fn links_outgoing(conn: &Connection, note_id: &str) -> Result<Vec<LinkRow>, IpcError> {
     link_query(
         conn,
-        "SELECT src_note_id, target_text, target_id, position, alias
+        "SELECT src_note_id, target_text, target_id, position, alias, ambiguous
          FROM links
          WHERE src_note_id = ?1
          ORDER BY position ASC",
@@ -139,7 +140,7 @@ pub fn links_outgoing(conn: &Connection, note_id: &str) -> Result<Vec<LinkRow>, 
 pub fn links_incoming(conn: &Connection, note_id: &str) -> Result<Vec<LinkRow>, IpcError> {
     link_query(
         conn,
-        "SELECT src_note_id, target_text, target_id, position, alias
+        "SELECT src_note_id, target_text, target_id, position, alias, ambiguous
          FROM links
          WHERE target_id = ?1
          ORDER BY position ASC",
@@ -193,6 +194,7 @@ fn link_query(conn: &Connection, sql: &str, note_id: &str) -> Result<Vec<LinkRow
                 target_id: row.get(2)?,
                 position: row.get(3)?,
                 alias: row.get(4)?,
+                ambiguous: row.get::<_, i64>(5)? != 0,
             })
         })
         .map_err(sql_error)?;
@@ -296,7 +298,7 @@ mod tests {
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO links (src_note_id, target_text, target_id, position, alias) VALUES ('n1', 'Beta', 'n2', 7, 'B')",
+            "INSERT INTO links (src_note_id, target_text, target_id, position, alias, ambiguous) VALUES ('n1', 'Beta', 'n2', 7, 'B', 0)",
             [],
         )
         .unwrap();

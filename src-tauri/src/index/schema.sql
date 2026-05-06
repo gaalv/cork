@@ -36,11 +36,14 @@ CREATE TABLE IF NOT EXISTS links (
   target_text TEXT NOT NULL,
   target_id   TEXT,
   position    INTEGER NOT NULL,
-  alias       TEXT
+  alias       TEXT,
+  ambiguous   INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_links_src ON links(src_note_id);
 CREATE INDEX IF NOT EXISTS idx_links_target_id ON links(target_id);
 CREATE INDEX IF NOT EXISTS idx_links_target_text ON links(target_text);
+CREATE INDEX IF NOT EXISTS idx_links_ambiguous ON links(ambiguous);
+CREATE INDEX IF NOT EXISTS idx_links_target_text_lower ON links(LOWER(target_text));
 
 CREATE TABLE IF NOT EXISTS frontmatter (
   note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,

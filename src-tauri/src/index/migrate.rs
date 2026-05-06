@@ -8,7 +8,8 @@ use crate::IpcError;
 
 const SCHEMA: &str = include_str!("schema.sql");
 const MIGRATION_003_ASSETS: &str = include_str!("migrations/003_assets.sql");
-const SCHEMA_VERSION: i64 = 3;
+const MIGRATION_004_LINKS_AMBIGUOUS: &str = include_str!("migrations/004_links_ambiguous.sql");
+const SCHEMA_VERSION: i64 = 4;
 
 pub fn open_index(app_data_dir: &Path, vault_path: &Path) -> Result<Connection, IpcError> {
     let db_path = index_db_path(app_data_dir, vault_path);
@@ -71,7 +72,21 @@ fn run_migrations(conn: &Connection, current_version: i64) -> Result<(), rusqlit
     if current_version < 3 {
         conn.execute_batch(MIGRATION_003_ASSETS)?;
     }
+    if current_version < 4 && !has_column(conn, "links", "ambiguous")? {
+        conn.execute_batch(MIGRATION_004_LINKS_AMBIGUOUS)?;
+    }
     Ok(())
+}
+
+fn has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let columns = stmt.query_map([], |row| row.get::<_, String>(1))?;
+    for result in columns {
+        if result? == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn remove_sqlite_files(db_path: &Path) -> Result<(), IpcError> {
