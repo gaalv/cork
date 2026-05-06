@@ -1,8 +1,13 @@
 import { ArrowLeft, Command as CommandIcon, Plus, Star } from "@phosphor-icons/react";
+import { useState } from "react";
 
+import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { VaultSwitcher } from "@/features/vault-switcher/ui/VaultSwitcher";
+import { client } from "@/shared/ipc/client";
+
+import type { NoteEntry } from "@/shared/ipc/types";
 
 export function TopBar() {
   const view = useShellStore((state) => state.view);
@@ -35,6 +40,7 @@ export function TopBar() {
         <Breadcrumb
           vaultName={vaultName}
           folder={activeNote?.folder ?? "Vault"}
+          note={activeNote ?? null}
           title={activeNote?.title ?? "Untitled"}
           onFolderClick={() => toggleDrawer("folders")}
         />
@@ -76,11 +82,24 @@ export function TopBar() {
 type BreadcrumbProps = {
   vaultName: string;
   folder: string;
+  note: NoteEntry | null;
   title: string;
   onFolderClick: () => void;
 };
 
-function Breadcrumb({ vaultName, folder, title, onFolderClick }: BreadcrumbProps) {
+function Breadcrumb({ vaultName, folder, note, title, onFolderClick }: BreadcrumbProps) {
+  const [editing, setEditing] = useState(false);
+  const loadNotes = useVaultStore((state) => state.loadNotes);
+
+  async function renameNote(nextTitle: string) {
+    if (!note) {
+      return;
+    }
+    await client.notes.rename({ oldPath: note.path, newName: nextTitle });
+    await loadNotes();
+    setEditing(false);
+  }
+
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 text-[13px] text-[var(--color-noxe-muted)]">
       <span className="truncate">{vaultName}</span>
@@ -93,7 +112,34 @@ function Breadcrumb({ vaultName, folder, title, onFolderClick }: BreadcrumbProps
         {folder || "Vault"}
       </button>
       <span aria-hidden="true">/</span>
-      <span className="truncate font-medium text-[var(--color-noxe-ink)]">{title}</span>
+      {editing ? (
+        <InlineRename
+          initial={title}
+          label="Rename active note"
+          validate={validateNoteTitle}
+          onCommit={renameNote}
+          onCancel={() => setEditing(false)}
+          className="font-medium text-[var(--color-noxe-ink)]"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="truncate rounded px-1 py-0.5 font-medium text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+        >
+          {title}
+        </button>
+      )}
     </nav>
   );
+}
+
+function validateNoteTitle(title: string): string | null {
+  if (title.length === 0) {
+    return "Note title is required";
+  }
+  if (/[\\/:*?"<>|]/.test(title)) {
+    return "Note title cannot contain path separators or reserved characters";
+  }
+  return null;
 }
