@@ -2,6 +2,7 @@ import { ArrowLeft, Command as CommandIcon, Plus, Star } from "@phosphor-icons/r
 
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { VaultSwitcher } from "@/features/vault-switcher/ui/VaultSwitcher";
 
 export function TopBar() {
   const view = useShellStore((state) => state.view);
@@ -27,7 +28,7 @@ export function TopBar() {
           <ArrowLeft size={12} /> Home
         </button>
       ) : (
-        <span className="text-[13px] font-semibold tracking-tight">Vault: {vaultName}</span>
+        <VaultSwitcher />
       )}
 
       {view.kind === "note" && (
