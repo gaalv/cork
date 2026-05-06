@@ -27,6 +27,7 @@ export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: Prev
   const buffer = useEditorStore((state) => (resolvedNoteId ? state.buffers.get(resolvedNoteId) : null));
   const updateBody = useEditorStore((state) => state.updateBody);
   const vaultRoot = useVaultStore((state) => state.path);
+  const notes = useVaultStore((state) => state.notes);
   const [outgoingLinks, setOutgoingLinks] = useState<LinkRow[]>([]);
   const source = markdown ?? buffer?.body ?? "";
 
@@ -45,13 +46,13 @@ export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: Prev
       })
       .catch(() => {
         if (!cancelled) {
-          setOutgoingLinks([]);
+          setOutgoingLinks(fallbackLinks(source, notes, resolvedNoteId));
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [markdown, resolvedNoteId]);
+  }, [markdown, notes, resolvedNoteId, source]);
 
   const linksByTarget = useMemo(() => linkMap(outgoingLinks), [outgoingLinks]);
   const components = useMemo(
@@ -116,6 +117,21 @@ export function Preview({ noteId, markdown, onWikilinkClick, assetExists }: Prev
       </ReactMarkdown>
     </article>
   );
+}
+
+function fallbackLinks(source: string, notes: Array<{ id: string; title: string }>, sourceNoteId: string): LinkRow[] {
+  return [...source.matchAll(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g)].map((match) => {
+    const targetText = (match[1] ?? "").trim();
+    const target = notes.find((note) => normalizeTarget(note.title) === normalizeTarget(targetText));
+    return {
+      srcNoteId: sourceNoteId,
+      targetText,
+      targetId: target?.id ?? null,
+      position: match.index ?? 0,
+      alias: match[2] ?? null,
+      ambiguous: false,
+    };
+  });
 }
 
 function linkMap(links: LinkRow[]): Map<string, LinkRow> {

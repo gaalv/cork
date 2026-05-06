@@ -46,6 +46,10 @@ export function ViewRouter() {
   return <HomeView />;
 }
 
+function fixtureBody(note: { title: string; body?: unknown }): string {
+  return typeof note.body === "string" ? note.body : `# ${note.title}\n`;
+}
+
 function NoteView({ noteId, title }: { noteId: string; title: string }) {
   const note = useVaultStore((state) => state.notes.find((candidate) => candidate.id === noteId));
   const openBuffer = useEditorStore((state) => state.openBuffer);
@@ -59,7 +63,7 @@ function NoteView({ noteId, title }: { noteId: string; title: string }) {
     let cancelled = false;
     void client.notes
       .read(note.path)
-      .catch(() => ({ path: note.path, frontmatter: {}, body: `# ${note.title}\n`, mtime: note.mtime }))
+      .catch(() => ({ path: note.path, frontmatter: {}, body: fixtureBody(note), mtime: note.mtime }))
       .then((file) => {
         if (!cancelled) {
           openBuffer({ noteId, file });
