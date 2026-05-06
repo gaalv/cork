@@ -15,8 +15,8 @@ pub enum IpcError {
     #[error("not found")]
     NotFound,
 
-    #[error("conflict: {0}")]
-    Conflict(String),
+    #[error("conflict at mtime {current_mtime}")]
+    Conflict { current_mtime: i64 },
 
     #[error("{0}")]
     Other(String),
@@ -41,9 +41,9 @@ impl Serialize for IpcError {
             IpcError::NotFound => {
                 map.serialize_entry("kind", "NotFound")?;
             }
-            IpcError::Conflict(m) => {
+            IpcError::Conflict { current_mtime } => {
                 map.serialize_entry("kind", "Conflict")?;
-                map.serialize_entry("message", m)?;
+                map.serialize_entry("currentMtime", current_mtime)?;
             }
             IpcError::Other(m) => {
                 map.serialize_entry("kind", "Other")?;
@@ -76,5 +76,12 @@ mod tests {
         let err = IpcError::Io("file missing".to_string());
         let json = serde_json::to_string(&err).unwrap();
         assert_eq!(json, r#"{"kind":"Io","message":"file missing"}"#);
+    }
+
+    #[test]
+    fn conflict_serializes_with_current_mtime() {
+        let err = IpcError::Conflict { current_mtime: 123 };
+        let json = serde_json::to_string(&err).unwrap();
+        assert_eq!(json, r#"{"kind":"Conflict","currentMtime":123}"#);
     }
 }
