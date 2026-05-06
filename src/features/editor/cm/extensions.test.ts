@@ -14,7 +14,7 @@ describe("createEditorExtensions", () => {
     });
 
     expect(parent.querySelector(".cm-editor")).toBeInTheDocument();
-    expect(parent.innerHTML).toMatchSnapshot();
+    expect(parent.innerHTML.replace(/ͼ[a-z0-9]+/g, "cm-token")).toMatchSnapshot();
     view.destroy();
   });
 });
