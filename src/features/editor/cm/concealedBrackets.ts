@@ -22,12 +22,23 @@ export const concealedBrackets = ViewPlugin.fromClass(
 function buildConcealDecorations(view: EditorView): DecorationSet {
   const cursor = view.state.selection.main.head;
   const decorations = [];
-  const pattern = /\[\[[^\]]+\]\]/g;
+  const pattern = /\[\[([^\]]+)\]\]/g;
   for (const { from, to } of view.visibleRanges) {
     const text = view.state.doc.sliceString(from, to);
     for (const match of text.matchAll(pattern)) {
       const start = from + (match.index ?? 0);
       const end = start + match[0].length;
+      const innerStart = start + 2;
+      const innerEnd = end - 2;
+      const inner = match[1] ?? "";
+      const pipeIdx = inner.indexOf("|");
+      const target = (pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner).trim();
+      decorations.push(
+        Decoration.mark({
+          class: "cm-wikilink",
+          attributes: { "data-wikilink": target },
+        }).range(innerStart, innerEnd),
+      );
       if (cursor >= start && cursor <= end) {
         continue;
       }
@@ -35,5 +46,6 @@ function buildConcealDecorations(view: EditorView): DecorationSet {
       decorations.push(Decoration.mark({ class: "cm-wikilink-bracket-hidden" }).range(end - 2, end));
     }
   }
+  decorations.sort((a, b) => a.from - b.from || a.value.startSide - b.value.startSide);
   return Decoration.set(decorations, true);
 }

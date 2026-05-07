@@ -146,7 +146,7 @@ export function GraphView() {
   const totalEdges = sim.edges.length;
 
   return (
-    <section data-testid="graph-view" className="flex h-full min-h-0 flex-col gap-3 p-4">
+    <section data-testid="graph-view" className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-3 p-4">
       <header className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Graph</p>

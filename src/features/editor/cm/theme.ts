@@ -99,6 +99,13 @@ export const noxeEditorTheme = EditorView.theme({
   ".cm-md-link:hover": {
     textDecoration: "underline",
   },
+  ".cm-wikilink": {
+    color: "var(--color-noxe-accent)",
+    cursor: "pointer",
+  },
+  ".cm-wikilink:hover": {
+    textDecoration: "underline",
+  },
 });
 
 export const noxeHighlightStyle = syntaxHighlighting(
