@@ -61,7 +61,12 @@ export function Editor({ className, extraExtensions = [], onReady }: EditorProps
       view.destroy();
       viewRef.current = null;
     };
-  }, [buffer, extensions, onReady]);
+    // We deliberately key the editor lifecycle off `activeNoteId` (and the
+    // presence of a buffer), NOT off the buffer object itself — every keystroke
+    // produces a new buffer reference via the editor store, which would destroy
+    // and remount the EditorView and steal focus on every character.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNoteId, Boolean(buffer)]);
 
   useEffect(() => {
     const view = viewRef.current;
