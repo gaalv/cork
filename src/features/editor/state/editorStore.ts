@@ -36,6 +36,7 @@ type EditorStore = {
   openBuffer: (input: OpenBufferInput) => void;
   setActiveNoteId: (noteId: string | null) => void;
   updateBody: (noteId: string, body: string) => void;
+  updateFrontmatter: (noteId: string, patch: JsonRecord) => void;
   markSaving: (noteId: string) => void;
   markSaved: (noteId: string, result: SaveResult, savedAt?: number) => void;
   markSaveError: (noteId: string, message: string) => void;
@@ -70,6 +71,23 @@ export const useEditorStore = create<EditorStore>((set) => ({
       pendingSave: body !== buffer.body && buffer.saveStatus === "saving" ? true : buffer.pendingSave,
       saveStatus: body !== buffer.body && buffer.saveStatus !== "saving" ? "idle" : buffer.saveStatus,
     }));
+  },
+
+  updateFrontmatter(noteId, patch) {
+    updateBuffer(set, noteId, (buffer) => {
+      const next = { ...buffer.frontmatter, ...patch };
+      const changed = JSON.stringify(next) !== JSON.stringify(buffer.frontmatter);
+      if (!changed) {
+        return buffer;
+      }
+      return {
+        ...buffer,
+        frontmatter: next,
+        dirty: true,
+        pendingSave: buffer.saveStatus === "saving" ? true : buffer.pendingSave,
+        saveStatus: buffer.saveStatus !== "saving" ? "idle" : buffer.saveStatus,
+      };
+    });
   },
 
   markSaving(noteId) {

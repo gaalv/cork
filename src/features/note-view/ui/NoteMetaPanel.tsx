@@ -4,6 +4,7 @@ import { NoteFolderField } from "./NoteFolderField";
 import { NoteMetaFooter } from "./NoteMetaFooter";
 import { Outline } from "./Outline";
 import { RecentsList } from "./RecentsList";
+import { TagsField } from "./TagsField";
 
 import { useBacklinks } from "@/features/note-view/hooks/useBacklinks";
 import { useOutline } from "@/features/note-view/hooks/useOutline";
@@ -44,6 +45,7 @@ export function NoteMetaPanel({ noteId, body, recents, updated, created, onOpenN
       </button>
       <Outline items={outline} activeId={activeId} onSelect={(item) => onSelectHeading?.(item)} />
       <NoteFolderField noteId={noteId} />
+      <TagsField noteId={noteId} />
       <BacklinksList backlinks={backlinks} onOpen={onOpenNote} />
       <RecentsList notes={recents} currentNoteId={noteId} onOpen={onOpenNote} />
       <AISuggestionCard />
