@@ -52,9 +52,11 @@ export function Shell() {
   }
 
   return (
-    <div data-testid="shell" className="relative grid h-full grid-cols-[56px_1fr] bg-[var(--color-noxe-bg)]">
-      <Rail />
-      <div className="relative flex h-full min-w-0 flex-col">
+    <div data-testid="shell" className="relative flex h-full overflow-hidden bg-[var(--color-noxe-bg)]">
+      <div className="h-full w-14 shrink-0">
+        <Rail />
+      </div>
+      <div className="relative flex h-full min-w-0 flex-1 flex-col">
         <TopBar />
         <div className="relative flex min-h-0 flex-1 overflow-hidden">
           <DrawerHost />
