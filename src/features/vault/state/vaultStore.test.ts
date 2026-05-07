@@ -49,7 +49,7 @@ describe("vaultStore", () => {
   });
 
   it("updates local cache when an external file event arrives", async () => {
-    const listener: { callback: ((event: IpcEventPayload<"vault.fileChanged">) => void) | null } = {
+    const listener: { callback: ((event: IpcEventPayload<"vault:fileChanged">) => void) | null } = {
       callback: null,
     };
     clientMock.events.on.mockImplementation((_event, cb) => {

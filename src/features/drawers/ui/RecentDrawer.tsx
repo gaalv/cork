@@ -37,7 +37,7 @@ export function RecentDrawer({ onOpenNote }: RecentDrawerProps) {
     };
 
     void load();
-    void client.events.on("vault.fileChanged", () => void load()).catch(() => undefined);
+    void client.events.on("vault:fileChanged", () => void load()).catch(() => undefined);
 
     return () => {
       cancelled = true;

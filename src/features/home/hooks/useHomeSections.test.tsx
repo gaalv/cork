@@ -66,7 +66,7 @@ describe("useHomeSections", () => {
     await waitFor(() => expect(clientMock.notes.recent).toHaveBeenCalledTimes(1));
 
     await act(async () => {
-      listeners.get("vault.fileChanged")?.({ path: "/vault/a.md", kind: "modified", source: "external", mtime: 2, size: 3 });
+      listeners.get("vault:fileChanged")?.({ path: "/vault/a.md", kind: "modified", source: "external", mtime: 2, size: 3 });
     });
 
     await waitFor(() => expect(clientMock.notes.recent).toHaveBeenCalledTimes(2));

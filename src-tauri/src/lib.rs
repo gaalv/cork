@@ -63,7 +63,7 @@ pub fn run() {
             let menu = menu::build_app_menu(app.handle())?;
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| {
-                app.emit("menu.action", event.id().0.as_str()).ok();
+                app.emit("menu:action", event.id().0.as_str()).ok();
             });
             if let Some(window) = app.get_webview_window("main") {
                 ensure_window_visible(&window)?;

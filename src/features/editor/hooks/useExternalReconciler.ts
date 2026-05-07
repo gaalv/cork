@@ -10,7 +10,7 @@ export function useExternalReconciler() {
 
     void Promise.resolve()
       .then(() =>
-        client.events.on("vault.fileChanged", async (event) => {
+        client.events.on("vault:fileChanged", async (event) => {
           if (disposed || event.source !== "external") {
             return;
           }

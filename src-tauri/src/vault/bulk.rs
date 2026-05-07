@@ -268,7 +268,7 @@ fn emit_file_renamed(
     new_path: PathBuf,
 ) -> Result<(), IpcError> {
     app.emit(
-        "vault.fileRenamed",
+        "vault:fileRenamed",
         VaultFileRenamedEvent { old_path, new_path },
     )
     .map_err(|err| IpcError::Other(err.to_string()))
@@ -282,7 +282,7 @@ fn emit_file_changed(
     size: u64,
 ) -> Result<(), IpcError> {
     app.emit(
-        "vault.fileChanged",
+        "vault:fileChanged",
         VaultFileChangedEvent {
             path,
             kind,

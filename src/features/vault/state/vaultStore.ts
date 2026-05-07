@@ -58,7 +58,7 @@ export const useVaultStore = create<VaultStore>((set, get) => ({
     if (watcherUnlisten) {
       return;
     }
-    watcherUnlisten = await client.events.on("vault.fileChanged", (event) => {
+    watcherUnlisten = await client.events.on("vault:fileChanged", (event) => {
       applyFileChanged(event);
       void get().loadNotes();
     });

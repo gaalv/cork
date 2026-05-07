@@ -220,7 +220,7 @@ fn emit_folder_changed(
     kind: FolderChangeKind,
 ) -> Result<(), IpcError> {
     app.emit(
-        "vault.folderChanged",
+        "vault:folderChanged",
         VaultFolderChangedEvent {
             path,
             old_path,

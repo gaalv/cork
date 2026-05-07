@@ -79,7 +79,7 @@ export function useHomeSections(): HomeSections {
     let cancelled = false;
     let unlisten: (() => void) | null = null;
     void client.events
-      .on("vault.fileChanged", () => {
+      .on("vault:fileChanged", () => {
         if (!cancelled) {
           void load();
         }

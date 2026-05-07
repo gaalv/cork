@@ -76,11 +76,11 @@ impl IndexState {
         let conn = open_index_at(&db_path)?;
         let progress_app = app.clone();
         let progress_sink: worker::ProgressSink = Arc::new(move |progress| {
-            let _ = progress_app.emit("index.progress", progress);
+            let _ = progress_app.emit("index:progress", progress);
         });
         let error_app = app.clone();
         let error_sink: worker::ErrorSink = Arc::new(move |message| {
-            let _ = error_app.emit("index.error", IndexErrorEvent { message });
+            let _ = error_app.emit("index:error", IndexErrorEvent { message });
         });
         let sender = worker::spawn_worker(
             db_path,
@@ -96,7 +96,7 @@ impl IndexState {
             conn: Mutex::new(conn),
             sender,
         });
-        app.emit("index.ready", self.status_for_runtime(runtime.as_ref()))
+        app.emit("index:ready", self.status_for_runtime(runtime.as_ref()))
             .map_err(|err| IpcError::Other(err.to_string()))?;
         Ok(())
     }
@@ -177,7 +177,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     state.set_app_data_dir(app_data_dir);
 
     let app_handle = app.handle().clone();
-    app.listen("vault.opened", move |event| {
+    app.listen("vault:opened", move |event| {
         if let Ok(payload) = serde_json::from_str::<VaultPath>(event.payload()) {
             let state = app_handle.state::<IndexState>();
             let _ = state.configure_for_vault(&app_handle, &payload.path);
@@ -185,7 +185,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let app_handle = app.handle().clone();
-    app.listen("vault.fileChanged", move |event| {
+    app.listen("vault:fileChanged", move |event| {
         if let Ok(payload) = serde_json::from_str::<VaultFileChangedEvent>(event.payload()) {
             let state = app_handle.state::<IndexState>();
             let vault = app_handle.state::<VaultState>();
@@ -200,7 +200,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let app_handle = app.handle().clone();
-    app.listen("vault.fileRenamed", move |event| {
+    app.listen("vault:fileRenamed", move |event| {
         if let Ok(payload) = serde_json::from_str::<VaultFileRenamedEvent>(event.payload()) {
             let state = app_handle.state::<IndexState>();
             let vault = app_handle.state::<VaultState>();

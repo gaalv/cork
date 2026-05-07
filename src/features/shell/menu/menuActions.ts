@@ -20,7 +20,7 @@ export function startMenuActionListener(): void {
   if (!hasTauriInternals()) {
     return;
   }
-  unlisten ??= listen<string>("menu.action", (event) => {
+  unlisten ??= listen<string>("menu:action", (event) => {
     void dispatchMenuAction(event.payload);
   });
 }

@@ -54,9 +54,9 @@ describe("ipc client", () => {
     });
     const callback = vi.fn();
 
-    const result = await client.events.on("vault.fileRenamed", callback);
+    const result = await client.events.on("vault:fileRenamed", callback);
 
-    expect(listenMock).toHaveBeenCalledWith("vault.fileRenamed", expect.any(Function));
+    expect(listenMock).toHaveBeenCalledWith("vault:fileRenamed", expect.any(Function));
     expect(callback).toHaveBeenCalledWith({ oldPath: "/old.md", newPath: "/new.md" });
     expect(result).toBe(unlisten);
   });

@@ -244,14 +244,14 @@ export type IpcCommandArgs<Name extends IpcCommandName> = IpcCommandMap[Name]["a
 export type IpcCommandResult<Name extends IpcCommandName> = IpcCommandMap[Name]["result"];
 
 export type IpcEventMap = {
-  "vault.opened": VaultOpenedEvent;
-  "vault.closed": VaultClosedEvent;
-  "vault.fileChanged": VaultFileChangedEvent;
-  "vault.fileRenamed": VaultFileRenamedEvent;
-  "vault.folderChanged": VaultFolderChangedEvent;
-  "index.progress": IndexProgressEvent;
-  "index.ready": IndexStatus;
-  "index.error": IndexErrorEvent;
+  "vault:opened": VaultOpenedEvent;
+  "vault:closed": VaultClosedEvent;
+  "vault:fileChanged": VaultFileChangedEvent;
+  "vault:fileRenamed": VaultFileRenamedEvent;
+  "vault:folderChanged": VaultFolderChangedEvent;
+  "index:progress": IndexProgressEvent;
+  "index:ready": IndexStatus;
+  "index:error": IndexErrorEvent;
 };
 
 export type IpcEventName = keyof IpcEventMap;

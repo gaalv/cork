@@ -50,14 +50,14 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
     if (unlisteners.length > 0) {
       return;
     }
-    const progressUnlisten = await client.events.on("index.progress", (progress) => {
+    const progressUnlisten = await client.events.on("index:progress", (progress) => {
       set({ progress, error: null });
     });
-    const readyUnlisten = await client.events.on("index.ready", (status) => {
+    const readyUnlisten = await client.events.on("index:ready", (status) => {
       set({ ready: status.ready, status, error: null });
       void get().loadHomeIndex();
     });
-    const errorUnlisten = await client.events.on("index.error", (event) => {
+    const errorUnlisten = await client.events.on("index:error", (event) => {
       set({ error: event.message });
     });
     unlisteners = [progressUnlisten, readyUnlisten, errorUnlisten];

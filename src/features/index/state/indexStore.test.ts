@@ -67,8 +67,8 @@ describe("indexStore", () => {
     clientMock.tags.list.mockResolvedValue([]);
 
     await useIndexStore.getState().startIndexIntegration();
-    listeners.get("index.progress")?.({ processed: 5, total: 10, phase: "building" });
-    listeners.get("index.ready")?.({ ready: true, vaultPath: "/vault", indexedNotes: 10, pendingJobs: 0 });
+    listeners.get("index:progress")?.({ processed: 5, total: 10, phase: "building" });
+    listeners.get("index:ready")?.({ ready: true, vaultPath: "/vault", indexedNotes: 10, pendingJobs: 0 });
 
     expect(useIndexStore.getState().progress?.processed).toBe(5);
     expect(useIndexStore.getState().ready).toBe(true);

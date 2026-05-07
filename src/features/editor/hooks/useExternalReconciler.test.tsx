@@ -8,7 +8,7 @@ import { useExternalReconciler } from "./useExternalReconciler";
 import type { IpcEventPayload } from "@/shared/ipc/IpcContract";
 import type { NoteFile } from "@/shared/ipc/types";
 
-type FileChanged = IpcEventPayload<"vault.fileChanged">;
+type FileChanged = IpcEventPayload<"vault:fileChanged">;
 
 let fileChanged: ((event: FileChanged) => void) | undefined;
 const readMock = vi.fn<(path: string) => Promise<NoteFile>>();
@@ -16,7 +16,7 @@ const readMock = vi.fn<(path: string) => Promise<NoteFile>>();
 vi.mock("@/shared/ipc/client", () => ({
   client: {
     events: {
-      on: (_event: "vault.fileChanged", callback: (event: FileChanged) => void) => {
+      on: (_event: "vault:fileChanged", callback: (event: FileChanged) => void) => {
         fileChanged = callback;
         return Promise.resolve(() => undefined);
       },

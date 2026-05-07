@@ -185,7 +185,7 @@ impl VaultState {
         let root = self.current_path().ok_or(IpcError::NotFound)?;
         let app = app.clone();
         let sink: VaultEventSink = Arc::new(move |event| {
-            let _ = app.emit("vault.fileChanged", event);
+            let _ = app.emit("vault:fileChanged", event);
         });
         self.watcher
             .start(root, Arc::clone(&self.fingerprint_cache), sink)
@@ -279,7 +279,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             }
             state.start_watcher(&app_handle)?;
             if let Some(path) = state.current_path() {
-                app_handle.emit("vault.opened", VaultPath { path })?;
+                app_handle.emit("vault:opened", VaultPath { path })?;
             }
         } else {
             state.clear_current_path()?;
@@ -321,7 +321,7 @@ pub fn vault_open(
     state.start_watcher(&app)?;
     let path = state.current_path().ok_or(IpcError::NotFound)?;
     let payload = VaultPath { path };
-    app.emit("vault.opened", &payload)
+    app.emit("vault:opened", &payload)
         .map_err(|err| IpcError::Other(err.to_string()))?;
     Ok(payload)
 }
@@ -334,7 +334,7 @@ pub fn vault_close(
 ) -> Result<(), IpcError> {
     let previous_path = state.close_current_path()?;
     index.close();
-    app.emit("vault.closed", VaultClosedEvent { previous_path })
+    app.emit("vault:closed", VaultClosedEvent { previous_path })
         .map_err(|err| IpcError::Other(err.to_string()))?;
     Ok(())
 }
@@ -403,7 +403,7 @@ pub fn notes_save(
         mtime: result.mtime,
         size: metadata.len(),
     };
-    app.emit("vault.fileChanged", event)
+    app.emit("vault:fileChanged", event)
         .map_err(|err| IpcError::Other(err.to_string()))?;
     Ok(result)
 }
@@ -424,7 +424,7 @@ pub fn notes_create(
     let metadata = fs::metadata(&path)?;
     let mtime = io::metadata_mtime_ms(&metadata)?;
     app.emit(
-        "vault.fileChanged",
+        "vault:fileChanged",
         VaultFileChangedEvent {
             path: path.clone(),
             kind: FileChangeKind::Created,
@@ -462,7 +462,7 @@ pub fn notes_rename(
     for result in rewritten {
         let metadata = fs::metadata(&result.path)?;
         app.emit(
-            "vault.fileChanged",
+            "vault:fileChanged",
             VaultFileChangedEvent {
                 path: result.path,
                 kind: FileChangeKind::Modified,
@@ -474,7 +474,7 @@ pub fn notes_rename(
         .map_err(|err| IpcError::Other(err.to_string()))?;
     }
     app.emit(
-        "vault.fileRenamed",
+        "vault:fileRenamed",
         VaultFileRenamedEvent {
             old_path,
             new_path: new_path.clone(),
@@ -488,7 +488,7 @@ pub fn notes_rename(
 pub fn notes_trash(app: AppHandle, path: PathBuf) -> Result<(), IpcError> {
     io::trash_note(&path)?;
     app.emit(
-        "vault.fileChanged",
+        "vault:fileChanged",
         VaultFileChangedEvent {
             path,
             kind: FileChangeKind::Removed,
