@@ -16,6 +16,7 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, WebviewWind
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 const QUICK_CAPTURE_EVENT: &str = "quick-capture:new";
+const OPEN_TODOS_EVENT: &str = "todos:open";
 
 /// Health check for the IPC bridge — used by the smoke test and as a
 /// reference for typed IPC contracts.
@@ -81,15 +82,21 @@ fn trigger_quick_capture(app: &AppHandle) {
     let _ = app.emit(QUICK_CAPTURE_EVENT, ());
 }
 
+fn trigger_open_todos(app: &AppHandle) {
+    show_main_window(app);
+    let _ = app.emit(OPEN_TODOS_EVENT, ());
+}
+
 fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let quick = MenuItemBuilder::with_id("tray:quick-capture", "Quick capture")
         .accelerator("CmdOrCtrl+Shift+I")
         .build(app)?;
+    let todos = MenuItemBuilder::with_id("tray:open-todos", "Open Todos").build(app)?;
     let show = MenuItemBuilder::with_id("tray:show", "Show Noxe").build(app)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItemBuilder::with_id("tray:quit", "Quit Noxe").build(app)?;
 
-    let menu = MenuBuilder::new(app).items(&[&quick, &show, &separator, &quit]).build()?;
+    let menu = MenuBuilder::new(app).items(&[&quick, &todos, &show, &separator, &quit]).build()?;
 
     let icon = app
         .default_window_icon()
@@ -102,6 +109,7 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "tray:quick-capture" => trigger_quick_capture(app),
+            "tray:open-todos" => trigger_open_todos(app),
             "tray:show" => show_main_window(app),
             "tray:quit" => app.exit(0),
             _ => {}
