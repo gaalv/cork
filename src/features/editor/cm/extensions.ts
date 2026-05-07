@@ -10,6 +10,9 @@ import { concealedBrackets } from "./concealedBrackets";
 import { footnoteDefExtension } from "./footnoteDef";
 import { headingSizes } from "./headingSizes";
 import { highlightMarkExtension } from "./highlightMark";
+import { liveLinkClick } from "./liveLinkClick";
+import { liveMarkdownDecorations } from "./liveMarkdownDecorations";
+import { liveModeFacet } from "./liveModeFacet";
 import { searchExtension } from "./searchExtension";
 import { slashCompletionSource } from "./slashMenu";
 import { tagCompletionSource } from "./tagAutocomplete";
@@ -17,6 +20,7 @@ import { noxeEditorTheme, noxeHighlightStyle } from "./theme";
 import { wikilinkCompletionSource } from "./wikilinkAutocomplete";
 
 import type { Extension } from "@codemirror/state";
+import type { LiveMode } from "./liveModeFacet";
 
 export type EditorExtensionOptions = {
   extraExtensions?: Extension[];
@@ -25,12 +29,14 @@ export type EditorExtensionOptions = {
   fontFamily?: string;
   fontSize?: number;
   tabSize?: number;
+  liveMode?: LiveMode;
 };
 
 export function createEditorExtensions(options: EditorExtensionOptions = {}): Extension[] {
   const showLineNumbers = options.showLineNumbers ?? true;
   const tabSize = options.tabSize ?? 2;
   return [
+    liveModeFacet.of(options.liveMode ?? "live"),
     ...(showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : []),
     highlightActiveLine(),
     history(),
@@ -43,6 +49,8 @@ export function createEditorExtensions(options: EditorExtensionOptions = {}): Ex
     footnoteDefExtension,
     highlightMarkExtension,
     concealedBrackets,
+    liveMarkdownDecorations,
+    liveLinkClick,
     searchExtension,
     autocompletion({ override: [wikilinkCompletionSource, tagCompletionSource, slashCompletionSource] }),
     keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),

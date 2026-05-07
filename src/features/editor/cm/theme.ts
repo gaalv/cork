@@ -48,6 +48,29 @@ export const noxeEditorTheme = EditorView.theme({
     backgroundColor: "color-mix(in oklab, var(--color-noxe-warning, #f59e0b) 22%, transparent)",
     borderRadius: "0.2rem",
   },
+  ".cm-md-bold": {
+    fontWeight: "700",
+  },
+  ".cm-md-italic": {
+    fontStyle: "italic",
+  },
+  ".cm-md-strike": {
+    textDecoration: "line-through",
+    textDecorationColor: "var(--color-noxe-muted, #7a736b)",
+  },
+  ".cm-md-code": {
+    fontFamily: "var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)",
+    backgroundColor: "color-mix(in oklab, var(--color-noxe-muted, #7a736b) 14%, transparent)",
+    borderRadius: "0.2rem",
+    padding: "0 0.25em",
+  },
+  ".cm-md-link": {
+    color: "var(--color-noxe-accent, #7c5cff)",
+    cursor: "pointer",
+  },
+  ".cm-md-link:hover": {
+    textDecoration: "underline",
+  },
 });
 
 export const noxeHighlightStyle = syntaxHighlighting(

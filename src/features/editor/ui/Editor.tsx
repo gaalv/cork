@@ -5,6 +5,7 @@ import { EditorView } from "@codemirror/view";
 import { createEditorDropPasteExtension } from "@/features/assets/hooks/useEditorDropPaste";
 import { createEditorExtensions } from "@/features/editor/cm/extensions";
 import { useEditorStore } from "@/features/editor/state/editorStore";
+import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 
 import type { Extension } from "@codemirror/state";
@@ -22,6 +23,7 @@ export function Editor({ className, extraExtensions = [], onReady }: EditorProps
   const buffer = useEditorStore((state) => (state.activeNoteId ? state.buffers.get(state.activeNoteId) : null));
   const updateBody = useEditorStore((state) => state.updateBody);
   const editorSettings = useAppSettingsStore((state) => state.settings.editor);
+  const liveMode = useNoteViewStore((state) => (activeNoteId ? state.liveMode[activeNoteId] ?? "live" : "live"));
   const extensions = useMemo(
     () => [
       EditorView.updateListener.of((update) => {
@@ -40,9 +42,10 @@ export function Editor({ className, extraExtensions = [], onReady }: EditorProps
         fontFamily: editorSettings.fontFamily,
         fontSize: editorSettings.fontSize,
         tabSize: editorSettings.tabSize,
+        liveMode,
       }),
     ],
-    [editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineWrap, editorSettings.showLineNumbers, editorSettings.tabSize, extraExtensions, updateBody],
+    [editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineWrap, editorSettings.showLineNumbers, editorSettings.tabSize, extraExtensions, liveMode, updateBody],
   );
 
   useEffect(() => {

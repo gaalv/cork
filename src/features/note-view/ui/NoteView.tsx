@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useAutoSave } from "@/features/editor/hooks/useAutoSave";
 import { useExternalReconciler } from "@/features/editor/hooks/useExternalReconciler";
 import { useEditorStore } from "@/features/editor/state/editorStore";
-import { EditorPreviewSplit } from "@/features/editor/ui/EditorPreviewSplit";
+import { Editor } from "@/features/editor/ui/Editor";
 import { NoteMetaPanel } from "@/features/note-view/ui/NoteMetaPanel";
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -24,6 +24,7 @@ export function NoteView({ noteId, title }: NoteViewProps) {
   const openBuffer = useEditorStore((state) => state.openBuffer);
   const buffer = useEditorStore((state) => state.buffers.get(noteId));
   const setActiveNotePath = useNoteViewStore((state) => state.setActiveNotePath);
+  const toggleLiveMode = useNoteViewStore((state) => state.toggleLiveMode);
   useAutoSave();
   useExternalReconciler();
 
@@ -50,6 +51,17 @@ export function NoteView({ noteId, title }: NoteViewProps) {
     };
   }, [buffer?.dirty, note, noteId, openBuffer]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === ".") {
+        event.preventDefault();
+        toggleLiveMode(noteId);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [noteId, toggleLiveMode]);
+
   const recents = useMemo(() => [...notes].sort((left, right) => right.mtime - left.mtime), [notes]);
   const openNote = (entry: NoteEntry) => navigate({ kind: "note", id: entry.id });
 
@@ -59,7 +71,7 @@ export function NoteView({ noteId, title }: NoteViewProps) {
         <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Note</p>
         <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
         <div className="mt-4 min-h-0 flex-1">
-          <EditorPreviewSplit />
+          <Editor className="h-full min-h-0" />
         </div>
       </section>
       <NoteMetaPanel

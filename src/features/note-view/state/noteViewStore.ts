@@ -1,18 +1,22 @@
 import { create } from "zustand";
 
 export type NoteMetaPanelSection = "outline" | "backlinks" | "recents" | "ai";
+export type EditorLiveMode = "live" | "source";
 
 type NoteViewStore = {
   activeNotePath: string | null;
   panelCollapsed: boolean;
   activeSection: NoteMetaPanelSection;
   scrollPositions: Record<string, number>;
+  liveMode: Record<string, EditorLiveMode>;
   setActiveNotePath: (path: string | null) => void;
   setPanelCollapsed: (collapsed: boolean) => void;
   togglePanelCollapsed: () => void;
   setActiveSection: (section: NoteMetaPanelSection) => void;
   saveScrollPosition: (noteId: string, position: number) => void;
   getScrollPosition: (noteId: string) => number;
+  getLiveMode: (noteId: string) => EditorLiveMode;
+  toggleLiveMode: (noteId: string) => void;
   reset: () => void;
 };
 
@@ -21,6 +25,7 @@ const initialState = {
   panelCollapsed: false,
   activeSection: "outline" as NoteMetaPanelSection,
   scrollPositions: {},
+  liveMode: {} as Record<string, EditorLiveMode>,
 };
 
 export const useNoteViewStore = create<NoteViewStore>((set, get) => ({
@@ -48,6 +53,18 @@ export const useNoteViewStore = create<NoteViewStore>((set, get) => ({
 
   getScrollPosition(noteId) {
     return get().scrollPositions[noteId] ?? 0;
+  },
+
+  getLiveMode(noteId) {
+    return get().liveMode[noteId] ?? "live";
+  },
+
+  toggleLiveMode(noteId) {
+    set((state) => {
+      const current = state.liveMode[noteId] ?? "live";
+      const next: EditorLiveMode = current === "live" ? "source" : "live";
+      return { liveMode: { ...state.liveMode, [noteId]: next } };
+    });
   },
 
   reset() {
