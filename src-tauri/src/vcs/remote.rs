@@ -14,7 +14,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -263,7 +263,29 @@ pub struct GhAccount {
 }
 
 /// Best-effort active gh account discovery. Parses `gh auth status` output.
+///
+/// Cached for 5 minutes — `gh auth status` makes a network round-trip to
+/// GitHub to validate the token, which can easily take a few seconds. Without
+/// caching, every `vcs_status` poll (~every 5 s from the UI) would block a
+/// worker thread, making the Sync settings feel frozen.
 pub fn gh_active_account() -> Option<GhAccount> {
+    static CACHE: OnceLock<Mutex<Option<(Instant, Option<GhAccount>)>>> = OnceLock::new();
+    let cell = CACHE.get_or_init(|| Mutex::new(None));
+    if let Ok(guard) = cell.lock() {
+        if let Some((ts, ref value)) = *guard {
+            if ts.elapsed() < Duration::from_secs(300) {
+                return value.clone();
+            }
+        }
+    }
+    let fresh = gh_active_account_uncached();
+    if let Ok(mut guard) = cell.lock() {
+        *guard = Some((Instant::now(), fresh.clone()));
+    }
+    fresh
+}
+
+fn gh_active_account_uncached() -> Option<GhAccount> {
     let out = Command::new("gh").args(["auth", "status"]).output().ok()?;
     let combined = format!(
         "{}\n{}",
