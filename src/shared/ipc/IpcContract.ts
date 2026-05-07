@@ -283,6 +283,68 @@ export type IpcCommandMap = {
     args: { provider: AiProvider; prompt: string; context: string };
     result: string;
   };
+  // === F21 AI Infrastructure ===
+  "ai.runSkill": {
+    args: { skillId: string; variables: Record<string, string> };
+    result: AiSkillResult;
+  };
+  "ai.cacheClear": {
+    args: { skillId?: string };
+    result: number;
+  };
+  "ai.skillsReload": {
+    args: undefined;
+    result: number;
+  };
+  "ai.skillsList": {
+    args: undefined;
+    result: SkillSummary[];
+  };
+  "ai.stats": {
+    args: { since?: number };
+    result: AiStats;
+  };
+  "ai.telemetryClear": {
+    args: undefined;
+    result: number;
+  };
+};
+
+export type AiSkillResult = {
+  output: string;
+  cacheHit: boolean;
+  tokensIn: number;
+  tokensOut: number;
+  latencyMs: number;
+  skillId: string;
+};
+
+export type SkillSummary = {
+  id: string;
+  name: string;
+  source: string;
+  triggers: string[];
+};
+
+export type AiStats = {
+  callsTotal: number;
+  cacheHitRate: number;
+  tokensIn: number;
+  tokensOut: number;
+  bySkill: Array<{ skillId: string; calls: number; tokens: number }>;
+  cacheRows: number;
+  cacheBytes: number;
+};
+
+export type AiSkillError = {
+  kind:
+    | "provider_disabled"
+    | "binary_not_found"
+    | "subprocess_failed"
+    | "timeout"
+    | "skill_not_found"
+    | "internal";
+  message: string;
 };
 
 export type IpcCommandName = keyof IpcCommandMap;

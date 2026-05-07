@@ -145,9 +145,11 @@ pub fn run() {
         .manage(index::IndexState::default())
         .manage(assets::AssetScopeState::default())
         .manage(vcs::VcsState::default())
+        .manage(ai::AiState::default())
         .setup(|app| {
             vault::setup(app)?;
             index::setup(app)?;
+            ai::setup(app.handle())?;
             // Start the VCS debounce worker
             vcs::start_worker(&app.state::<vcs::VcsState>());
             let menu = menu::build_app_menu(app.handle())?;
@@ -229,7 +231,14 @@ pub fn run() {
             vcs::vcs_history,
             vcs::vcs_restore,
             // === F20 AI ===
-            ai::ai_send_prompt
+            ai::ai_send_prompt,
+            // === F21 AI Infrastructure ===
+            ai::ai_run_skill,
+            ai::ai_cache_clear,
+            ai::ai_skills_reload,
+            ai::ai_skills_list,
+            ai::ai_stats,
+            ai::ai_telemetry_clear
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

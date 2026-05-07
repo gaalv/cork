@@ -10,6 +10,7 @@ import { resolvedVaultSettings, useVaultSettingsStore } from "@/features/setting
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { AboutDialog } from "./AboutDialog";
+import { AiUsageSection } from "./AiUsageSection";
 import { SettingRow } from "./SettingRow";
 import { ShortcutsList } from "./ShortcutsList";
 import { TemplatesSection } from "./TemplatesSection";
@@ -498,7 +499,7 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
       <div className="space-y-3">
         <SettingRow
           label="AI Provider"
-          description="Choose the CLI assistant Noxe will use for the AI chat panel. Requires the binary to be installed and available on PATH."
+          description="Choose the CLI assistant Noxe will use for AI features. Requires the binary to be installed and available on PATH."
           scope="app"
           control={
             <Select<AiProvider>
@@ -515,6 +516,7 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
             />
           }
         />
+        <AiUsageSection />
       </div>
     );
   }

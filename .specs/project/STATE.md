@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-06T20:00-03:00
-**Current Work:** F13 Settings + Search + App Menu complete
+**Last Updated:** 2026-05-07T14:35-03:00
+**Current Work:** F20 superseded; F21 (AI Infrastructure) spec written, ready for tasks/implementation
 
 ---
 
@@ -213,6 +213,13 @@ src-tauri/
 **Reason:** Keeps Rust menu construction simple and avoids duplicating business logic in native code.
 **Trade-off:** Native menu behavior needs manual UAT on macOS/Windows/Linux because browser tests cannot exercise OS menubars.
 **Impact:** New menu actions should add a stable ID in `src-tauri/src/menu.rs` and a matching branch in `menuActions.ts`.
+
+### AD-036: AI pivots from generic chat (F20) to contextual skills (F21–F24) (2026-05-07)
+
+**Decision:** Drop the F20 generic chat panel. Replace with three integrated AI features (Insights sidebar, Generate-from-topic, Slash commands) built on a small skills + cache + telemetry infrastructure (F21). No embeddings, no RAG, no HTTP API providers — keep using `claude` / `copilot` CLI subprocesses.
+**Reason:** User feedback — generic chat is already free-form-Q&A territory that the user's AI CLIs handle better directly against the `.md` files. Noxe's leverage is contextual integration in the editor and note view. Embeddings/RAG add a heavy dependency (model download, vector DB) for a use case the CLI already covers.
+**Trade-off:** "Ask my vault" semantic search isn't built into Noxe — users relying on it must invoke their AI CLI manually against the vault folder. Tag-overlap "Related notes" replaces it inside the app.
+**Impact:** F20 marked SUPERSEDED in roadmap; spec stays as historical reference. F21 spec written; F22–F24 to follow. The existing `ai_send_prompt` command is kept as the low-level subprocess primitive that the new `ai_run_skill` runner builds on.
 
 ---
 

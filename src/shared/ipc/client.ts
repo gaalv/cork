@@ -73,6 +73,13 @@ const commandNames: Record<IpcCommandName, string> = {
   "vcs.restore": "vcs_restore",
   // === F20 AI ===
   "ai.sendPrompt": "ai_send_prompt",
+  // === F21 AI Infrastructure ===
+  "ai.runSkill": "ai_run_skill",
+  "ai.cacheClear": "ai_cache_clear",
+  "ai.skillsReload": "ai_skills_reload",
+  "ai.skillsList": "ai_skills_list",
+  "ai.stats": "ai_stats",
+  "ai.telemetryClear": "ai_telemetry_clear",
 };
 
 type RustArgs = Record<string, unknown> | undefined;
@@ -155,6 +162,13 @@ export const client = {
   ai: {
     sendPrompt: (provider: AiProvider, prompt: string, context: string) =>
       invokeCommand("ai.sendPrompt", { provider, prompt, context }),
+    runSkill: (skillId: string, variables: Record<string, string>) =>
+      invokeCommand("ai.runSkill", { skillId, variables }),
+    cacheClear: (skillId?: string) => invokeCommand("ai.cacheClear", { skillId }),
+    skillsReload: () => invokeCommand("ai.skillsReload", undefined),
+    skillsList: () => invokeCommand("ai.skillsList", undefined),
+    stats: (since?: number) => invokeCommand("ai.stats", { since }),
+    telemetryClear: () => invokeCommand("ai.telemetryClear", undefined),
   },
   events: {
     on: <Name extends IpcEventName>(
@@ -183,6 +197,9 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "vcs.status":
     case "folders.list":
     case "links.graph":
+    case "ai.skillsReload":
+    case "ai.skillsList":
+    case "ai.telemetryClear":
       return undefined;
     case "vault.open":
     case "vault.removeRecent":
@@ -201,6 +218,18 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
       return args as RustArgs;
     case "ai.sendPrompt":
       return args as RustArgs;
+    case "ai.runSkill": {
+      const input = args as { skillId: string; variables: Record<string, string> };
+      return { input: { skillId: input.skillId, variables: input.variables } };
+    }
+    case "ai.cacheClear": {
+      const input = args as { skillId?: string };
+      return { input: { skillId: input.skillId } };
+    }
+    case "ai.stats": {
+      const input = args as { since?: number };
+      return { input: { since: input.since } };
+    }
     case "notes.byTag": {
       const input = args as { tag: string };
       return { tag: input.tag };

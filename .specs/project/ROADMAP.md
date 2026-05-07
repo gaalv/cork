@@ -151,9 +151,40 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ---
 
-## M6 — Release prep (post-mock)
+## M6 — Contextual AI
 
-**Goal:** Cross-platform build pipeline, icons, branding, public v1 release. Specs to be written when M5 lands.
+**Goal:** Replace the generic AI chat panel with three tightly integrated AI features the user actually reaches for: passive insights on the open note, generation from a topic, and slash-commands inside the editor. All built on a small skills + cache + telemetry foundation.
+
+### Features
+
+**[F20 — AI Chat Panel](../features/F20-ai-chat/spec.md)** — SUPERSEDED by F21–F24
+- Generic right-side chat panel scoped to the open note. Shipped, then deprecated when we realised the user already has `claude` / `copilot` CLIs for free-form Q&A. Spec stays as historical reference.
+
+**[F21 — AI Infrastructure](../features/F21-ai-infrastructure/spec.md)** — PLANNED
+- Skills system: bundled defaults + `~/.noxe/skills/*.md` overrides
+- BLAKE3 content-hash cache (`ai_cache` table)
+- Telemetry (`ai_calls` table) + Settings → AI → Usage
+- `ai_run_skill` runner orchestrates skill → cache → subprocess
+- Removes the F20 chat UI (low-level subprocess primitive stays)
+
+**F22 — Insights sidebar** — PLANNED (spec to be written)
+- Replaces the "Coming soon" panel on note view with three on-demand cards: Summary, Suggested tags, Related notes
+- Each card is opt-in (explicit "Generate" button) and cached via F21
+- "Related notes" uses keyword-overlap on cached suggested-tag output (no embeddings)
+
+**F23 — Generate note from topic** — PLANNED (spec to be written)
+- Command palette entry + Home button "New from topic"
+- Modal asks for topic + optional folder; produces a draft note via the `generate-note` skill
+
+**F24 — Slash commands** — PLANNED (spec to be written)
+- In-editor `/summarize`, `/expand`, `/rephrase`, `/continue` commands operating on the current selection (or paragraph)
+- Streams not required — replace the selection with the result on completion
+
+---
+
+## M7 — Release prep (post-mock)
+
+**Goal:** Cross-platform build pipeline, icons, branding, public v1 release. Specs to be written when M5/M6 land.
 
 ### Features
 
