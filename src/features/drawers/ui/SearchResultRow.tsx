@@ -19,7 +19,7 @@ export function SearchResultRow({ result, query, onOpenNote }: SearchResultRowPr
       <span className="mt-1 line-clamp-1 block text-xs text-[var(--color-noxe-muted)]">
         {renderSnippet(result.snippet)}
       </span>
-      <span className="mt-1 block text-[11px] text-[var(--color-noxe-muted)]">{result.folder || "Root"}</span>
+      <span className="mt-1 block text-[11px] text-[var(--color-noxe-muted)]">{result.folder || "Inbox"}</span>
     </button>
   );
 }

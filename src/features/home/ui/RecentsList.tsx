@@ -29,7 +29,7 @@ export function RecentsList({ notes, onOpen }: RecentsListProps) {
               >
                 <span>
                   <span className="block font-medium text-[var(--color-noxe-ink)]">{note.title}</span>
-                  <span className="mt-0.5 block text-xs text-[var(--color-noxe-muted)]">{note.folder || "Vault"}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--color-noxe-muted)]">{note.folder || "Inbox"}</span>
                 </span>
                 <time className="shrink-0 text-xs text-[var(--color-noxe-muted)]" dateTime={new Date(note.mtime).toISOString()}>
                   {formatDate(note.mtime)}

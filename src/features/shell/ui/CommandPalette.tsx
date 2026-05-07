@@ -197,7 +197,7 @@ function itemLabel(item: PaletteItem): string {
 
 function itemHint(item: PaletteItem): string {
   if (item.kind === "note") {
-    return item.folder || "Vault";
+    return item.folder || "Inbox";
   }
   if (item.kind === "tag") {
     return `${item.count} notes`;

@@ -20,7 +20,7 @@ export function NoteFolderField({ noteId }: NoteFolderFieldProps) {
       }
     }
     return [
-      { value: "", label: "Root" },
+      { value: "", label: "Inbox" },
       ...Array.from(set)
         .sort((a, b) => a.localeCompare(b))
         .map((folder) => ({ value: folder, label: folder })),

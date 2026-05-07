@@ -27,11 +27,11 @@ beforeEach(() => {
 });
 
 describe("NoteFolderField", () => {
-  it("opens a popover with all folders + Root", () => {
+  it("opens a popover with all folders + Inbox", () => {
     render(<NoteFolderField noteId="n1" />);
     fireEvent.click(screen.getByRole("combobox", { name: "Move note to folder" }));
     const options = screen.getAllByRole("option").map((node) => node.textContent);
-    expect(options).toEqual(["Root", "archive", "Inbox"]);
+    expect(options).toEqual(["Inbox", "archive", "Inbox"]);
   });
 
   it("invokes notes.move when the user picks a different folder", () => {
