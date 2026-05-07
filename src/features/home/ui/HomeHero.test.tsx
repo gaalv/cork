@@ -20,17 +20,16 @@ describe("HomeHero", () => {
     expect(screen.getByText(new RegExp(String(new Date().getFullYear())))).toBeInTheDocument();
   });
 
-  it("nudges when inbox notes are stale", () => {
-    const yesterday = Date.now() - 24 * 60 * 60 * 1000;
+  it("nudges when inbox has notes", () => {
     useVaultStore.setState({
       notes: [
-        { id: "n1", path: "/v/a.md", title: "A", folder: "", size: 1, mtime: yesterday },
-        { id: "n2", path: "/v/b.md", title: "B", folder: "", size: 1, mtime: yesterday },
+        { id: "n1", path: "/v/a.md", title: "A", folder: "", size: 1, mtime: Date.now() },
+        { id: "n2", path: "/v/b.md", title: "B", folder: "", size: 1, mtime: Date.now() },
       ],
     });
 
     render(<HomeHero />);
-    expect(screen.getByText(/sitting in your Inbox/i)).toBeInTheDocument();
+    expect(screen.getByText(/in your Inbox/i)).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 

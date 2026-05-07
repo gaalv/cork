@@ -3,7 +3,8 @@ import { FilePlus, FolderPlus, Tray } from "@phosphor-icons/react";
 
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
 import { useFolderTree } from "@/features/drawers/hooks/useFolderTree";
-import { folderOps, validateFolderName } from "@/features/folder-ops/services/folderOps";
+import { folderOps } from "@/features/folder-ops/services/folderOps";
+import { NewFolderDialog } from "@/features/folder-ops/ui/NewFolderDialog";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
@@ -26,23 +27,13 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
   const rootNotes = useMemo(() => notes.filter((note) => !note.folder).sort((a, b) => a.title.localeCompare(b.title)), [notes]);
   const inboxSelected = selectedFolder === null;
   const [busy, setBusy] = useState(false);
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
 
-  async function createRootFolder() {
-    if (busy) return;
-    const raw = window.prompt("New folder name");
-    if (raw === null) return;
-    const trimmed = raw.trim();
-    const validationError = validateFolderName(trimmed);
-    if (validationError) {
-      window.alert(validationError);
-      return;
-    }
+  async function handleCreateFolder(parent: string, name: string) {
     setBusy(true);
     try {
-      await folderOps.create({ parent: "", name: trimmed });
+      await folderOps.create({ parent, name });
       await loadNotes();
-    } catch (error) {
-      window.alert((error as Error).message ?? "Failed to create folder");
     } finally {
       setBusy(false);
     }
@@ -61,8 +52,14 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
   if (notes.length === 0 && tree.length === 0) {
     return (
       <section className="space-y-3">
-        <DrawerToolbar busy={busy} onNewFolder={() => void createRootFolder()} onNewNote={() => void newInboxNote()} />
+        <DrawerToolbar busy={busy} onNewFolder={() => setNewFolderOpen(true)} onNewNote={() => void newInboxNote()} />
         <p className="text-sm text-[var(--color-noxe-muted)]">No notes in this vault yet.</p>
+        <NewFolderDialog
+          open={newFolderOpen}
+          parent=""
+          onCreate={handleCreateFolder}
+          onClose={() => setNewFolderOpen(false)}
+        />
       </section>
     );
   }
@@ -79,7 +76,7 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
         }
       }}
     >
-      <DrawerToolbar busy={busy} onNewFolder={() => void createRootFolder()} onNewNote={() => void newInboxNote()} />
+      <DrawerToolbar busy={busy} onNewFolder={() => setNewFolderOpen(true)} onNewNote={() => void newInboxNote()} />
       <div>
         <button
           type="button"
@@ -123,6 +120,12 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
           ))}
         </ul>
       ) : null}
+      <NewFolderDialog
+        open={newFolderOpen}
+        parent=""
+        onCreate={handleCreateFolder}
+        onClose={() => setNewFolderOpen(false)}
+      />
     </section>
   );
 }

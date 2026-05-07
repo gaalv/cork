@@ -48,7 +48,6 @@ export function NoteCard({ note, onOpen, onPinToggle, onChanged, selected = fals
         <NoteCardMenu note={note} pinned={pinned} starred={starred} onOpen={onOpen} onPinToggle={onPinToggle} onChanged={onChanged} />
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-[var(--color-noxe-muted)]">
-        {pinned ? <Badge>Pinned</Badge> : null}
         {starred ? <Badge>Starred</Badge> : null}
         {note.folder ? <Badge>{note.folder}</Badge> : null}
         <time dateTime={new Date(note.mtime).toISOString()}>{formatDate(note.mtime)}</time>

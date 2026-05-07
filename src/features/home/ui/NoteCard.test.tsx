@@ -43,15 +43,14 @@ describe("NoteCard", () => {
   });
 
   it("runs menu actions", async () => {
-    const onPinToggle = vi.fn().mockResolvedValue(undefined);
     const onChanged = vi.fn();
     toggleStarMock.mockResolvedValue(true);
 
-    render(<NoteCard note={note} onOpen={vi.fn()} onPinToggle={onPinToggle} onChanged={onChanged} />);
+    render(<NoteCard note={note} onOpen={vi.fn()} onPinToggle={vi.fn()} onChanged={onChanged} />);
     fireEvent.click(screen.getByRole("button", { name: "Open menu for Alpha" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Unpin" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Star" }));
 
-    await waitFor(() => expect(onPinToggle).toHaveBeenCalledWith(note));
+    await waitFor(() => expect(toggleStarMock).toHaveBeenCalledWith(note));
     expect(onChanged).toHaveBeenCalled();
   });
 

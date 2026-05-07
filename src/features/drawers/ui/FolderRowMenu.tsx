@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { DotsThreeVertical } from "@phosphor-icons/react";
 
-import { folderOps, validateFolderName } from "@/features/folder-ops/services/folderOps";
+import { folderOps } from "@/features/folder-ops/services/folderOps";
+import { NewFolderDialog } from "@/features/folder-ops/ui/NewFolderDialog";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 
 type FolderRowMenuProps = {
   path: string;
@@ -13,6 +15,9 @@ type FolderRowMenuProps = {
 export function FolderRowMenu({ path, name, onRequestRename }: FolderRowMenuProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [newSubOpen, setNewSubOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const loadNotes = useVaultStore((state) => state.loadNotes);
 
@@ -27,39 +32,27 @@ export function FolderRowMenu({ path, name, onRequestRename }: FolderRowMenuProp
 
   const close = () => setOpen(false);
 
-  const newSubfolder = async () => {
-    const raw = window.prompt(`Create new folder inside "${name}"`);
-    if (raw === null) return close();
-    const trimmed = raw.trim();
-    const validationError = validateFolderName(trimmed);
-    if (validationError) {
-      window.alert(validationError);
-      return close();
-    }
+  const handleCreateSubfolder = async (parent: string, subName: string) => {
     setBusy(true);
     try {
-      await folderOps.create({ parent: path, name: trimmed });
+      await folderOps.create({ parent, name: subName });
       await loadNotes();
-    } catch (error) {
-      window.alert((error as Error).message ?? "Failed to create folder");
     } finally {
       setBusy(false);
-      close();
     }
   };
 
-  const trashFolder = async () => {
-    const ok = window.confirm(`Move folder "${name}" to trash?`);
-    if (!ok) return close();
+  const confirmTrash = async () => {
     setBusy(true);
+    setErrorMessage(null);
     try {
       await folderOps.trash(path);
       await loadNotes();
+      setTrashOpen(false);
     } catch (error) {
-      window.alert((error as Error).message ?? "Failed to move folder to trash");
+      setErrorMessage((error as Error).message ?? "Failed to move folder to trash");
     } finally {
       setBusy(false);
-      close();
     }
   };
 
@@ -81,10 +74,25 @@ export function FolderRowMenu({ path, name, onRequestRename }: FolderRowMenuProp
           className="absolute top-full right-0 z-30 mt-1 w-44 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-1 text-xs shadow-lg"
         >
           <MenuItem disabled={busy} onSelect={() => { onRequestRename(); close(); }}>Rename</MenuItem>
-          <MenuItem disabled={busy} onSelect={() => void newSubfolder()}>New subfolder</MenuItem>
-          <MenuItem disabled={busy} destructive onSelect={() => void trashFolder()}>Move to trash</MenuItem>
+          <MenuItem disabled={busy} onSelect={() => { setNewSubOpen(true); close(); }}>New subfolder</MenuItem>
+          <MenuItem disabled={busy} destructive onSelect={() => { setTrashOpen(true); close(); }}>Move to trash</MenuItem>
         </div>
       ) : null}
+      <NewFolderDialog
+        open={newSubOpen}
+        parent={path}
+        onCreate={handleCreateSubfolder}
+        onClose={() => setNewSubOpen(false)}
+      />
+      <ConfirmDialog
+        open={trashOpen}
+        title={`Move "${name}" to trash?`}
+        message={errorMessage ?? "The folder and all of its notes will be moved to the system trash."}
+        confirmLabel="Move to trash"
+        destructive
+        onCancel={() => { setTrashOpen(false); setErrorMessage(null); }}
+        onConfirm={() => void confirmTrash()}
+      />
     </div>
   );
 }

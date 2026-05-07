@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { toggleStar } from "@/features/drawers/services/starService";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -15,10 +15,27 @@ type NoteCardMenuProps = {
   onChanged?: () => void;
 };
 
-export function NoteCardMenu({ note, pinned = false, starred = false, onOpen, onPinToggle, onChanged }: NoteCardMenuProps) {
+export function NoteCardMenu({ note, starred = false, onOpen, onChanged }: NoteCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
   const toggleDrawer = useShellStore((state) => state.toggleDrawer);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDocClick = (event: MouseEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   const runAction = async (action: () => Promise<void> | void) => {
     setBusy(true);
@@ -32,7 +49,7 @@ export function NoteCardMenu({ note, pinned = false, starred = false, onOpen, on
   };
 
   return (
-    <div className="relative" onClick={(event) => event.stopPropagation()}>
+    <div ref={ref} className="relative" onClick={(event) => event.stopPropagation()}>
       <button
         type="button"
         aria-label={`Open menu for ${note.title}`}
@@ -48,15 +65,12 @@ export function NoteCardMenu({ note, pinned = false, starred = false, onOpen, on
           aria-label={`Actions for ${note.title}`}
           className="absolute top-full right-0 z-20 mt-1 w-44 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-1 text-sm shadow-lg"
         >
-          <MenuButton onSelect={() => onOpen(note)}>Open</MenuButton>
-          <MenuButton disabled={busy} onSelect={() => runAction(() => onPinToggle(note))}>
-            {pinned ? "Unpin" : "Pin"}
-          </MenuButton>
+          <MenuButton onSelect={() => { onOpen(note); setOpen(false); }}>Open</MenuButton>
           <MenuButton disabled={busy} onSelect={() => runAction(async () => { void (await toggleStar(note)); })}>
             {starred ? "Unstar" : "Star"}
           </MenuButton>
-          <MenuButton onSelect={() => toggleDrawer("folders")}>Reveal in Folders</MenuButton>
-          <MenuButton onSelect={() => navigator.clipboard?.writeText(note.path)}>Copy Path</MenuButton>
+          <MenuButton onSelect={() => { toggleDrawer("folders"); setOpen(false); }}>Reveal in Folders</MenuButton>
+          <MenuButton onSelect={() => { navigator.clipboard?.writeText(note.path); setOpen(false); }}>Copy Path</MenuButton>
           <MenuButton disabled={busy} destructive onSelect={() => runAction(() => client.notes.trash(note.path))}>
             Delete
           </MenuButton>
