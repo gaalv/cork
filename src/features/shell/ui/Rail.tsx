@@ -1,4 +1,4 @@
-import { CalendarBlank, ClockCounterClockwise, FolderSimple, GearSix, GraphIcon, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
+import { CalendarBlank, CheckSquare, ClockCounterClockwise, FolderSimple, GearSix, GraphIcon, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
 
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -61,6 +61,12 @@ export function Rail({ className }: RailProps) {
           label="Calendar"
           active={view.kind === "calendar" && drawer === null}
           onClick={() => navigate({ kind: "calendar" })}
+        />
+        <RailButton
+          icon={<CheckSquare size={18} />}
+          label="Todos"
+          active={view.kind === "todos" && drawer === null}
+          onClick={() => navigate({ kind: "todos" })}
         />
       </div>
       <div className="flex flex-col items-center gap-2">
