@@ -346,6 +346,11 @@ fn gh_active_account_uncached() -> Option<GhAccount> {
 fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
     Command::new("git")
         .current_dir(vault_root)
+        // Never let git prompt for credentials — without a TTY it would
+        // hang forever. We supply auth via http.extraHeader / SSH instead.
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
         .args(args)
         .output()
         .map_err(|e| e.to_string())
@@ -541,7 +546,7 @@ fn append_log(vault_root: &Path, line: &str) -> std::io::Result<()> {
 // ── IPC commands ─────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn vcs_remote_enable(
+pub async fn vcs_remote_enable(
     vault_state: tauri::State<'_, VaultState>,
     remote_state: tauri::State<'_, RemoteState>,
     input: EnableRemoteInput,
@@ -551,8 +556,34 @@ pub fn vcs_remote_enable(
         return Err(IpcError::Other("git is not available".into()));
     }
 
-    // Make sure repo exists
-    super::git_init_if_needed(&vault_root).map_err(IpcError::Other)?;
+    // The bulk of this command is blocking IO (git push/network). Run on
+    // the blocking pool so the Tauri runtime — and the UI — stay
+    // responsive.
+    let vault_root_for_blocking = vault_root.clone();
+    let url_set = tauri::async_runtime::spawn_blocking(move || -> Result<String, IpcError> {
+        let vault_root = vault_root_for_blocking;
+        super::git_init_if_needed(&vault_root).map_err(IpcError::Other)?;
+        enable_remote_blocking(&vault_root, input)
+    })
+    .await
+    .map_err(|e| IpcError::Other(format!("background task failed: {e}")))??;
+
+    let mut settings = load_vault_settings(&vault_root).unwrap_or_default();
+    settings.git_remote = Some(GitRemoteSettings {
+        enabled: true,
+        url: Some(url_set.clone()),
+        provider: Some("github".to_string()),
+    });
+    save_vault_settings(&vault_root, &settings)?;
+
+    remote_state.configure(Some(vault_root), settings.git_remote.clone());
+    Ok(remote_state.snapshot())
+}
+
+fn enable_remote_blocking(
+    vault_root: &Path,
+    input: EnableRemoteInput,
+) -> Result<String, IpcError> {
 
     let url_set: String;
     if let Some(url) = input.url.clone() {
@@ -660,37 +691,30 @@ pub fn vcs_remote_enable(
         url_set = url_out.trim().to_string();
     }
 
-    let mut settings = load_vault_settings(&vault_root).unwrap_or_default();
-    settings.git_remote = Some(GitRemoteSettings {
-        enabled: true,
-        url: Some(url_set.clone()),
-        provider: Some("github".to_string()),
-    });
-    save_vault_settings(&vault_root, &settings)?;
-
-    remote_state.configure(
-        Some(vault_root.clone()),
-        settings.git_remote.clone(),
-    );
-    Ok(remote_state.snapshot())
+    Ok(url_set)
 }
 
 #[tauri::command]
-pub fn vcs_remote_disable(
+pub async fn vcs_remote_disable(
     vault_state: tauri::State<'_, VaultState>,
     remote_state: tauri::State<'_, RemoteState>,
 ) -> Result<RemoteInfo, IpcError> {
     let vault_root = vault_state.current_path().ok_or(IpcError::NotFound)?;
-    let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
-    // Strip any per-repo auth overrides we may have set during enable.
-    let _ = run_git(
-        &vault_root,
-        &["config", "--local", "--unset-all", "credential.helper"],
-    );
-    let _ = run_git(
-        &vault_root,
-        &["config", "--local", "--remove-section", "http \"https://github.com/\""],
-    );
+    let vault_root_for_blocking = vault_root.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _ = run_git(&vault_root_for_blocking, &["remote", "remove", "origin"]);
+        let _ = run_git(
+            &vault_root_for_blocking,
+            &["config", "--local", "--unset-all", "credential.helper"],
+        );
+        let _ = run_git(
+            &vault_root_for_blocking,
+            &["config", "--local", "--remove-section", "http \"https://github.com/\""],
+        );
+    })
+    .await
+    .map_err(|e| IpcError::Other(format!("background task failed: {e}")))?;
+
     let mut settings = load_vault_settings(&vault_root).unwrap_or_default();
     settings.git_remote = Some(GitRemoteSettings {
         enabled: false,
@@ -703,7 +727,7 @@ pub fn vcs_remote_disable(
 }
 
 #[tauri::command]
-pub fn vcs_remote_sync_now(
+pub async fn vcs_remote_sync_now(
     vault_state: tauri::State<'_, VaultState>,
     remote_state: tauri::State<'_, RemoteState>,
 ) -> Result<RemoteInfo, IpcError> {
@@ -722,21 +746,19 @@ pub fn vcs_remote_sync_now(
         g.in_flight = true;
         g.status = SyncStatus::Syncing;
     }
-    let pull_res = pull_with_conflict_copy(&vault_root);
-    if pull_res.is_ok() && local_is_ahead(&vault_root) {
-        let push_res = git_push(&vault_root);
-        finish_op(
-            &remote_state.inner,
-            push_res,
-            OpKind::Push,
-        );
-    } else {
-        finish_op(
-            &remote_state.inner,
-            pull_res.map(|_| ()).map_err(|e| e),
-            OpKind::Pull,
-        );
-    }
+    let inner = remote_state.inner_arc();
+    let vault_root_for_blocking = vault_root.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let pull_res = pull_with_conflict_copy(&vault_root_for_blocking);
+        if pull_res.is_ok() && local_is_ahead(&vault_root_for_blocking) {
+            let push_res = git_push(&vault_root_for_blocking);
+            finish_op(&inner, push_res, OpKind::Push);
+        } else {
+            finish_op(&inner, pull_res.map(|_| ()), OpKind::Pull);
+        }
+    })
+    .await
+    .map_err(|e| IpcError::Other(format!("background task failed: {e}")))?;
     Ok(remote_state.snapshot())
 }
 
