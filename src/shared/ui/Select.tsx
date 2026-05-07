@@ -49,8 +49,8 @@ export function Select<T extends string | number>({
         setOpen(false);
       }
     };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("mousedown", onClickOutside, true);
+    return () => document.removeEventListener("mousedown", onClickOutside, true);
   }, [open]);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export function Select<T extends string | number>({
                 tabIndex={isActive ? 0 : -1}
                 ref={(node) => {
                   if (isActive && open && node) {
-                    node.focus({ preventScroll: false });
+                    node.focus({ preventScroll: true });
                   }
                 }}
                 onClick={() => commit(index)}
