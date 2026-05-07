@@ -302,6 +302,27 @@ export type IpcCommandMap = {
     args: undefined;
     result: number;
   };
+  // === F25 Todos ===
+  "todos.load": {
+    args: undefined;
+    result: TodoList;
+  };
+  "todos.save": {
+    args: { list: TodoList };
+    result: TodoList;
+  };
+};
+
+export type Todo = {
+  id: string;
+  text: string;
+  done: boolean;
+  createdAt: string;
+  completedAt?: string;
+};
+
+export type TodoList = {
+  todos: Todo[];
 };
 
 export type AiSkillResult = {

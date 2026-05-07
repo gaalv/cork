@@ -4,6 +4,7 @@ pub mod error;
 pub mod index;
 pub mod menu;
 pub mod settings;
+pub mod todos;
 pub mod vault;
 pub mod vcs;
 
@@ -236,7 +237,10 @@ pub fn run() {
             ai::ai_skills_reload,
             ai::ai_skills_list,
             ai::ai_stats,
-            ai::ai_telemetry_clear
+            ai::ai_telemetry_clear,
+            // === F25 Todos ===
+            todos::todos_load,
+            todos::todos_save
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

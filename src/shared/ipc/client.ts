@@ -20,6 +20,7 @@ import type {
   AppSettings,
   VaultSettings,
 } from "./types";
+import type { TodoList } from "./IpcContract";
 
 const commandNames: Record<IpcCommandName, string> = {
   health: "health",
@@ -77,6 +78,8 @@ const commandNames: Record<IpcCommandName, string> = {
   "ai.skillsList": "ai_skills_list",
   "ai.stats": "ai_stats",
   "ai.telemetryClear": "ai_telemetry_clear",
+  "todos.load": "todos_load",
+  "todos.save": "todos_save",
 };
 
 type RustArgs = Record<string, unknown> | undefined;
@@ -165,6 +168,10 @@ export const client = {
     stats: (since?: number) => invokeCommand("ai.stats", { since }),
     telemetryClear: () => invokeCommand("ai.telemetryClear", undefined),
   },
+  todos: {
+    load: () => invokeCommand("todos.load", undefined),
+    save: (list: TodoList) => invokeCommand("todos.save", { list }),
+  },
   events: {
     on: <Name extends IpcEventName>(
       event: Name,
@@ -195,6 +202,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "ai.skillsReload":
     case "ai.skillsList":
     case "ai.telemetryClear":
+    case "todos.load":
       return undefined;
     case "vault.open":
     case "vault.removeRecent":
@@ -266,6 +274,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "notes.bulkMove":
     case "notes.bulkTrash":
     case "notes.bulkSetFrontmatter":
+    case "todos.save":
       return args as RustArgs;
   }
 }

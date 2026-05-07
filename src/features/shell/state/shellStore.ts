@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ShellView = { kind: "home" } | { kind: "note"; id: string } | { kind: "calendar" } | { kind: "graph" };
+export type ShellView = { kind: "home" } | { kind: "note"; id: string } | { kind: "calendar" } | { kind: "graph" } | { kind: "todos" };
 export type DrawerId = "search" | "folders" | "recent" | "starred" | "tags";
 export type ToastMessage = {
   id: string;

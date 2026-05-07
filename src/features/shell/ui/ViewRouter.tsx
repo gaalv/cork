@@ -4,6 +4,7 @@ import { CalendarView } from "@/features/calendar/ui/CalendarView";
 import { GraphView } from "@/features/graph/ui/GraphView";
 import { HomeView } from "@/features/home/ui/HomeView";
 import { NoteView } from "@/features/note-view/ui/NoteView";
+import { TodosView } from "@/features/todos/ui/TodosView";
 
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
@@ -47,6 +48,10 @@ export function ViewRouter() {
 
   if (view.kind === "graph") {
     return <GraphView />;
+  }
+
+  if (view.kind === "todos") {
+    return <TodosView />;
   }
 
   return <HomeView />;

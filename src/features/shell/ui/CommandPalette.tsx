@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Command } from "cmdk";
 import fuzzysort from "fuzzysort";
+import { toast } from "sonner";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
 import { useGenerateNoteStore } from "@/features/ai/state/generateNoteStore";
@@ -10,15 +11,17 @@ import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { commandsRegistry } from "@/features/shell/commands/registry";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useIndexStore } from "@/features/index/state/indexStore";
+import { useTodosStore } from "@/features/todos/state/todosStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import type { CommandActionId, CommandRegistryItem } from "@/features/shell/commands/registry";
-import type { TagCount } from "@/shared/ipc/IpcContract";
+import type { TagCount, Todo } from "@/shared/ipc/IpcContract";
 import type { NoteEntry } from "@/shared/ipc/types";
 
 type PaletteItem =
   | { kind: "note"; id: string; title: string; folder: string; section: "Recents" | "Pinned" | "Notes" }
   | { kind: "tag"; tag: string; count: number; section: "Tags" }
+  | { kind: "todo"; id: string; text: string; section: "Todos" }
   | CommandRegistryItem;
 
 type CommandPaletteProps = {
@@ -36,6 +39,10 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
   const rebuild = useIndexStore((state) => state.rebuild);
   const openVault = useVaultStore((state) => state.openVault);
   const openSettings = useSettingsUiStore((state) => state.openSettings);
+  const openTodosAll = useTodosStore((state) => state.todos);
+  const loadTodos = useTodosStore((state) => state.load);
+  const addTodo = useTodosStore((state) => state.add);
+  const toggleTodo = useTodosStore((state) => state.toggle);
   const [query, setQuery] = useState("");
   const previousFocus = useRef<Element | null>(null);
 
@@ -43,15 +50,20 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
     if (open) {
       previousFocus.current = document.activeElement;
       setQuery("");
+      void loadTodos();
       return undefined;
     }
     if (previousFocus.current instanceof HTMLElement) {
       previousFocus.current.focus();
     }
     return undefined;
-  }, [open]);
+  }, [open, loadTodos]);
 
-  const items = useMemo(() => buildPaletteItems(notes, recentNotes, tags), [notes, recentNotes, tags]);
+  const openTodos = useMemo(() => openTodosAll.filter((t) => !t.done), [openTodosAll]);
+  const items = useMemo(
+    () => buildPaletteItems(notes, recentNotes, tags, openTodos),
+    [notes, recentNotes, tags, openTodos],
+  );
   const visibleItems = useMemo(() => filterPaletteItems(items, query), [items, query]);
 
   if (!open) {
@@ -89,16 +101,30 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
             <Command.Empty className="p-4 text-sm text-[var(--color-noxe-muted)]">
               <p>No matches</p>
               {query.trim() && (
-                <button
-                  type="button"
-                  className="mt-3 rounded-md border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)]"
-                  onClick={() => {
-                    onCreateNote?.(query.trim());
-                    closePalette();
-                  }}
-                >
-                  Create note “{query.trim()}”
-                </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)]"
+                    onClick={() => {
+                      onCreateNote?.(query.trim());
+                      closePalette();
+                    }}
+                  >
+                    Create note “{query.trim()}”
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)]"
+                    onClick={() => {
+                      const text = query.trim();
+                      void addTodo(text);
+                      toast.success("Todo added", { description: text, duration: 3000 });
+                      closePalette();
+                    }}
+                  >
+                    Create todo “{query.trim()}”
+                  </button>
+                </div>
               )}
             </Command.Empty>
           )}
@@ -109,7 +135,16 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
                   key={itemKey(item)}
                   item={item}
                   onSelect={() => {
-                    runPaletteItem(item, { closePalette, navigate, toggleDrawer, openVault, openSettings, rebuild, openDaily: openOrCreateToday });
+                    runPaletteItem(item, {
+                      closePalette,
+                      navigate,
+                      toggleDrawer,
+                      openVault,
+                      openSettings,
+                      rebuild,
+                      openDaily: openOrCreateToday,
+                      toggleTodo,
+                    });
                   }}
                 />
               ))}
@@ -134,11 +169,12 @@ function PaletteRow({ item, onSelect }: { item: PaletteItem; onSelect: () => voi
   );
 }
 
-function buildPaletteItems(notes: NoteEntry[], recentNotes: NoteEntry[], tags: TagCount[]): PaletteItem[] {
+function buildPaletteItems(notes: NoteEntry[], recentNotes: NoteEntry[], tags: TagCount[], todos: Todo[]): PaletteItem[] {
   const recent = (recentNotes.length > 0 ? recentNotes : notes).slice(0, 5).map((note) => toNoteItem(note, "Recents"));
   const pinned = notes.slice(0, 5).map((note) => toNoteItem(note, "Pinned"));
   const allNotes = notes.map((note) => toNoteItem(note, "Notes"));
-  return [...recent, ...pinned, ...commandsRegistry.slice(0, 8), ...tags.slice(0, 5).map(toTagItem), ...allNotes];
+  const todoItems: PaletteItem[] = todos.slice(0, 8).map((t) => ({ kind: "todo", id: t.id, text: t.text, section: "Todos" }));
+  return [...todoItems, ...recent, ...pinned, ...commandsRegistry.slice(0, 11), ...tags.slice(0, 5).map(toTagItem), ...allNotes];
 }
 
 function filterPaletteItems(items: PaletteItem[], query: string): PaletteItem[] {
@@ -151,8 +187,8 @@ function filterPaletteItems(items: PaletteItem[], query: string): PaletteItem[] 
 
 function groupItems(items: PaletteItem[], query: string): Array<[string, PaletteItem[]]> {
   const order = query.trim()
-    ? ["Notes", "Commands", "AI", "Tags", "Vault Actions", "Recents", "Pinned"]
-    : ["Recents", "Pinned", "Commands", "AI", "Tags", "Vault Actions"];
+    ? ["Todos", "Notes", "Commands", "AI", "Tags", "Vault Actions", "Recents", "Pinned"]
+    : ["Todos", "Recents", "Pinned", "Commands", "AI", "Tags", "Vault Actions"];
   return order
     .map((section) => [section, items.filter((item) => item.section === section)] as [string, PaletteItem[]])
     .filter(([, sectionItems]) => sectionItems.length > 0);
@@ -185,6 +221,9 @@ function itemKey(item: PaletteItem): string {
   if (item.kind === "tag") {
     return `tag:${item.tag}`;
   }
+  if (item.kind === "todo") {
+    return `todo:${item.id}`;
+  }
   return `command:${item.id}`;
 }
 
@@ -194,6 +233,9 @@ function itemLabel(item: PaletteItem): string {
   }
   if (item.kind === "tag") {
     return `#${item.tag}`;
+  }
+  if (item.kind === "todo") {
+    return `☐ ${item.text}`;
   }
   return item.label;
 }
@@ -205,6 +247,9 @@ function itemHint(item: PaletteItem): string {
   if (item.kind === "tag") {
     return `${item.count} notes`;
   }
+  if (item.kind === "todo") {
+    return "Mark done";
+  }
   return item.section;
 }
 
@@ -215,6 +260,9 @@ function itemSearchText(item: PaletteItem): string {
   if (item.kind === "tag") {
     return `${item.tag} tag`;
   }
+  if (item.kind === "todo") {
+    return `${item.text} todo`;
+  }
   return item.label;
 }
 
@@ -222,18 +270,23 @@ function runPaletteItem(
   item: PaletteItem,
   actions: {
     closePalette: () => void;
-    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" }) => void;
+    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" }) => void;
     toggleDrawer: (drawer: "search" | "folders" | "recent" | "starred" | "tags") => void;
     openVault: () => Promise<void>;
     openSettings: () => void;
     rebuild: () => Promise<void>;
     openDaily: () => Promise<void>;
+    toggleTodo: (id: string) => Promise<unknown>;
   },
 ) {
   if (item.kind === "note") {
     actions.navigate({ kind: "note", id: item.id });
   } else if (item.kind === "tag") {
     actions.toggleDrawer("tags");
+  } else if (item.kind === "todo") {
+    void actions.toggleTodo(item.id).then(() => {
+      toast.success("Todo completed", { description: item.text, duration: 2500 });
+    });
   } else {
     runCommand(item.id, actions);
   }
@@ -243,7 +296,7 @@ function runPaletteItem(
 function runCommand(
   id: CommandActionId,
   actions: {
-    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" }) => void;
+    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" }) => void;
     openVault: () => Promise<void>;
     openSettings: () => void;
     rebuild: () => Promise<void>;
@@ -255,6 +308,9 @@ function runCommand(
   }
   if (id === "open-graph") {
     actions.navigate({ kind: "graph" });
+  }
+  if (id === "open-todos" || id === "new-todo") {
+    actions.navigate({ kind: "todos" });
   }
   if (id === "new-note") {
     void createAndOpenNote();
