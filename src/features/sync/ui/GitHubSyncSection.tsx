@@ -123,6 +123,11 @@ export function GitHubSyncSection() {
           <button
             type="button"
             disabled={!hasGh || loading}
+            title={
+              hasGh
+                ? `Creates a private repo using your local gh CLI${ghAccount ? ` (${ghAccount.user}@${ghAccount.host})` : ""}.`
+                : "gh CLI not found — install it or use Use existing URL."
+            }
             onClick={() => void onEnable(false)}
             className="rounded-lg bg-[var(--color-noxe-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -131,6 +136,7 @@ export function GitHubSyncSection() {
           <button
             type="button"
             disabled={loading}
+            title="Connect to an existing repo. Add a personal access token to push to a different account than gh."
             onClick={() => setShowEnableForm(true)}
             className="rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -236,6 +242,7 @@ export function GitHubSyncSection() {
             <button
               type="button"
               disabled={loading}
+              title="Pull from origin and push pending local commits"
               onClick={() => void onSyncNow()}
               className="rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-1.5 font-medium text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -244,12 +251,49 @@ export function GitHubSyncSection() {
             <button
               type="button"
               disabled={loading}
+              title="Unlink the remote and stop syncing. Local notes are kept."
               onClick={() => void onDisable()}
               className="rounded-lg border border-[var(--color-noxe-border)] px-3 py-1.5 text-[var(--color-noxe-muted)] hover:text-red-500"
             >
               Disable sync
             </button>
           </div>
+          <details className="mt-2 rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
+            <summary className="cursor-pointer text-[var(--color-noxe-ink)]">
+              Switch GitHub account
+            </summary>
+            <p className="mt-2">
+              The remote above is bound to whichever credentials you used at connect time
+              {ghAccount ? (
+                <>
+                  {" "}
+                  (<code>gh</code> on this machine is{" "}
+                  <span className="font-mono text-[var(--color-noxe-ink)]">
+                    {ghAccount.user}@{ghAccount.host}
+                  </span>
+                  )
+                </>
+              ) : null}
+              .
+            </p>
+            <ol className="mt-2 list-decimal space-y-1 pl-4">
+              <li>
+                Click <strong>Disable sync</strong> above.
+              </li>
+              <li>
+                Click <strong>Use existing URL…</strong> and either:
+                <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                  <li>
+                    Paste a URL <em>without</em> a token → uses the active <code>gh</code> account.
+                  </li>
+                  <li>
+                    Paste a URL <em>with</em> a personal access token → uses that token (bypasses{" "}
+                    <code>gh</code>).
+                  </li>
+                </ul>
+              </li>
+            </ol>
+          </details>
         </div>
       )}
     </div>
