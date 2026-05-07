@@ -39,31 +39,16 @@ export function GitHubSyncSection() {
   const ghAccount = status?.ghAccount ?? null;
   const enabled = remote?.enabled ?? false;
 
-  const onConnect = async () => {
-    const u = url.trim();
-    const t = token.trim() || undefined;
-    if (!u && !t) return;
+  const onEnable = async (withUrl: boolean) => {
     try {
-      await enable({ url: u || undefined, token: t });
+      await enable(withUrl ? { url: url.trim(), token: token.trim() || undefined } : undefined);
       setShowEnableForm(false);
       setUrl("");
       setToken("");
-      pushToast({ title: u ? "GitHub sync enabled" : "Repo created and sync enabled" });
+      pushToast({ title: "GitHub sync enabled" });
     } catch (err) {
       pushToast({
         title: "Could not enable sync",
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
-
-  const onCreateWithGh = async () => {
-    try {
-      await enable(undefined);
-      pushToast({ title: "Repo created and sync enabled" });
-    } catch (err) {
-      pushToast({
-        title: "Could not create repo",
         description: err instanceof Error ? err.message : String(err),
       });
     }
@@ -117,12 +102,19 @@ export function GitHubSyncSection() {
 
       {hasGh && ghAccount && !enabled && (
         <div className="mb-2 rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-xs text-[var(--color-noxe-muted)]">
-          <span className="text-[var(--color-noxe-ink)]">gh</span> is logged in as{" "}
-          <span className="font-mono text-[var(--color-noxe-ink)]">
-            {ghAccount.user}@{ghAccount.host}
-          </span>
-          . To push to a different account, use <strong>Connect with URL or token…</strong> and
-          paste a personal access token from that account.
+          <div>
+            <span className="text-[var(--color-noxe-ink)]">gh</span> is currently logged in as{" "}
+            <span className="font-mono text-[var(--color-noxe-ink)]">
+              {ghAccount.user}@{ghAccount.host}
+            </span>
+            . "Create new private repo" will use this account.
+          </div>
+          <div className="mt-1">
+            To push to a different account (e.g. personal vs. work), create the repo on github.com
+            from that account, then use <strong>"Use existing URL…"</strong> below and paste a
+            personal access token. The token authenticates the push directly and bypasses the active{" "}
+            <code>gh</code> login.
+          </div>
         </div>
       )}
 
@@ -131,11 +123,10 @@ export function GitHubSyncSection() {
           <button
             type="button"
             disabled={!hasGh || loading}
-            title={!hasGh ? "Requires gh CLI installed and authenticated" : undefined}
-            onClick={() => void onCreateWithGh()}
+            onClick={() => void onEnable(false)}
             className="rounded-lg bg-[var(--color-noxe-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Create new private repo (gh)
+            Create new private repo
           </button>
           <button
             type="button"
@@ -143,7 +134,7 @@ export function GitHubSyncSection() {
             onClick={() => setShowEnableForm(true)}
             className="rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Connect with URL or token…
+            Use existing URL…
           </button>
         </div>
       )}
@@ -152,7 +143,7 @@ export function GitHubSyncSection() {
         <div className="space-y-2">
           <input
             type="text"
-            placeholder="https://github.com/user/repo.git  (leave empty to create a new repo)"
+            placeholder="https://github.com/user/repo.git"
             value={url}
             onChange={(e) => setUrl(e.currentTarget.value)}
             className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm text-[var(--color-noxe-ink)]"
@@ -160,40 +151,32 @@ export function GitHubSyncSection() {
           <input
             type="password"
             autoComplete="off"
-            placeholder="Personal access token"
+            placeholder="Personal access token (optional — needed for a different account)"
             value={token}
             onChange={(e) => setToken(e.currentTarget.value)}
             className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm text-[var(--color-noxe-ink)]"
           />
           <p className="text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
-            <strong>Token only</strong> → Noxe creates a new private repo on the token owner&apos;s
-            account and pushes there (PAT must allow <code>Administration: Read &amp; write</code>{" "}
-            at user level, or be a classic <code>repo</code> token).
-            <br />
-            <strong>URL + optional token</strong> → connect to an existing repo. The token is needed
-            only when <code>gh</code> is logged into a different account than the one that owns the
-            repo.
-            <br />
-            Get one at{" "}
+            If <code>gh</code> is logged into a different account, paste a fine-grained{" "}
             <a
               className="underline"
-              href="https://github.com/settings/tokens"
+              href="https://github.com/settings/personal-access-tokens/new"
               target="_blank"
               rel="noreferrer"
             >
-              github.com/settings/tokens
-            </a>
-            . The token is stored only in this machine&apos;s <code>.git/config</code> and never
-            committed.
+              personal access token
+            </a>{" "}
+            (scope: <code>Contents · Read &amp; write</code> on the target repo). The token is
+            stored only in this machine&apos;s <code>.git/config</code> and never committed.
           </p>
           <div className="flex gap-2">
             <button
               type="button"
-              disabled={loading || (!url.trim() && !token.trim())}
-              onClick={() => void onConnect()}
+              disabled={!url.trim() || loading}
+              onClick={() => void onEnable(true)}
               className="rounded-lg bg-[var(--color-noxe-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {url.trim() ? "Connect" : "Create & connect"}
+              Connect
             </button>
             <button
               type="button"
