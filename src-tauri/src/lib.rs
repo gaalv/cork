@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod assets;
 pub mod error;
 pub mod index;
@@ -223,7 +224,9 @@ pub fn run() {
             // === F18 VCS ===
             vcs::vcs_status,
             vcs::vcs_history,
-            vcs::vcs_restore
+            vcs::vcs_restore,
+            // === F20 AI ===
+            ai::ai_send_prompt
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

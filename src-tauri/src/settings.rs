@@ -21,6 +21,8 @@ pub struct AppSettings {
     pub markdown: MarkdownSettings,
     #[serde(default)]
     pub assets: AssetSettings,
+    #[serde(default)]
+    pub ai: AiSettings,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,6 +78,23 @@ pub struct MarkdownSettings {
 pub struct AssetSettings {
     #[serde(default)]
     pub offline_mode: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiSettings {
+    #[serde(default = "default_ai_provider")]
+    pub provider: String,
+}
+
+fn default_ai_provider() -> String {
+    "disabled".to_string()
+}
+
+impl Default for AiSettings {
+    fn default() -> Self {
+        Self { provider: default_ai_provider() }
+    }
 }
 
 impl Default for AppearanceSettings {
