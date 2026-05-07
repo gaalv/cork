@@ -72,7 +72,7 @@ export function InlineRename({ initial, label, validate, onCommit, onCancel, cla
           }
         }}
         className={cn(
-          "min-w-0 rounded-md border border-[var(--color-noxe-border-strong)] bg-white px-2 py-1 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-accent-soft)]",
+          "min-w-0 rounded-md border border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-panel)] px-2 py-1 text-[13px] text-[var(--color-noxe-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-accent-soft)]",
           className,
         )}
       />

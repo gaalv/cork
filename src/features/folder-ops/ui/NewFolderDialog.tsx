@@ -63,7 +63,7 @@ export function NewFolderDialog({ parent, open, onCreate, onClose }: NewFolderDi
           <button type="button" onClick={onClose} className="rounded-full px-3 py-1.5 text-[12px] hover:bg-[var(--color-noxe-panel-2)]">
             Cancel
           </button>
-          <button disabled={isSaving} className="rounded-full bg-[var(--color-noxe-ink)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-60">
+          <button disabled={isSaving} className="rounded-full bg-[var(--color-noxe-primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-noxe-primary-foreground)] disabled:opacity-60">
             Create
           </button>
         </div>

@@ -19,7 +19,7 @@ export function HomeHero() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="rounded-full bg-[var(--color-noxe-ink)] px-4 py-2 text-sm text-white">
+          <button type="button" className="rounded-full bg-[var(--color-noxe-primary)] px-4 py-2 text-sm text-[var(--color-noxe-primary-foreground)]">
             New Note ⌘N
           </button>
           <button

@@ -17,6 +17,9 @@
   --color-noxe-accent-soft: #eef2ff;
   --color-noxe-tag: #0f766e;
   --color-noxe-tag-soft: #ccfbf1;
+  --color-noxe-primary: #1c1917;
+  --color-noxe-primary-foreground: #fafaf9;
+  --color-noxe-kbd: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -32,6 +35,9 @@
   --color-noxe-accent-soft: #1e1b4b;
   --color-noxe-tag: #5eead4;
   --color-noxe-tag-soft: #134e4a;
+  --color-noxe-primary: #fafaf9;
+  --color-noxe-primary-foreground: #1c1917;
+  --color-noxe-kbd: #292524;
   color-scheme: dark;
 }
 

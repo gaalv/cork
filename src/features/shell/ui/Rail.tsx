@@ -1,4 +1,4 @@
-import { ClockCounterClockwise, FolderSimple, GearSix, Hash, House, MagnifyingGlass, Notebook, Star } from "@phosphor-icons/react";
+import { ClockCounterClockwise, FolderSimple, GearSix, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
 
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -35,9 +35,6 @@ export function Rail({ className }: RailProps) {
       )}
     >
       <div className="flex flex-col items-center gap-2">
-        <div className="mb-2 flex size-8 items-center justify-center rounded-lg bg-[var(--color-noxe-ink)] text-white">
-          <Notebook size={16} weight="fill" />
-        </div>
         <RailButton
           icon={<House size={18} />}
           label="Home"

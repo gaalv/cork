@@ -64,14 +64,14 @@ export function TopBar() {
         <CommandIcon size={14} />
         <span>Vá para nota, comando ou pesquisa…</span>
         <span className="ml-auto flex items-center gap-1" aria-hidden="true">
-          <kbd className="rounded border border-[var(--color-noxe-border)] bg-white px-1 text-[10px] font-medium">⌘</kbd>
-          <kbd className="rounded border border-[var(--color-noxe-border)] bg-white px-1 text-[10px] font-medium">K</kbd>
+          <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">⌘</kbd>
+          <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">K</kbd>
         </span>
       </button>
 
       <button
         type="button"
-        className="flex items-center gap-1.5 rounded-full bg-[var(--color-noxe-ink)] px-3 py-1.5 text-[12px] font-medium text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+        className="flex items-center gap-1.5 rounded-full bg-[var(--color-noxe-primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
       >
         <Plus size={12} weight="bold" /> Nova nota
       </button>

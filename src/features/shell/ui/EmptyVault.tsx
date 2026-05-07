@@ -18,7 +18,7 @@ export function EmptyVault() {
           type="button"
           onClick={() => void openVault()}
           disabled={isLoading}
-          className="mt-6 rounded-full bg-[var(--color-noxe-ink)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+          className="mt-6 rounded-full bg-[var(--color-noxe-primary)] px-4 py-2 text-sm font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
         >
           {isLoading ? "Opening…" : "Open Vault"}
         </button>
