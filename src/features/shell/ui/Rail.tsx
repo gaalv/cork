@@ -1,5 +1,6 @@
 import { ClockCounterClockwise, FolderSimple, GearSix, Hash, House, MagnifyingGlass, Notebook, Star } from "@phosphor-icons/react";
 
+import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/utils/cn";
@@ -23,6 +24,7 @@ export function Rail({ className }: RailProps) {
   const drawer = useShellStore((state) => state.drawer);
   const toggleDrawer = useShellStore((state) => state.toggleDrawer);
   const navigate = useShellStore((state) => state.navigate);
+  const openSettings = useSettingsUiStore((state) => state.openSettings);
 
   return (
     <aside
@@ -53,7 +55,7 @@ export function Rail({ className }: RailProps) {
         ))}
       </div>
       <div className="flex flex-col items-center gap-2">
-        <RailButton icon={<GearSix size={18} />} label="Settings" active={false} onClick={() => undefined} />
+        <RailButton icon={<GearSix size={18} />} label="Settings" active={false} onClick={() => openSettings()} />
       </div>
     </aside>
   );
