@@ -189,13 +189,41 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     }
 
+    // Make sure committer identity is set locally — the global config
+    // may be missing on a fresh machine, in which case `git commit`
+    // fails silently and the first push has nothing to send.
+    let has_name = Command::new("git")
+        .current_dir(vault_root)
+        .args(["config", "user.name"])
+        .output()
+        .map(|o| o.status.success() && !o.stdout.is_empty())
+        .unwrap_or(false);
+    if !has_name {
+        let _ = Command::new("git")
+            .current_dir(vault_root)
+            .args(["config", "--local", "user.name", "Noxe"])
+            .status();
+    }
+    let has_email = Command::new("git")
+        .current_dir(vault_root)
+        .args(["config", "user.email"])
+        .output()
+        .map(|o| o.status.success() && !o.stdout.is_empty())
+        .unwrap_or(false);
+    if !has_email {
+        let _ = Command::new("git")
+            .current_dir(vault_root)
+            .args(["config", "--local", "user.email", "noxe@local"])
+            .status();
+    }
+
     // Stage everything and create the initial commit
     let _ = Command::new("git")
         .current_dir(vault_root)
         .args(["add", "-A"])
         .status();
 
-    let _ = Command::new("git")
+    let commit = Command::new("git")
         .current_dir(vault_root)
         .args([
             "commit",
@@ -204,7 +232,15 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
             "Initial commit",
             "--author=Noxe <noxe@local>",
         ])
-        .status();
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !commit.status.success() {
+        let stderr = String::from_utf8_lossy(&commit.stderr).trim().to_string();
+        return Err(format!(
+            "git commit failed during init: {}",
+            if stderr.is_empty() { "non-zero exit".to_string() } else { stderr }
+        ));
+    }
 
     Ok(())
 }

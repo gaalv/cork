@@ -199,8 +199,14 @@ export function GitHubSyncSection() {
               <li>Paste the repo URL and the token above, then Connect.</li>
             </ol>
             <p className="mt-2">
-              The token is stored only in this machine&apos;s <code>.git/config</code> and never
-              committed.
+              <strong>Org-owned repos:</strong> if the repo lives under a GitHub organization, the
+              org owner must approve the fine-grained token before it can push (it stays in
+              &quot;pending&quot; until then and Connect will fail with 403).
+            </p>
+            <p className="mt-1">
+              The token is stored only in this machine&apos;s <code>.git/config</code> as a base64
+              HTTP Basic auth header (the same scheme <code>actions/checkout</code>
+              uses) and never committed.
             </p>
           </details>
           <div className="flex gap-2">

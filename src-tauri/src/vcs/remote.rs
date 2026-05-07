@@ -650,7 +650,65 @@ fn enable_remote_blocking(
             .map_err(IpcError::Other)?;
         }
 
-        run_git_check(&vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
+        // Make absolutely sure there's at least one commit before we push;
+        // a brand-new repo with no HEAD would fail with the cryptic
+        // "src refspec HEAD does not match any" error.
+        let has_head = run_git(&vault_root, &["rev-parse", "HEAD"])
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if !has_head {
+            let _ = run_git(&vault_root, &["add", "-A"]);
+            let _ = run_git(
+                &vault_root,
+                &[
+                    "commit",
+                    "--allow-empty",
+                    "-m",
+                    "Initial commit",
+                    "--author=Noxe <noxe@local>",
+                ],
+            );
+        }
+
+        let push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
+            .map_err(IpcError::Other)?;
+        if !push_out.status.success() {
+            let stderr = String::from_utf8_lossy(&push_out.stderr)
+                .trim()
+                .to_string();
+            let stdout = String::from_utf8_lossy(&push_out.stdout)
+                .trim()
+                .to_string();
+            let mut msg = "git push failed".to_string();
+            if !stderr.is_empty() {
+                msg.push_str(": ");
+                msg.push_str(&stderr);
+            }
+            if !stdout.is_empty() {
+                msg.push_str(" | ");
+                msg.push_str(&stdout);
+            }
+            // Inline hints for the most common failure modes when
+            // pushing with a PAT.
+            let lower = format!("{stderr} {stdout}").to_lowercase();
+            if lower.contains("403") || lower.contains("permission") {
+                msg.push_str(
+                    "\nHint: the PAT must have `Contents: Read and write` on this repo. \
+                     Fine-grained PATs targeting an org repo also need org owner approval.",
+                );
+            } else if lower.contains("401") || lower.contains("authentication") {
+                msg.push_str(
+                    "\nHint: the PAT was rejected. Make sure you copied the full token \
+                     and that it hasn't expired.",
+                );
+            } else if lower.contains("not found") || lower.contains("repository not found") {
+                msg.push_str(
+                    "\nHint: the repository URL is wrong, the repo doesn't exist, \
+                     or the PAT cannot see it (Repository access selection in the PAT).",
+                );
+            }
+            return Err(IpcError::Other(msg));
+        }
         url_set = stored;
     } else {
         if !gh_available() {
