@@ -152,23 +152,51 @@ export function GitHubSyncSection() {
             type="password"
             autoComplete="off"
             placeholder="Personal access token (optional — needed for a different account)"
+            title="Fine-grained PAT scoped to this repo with Contents: Read and write"
             value={token}
             onChange={(e) => setToken(e.currentTarget.value)}
             className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm text-[var(--color-noxe-ink)]"
           />
-          <p className="text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
-            If <code>gh</code> is logged into a different account, paste a fine-grained{" "}
-            <a
-              className="underline"
-              href="https://github.com/settings/personal-access-tokens/new"
-              target="_blank"
-              rel="noreferrer"
-            >
-              personal access token
-            </a>{" "}
-            (scope: <code>Contents · Read &amp; write</code> on the target repo). The token is
-            stored only in this machine&apos;s <code>.git/config</code> and never committed.
-          </p>
+          <details className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
+            <summary className="cursor-pointer text-[var(--color-noxe-ink)]">
+              How to create the repo &amp; token
+            </summary>
+            <ol className="mt-2 list-decimal space-y-1 pl-4">
+              <li>
+                On github.com (target account), create a new <strong>private</strong> repo. Leave it
+                empty — no README, no .gitignore, no license.
+              </li>
+              <li>
+                Generate a{" "}
+                <a
+                  className="underline"
+                  href="https://github.com/settings/personal-access-tokens/new"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  fine-grained personal access token
+                </a>{" "}
+                with:
+                <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                  <li>
+                    <strong>Resource owner:</strong> the account that owns the repo
+                  </li>
+                  <li>
+                    <strong>Repository access:</strong> Only select repositories → pick this repo
+                  </li>
+                  <li>
+                    <strong>Repository permissions:</strong> <code>Contents</code> →{" "}
+                    <code>Read and write</code> (also auto-enables <code>Metadata: Read-only</code>)
+                  </li>
+                </ul>
+              </li>
+              <li>Paste the repo URL and the token above, then Connect.</li>
+            </ol>
+            <p className="mt-2">
+              The token is stored only in this machine&apos;s <code>.git/config</code> and never
+              committed.
+            </p>
+          </details>
           <div className="flex gap-2">
             <button
               type="button"
