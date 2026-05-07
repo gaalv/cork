@@ -43,19 +43,26 @@ These features were proposed but deferred from the current sprint because each i
 
 ## D3 — AI integration (Claude Code + Copilot CLI)
 
-**Idea.** Hook Noxe up to the user's existing CLI assistants. Could be: side-panel chat, "summarise this note", "generate frontmatter", or arbitrary "ask the AI about my vault".
+**Status.** v1 (right-side chat panel scoped to open note) implemented in **F20** — see `.specs/features/F20-ai-chat/`.
 
-**Why deferred.**
-- Two integration shapes are very different (chat panel vs in-line actions). Need to pick one.
-- Claude Code and Copilot CLI both expose CLI surfaces, not stable HTTP APIs we can call from Tauri without spawning subprocesses.
-- Authn / sandboxing of subprocess execution from a desktop app is its own design problem.
-- "AI reads the vault" implies vector indexing, embeddings storage, retrieval — a substantial subproject.
+**What was implemented in F20:**
+- `AppSettings.ai.provider` setting (`disabled` | `claude` | `copilot`), default `disabled`.
+- Settings "AI" section with provider Select.
+- Rust `ai` module: `ai_send_prompt` Tauri command — binary discovery via `which`/`where`, stdin piping, 60s timeout, typed `AiError` with `kind` field.
+- IPC contract + client for `ai.sendPrompt`.
+- `useAiStore` Zustand store (in-memory messages, `sendPrompt`, `clearChat`, `togglePanel`).
+- `aiClient` service (context builder capped at 50 KB, IPC wrapper).
+- `ChatPanel` + `MessageBubble` components — assistant replies rendered as Markdown via `react-markdown`.
+- AI chat toggle button in TopBar (visible when a note is open).
 
-**Sketch when picked up.**
-1. Pick a single shape: a right-sidebar chat that scopes context to the open note + user-pinned notes.
-2. Provider selection in Settings: `claude`, `copilot`, or `disabled`.
-3. Backend spawns the chosen CLI as a subprocess (`std::process::Command`) and pipes prompts through it.
-4. Stretch: cache responses keyed on note hash + prompt.
+**Still deferred:**
+- Streaming output (SSE / chunked stdout).
+- Multi-note context / pinned notes.
+- Vector search / RAG / embeddings.
+- AI-driven note editing (inline rewrites, insertions).
+- Conversation persistence across restarts.
+- Tool calls / function calling.
+- Response caching keyed on note hash + prompt.
 
 ---
 
