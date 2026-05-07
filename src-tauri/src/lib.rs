@@ -140,6 +140,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_os::init())
         .manage(vault::VaultState::default())
         .manage(index::IndexState::default())
         .manage(assets::AssetScopeState::default())

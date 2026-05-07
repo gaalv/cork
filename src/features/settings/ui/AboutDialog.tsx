@@ -10,21 +10,34 @@ type RuntimeInfo = {
   appName: string;
   appVersion: string;
   tauriVersion: string;
+  os: string;
 };
 
 export function AboutDialog() {
   const vaultPath = useVaultStore((state) => state.path);
-  const [runtime, setRuntime] = useState<RuntimeInfo>({ appName: "Noxe", appVersion: __APP_VERSION__, tauriVersion: "Unknown" });
+  const [runtime, setRuntime] = useState<RuntimeInfo>({
+    appName: "Noxe",
+    appVersion: __APP_VERSION__,
+    tauriVersion: "Unknown",
+    os: "Unknown",
+  });
 
   useEffect(() => {
     let active = true;
-    void Promise.all([getName().catch(() => "Noxe"), getVersion().catch(() => __APP_VERSION__), getTauriVersion().catch(() => "Unknown")]).then(
-      ([appName, appVersion, tauriVersion]) => {
-        if (active) {
-          setRuntime({ appName, appVersion, tauriVersion });
-        }
-      },
-    );
+    void Promise.all([
+      getName().catch(() => "Noxe"),
+      getVersion().catch(() => __APP_VERSION__),
+      getTauriVersion().catch(() => "Unknown"),
+    ]).then(([appName, appVersion, tauriVersion]) => {
+      if (!active) return;
+      let os = "Unknown";
+      try {
+        os = `${platform()} ${osVersion()} (${arch()})`;
+      } catch {
+        os = "Unavailable";
+      }
+      setRuntime({ appName, appVersion, tauriVersion, os });
+    });
     return () => {
       active = false;
     };
@@ -40,7 +53,7 @@ export function AboutDialog() {
           <dt>Tauri version</dt>
           <dd>{runtime.tauriVersion}</dd>
           <dt>OS</dt>
-          <dd>{platform()} {osVersion()} ({arch()})</dd>
+          <dd>{runtime.os}</dd>
           <dt>Current vault</dt>
           <dd className="break-all">{vaultPath ?? "No vault open"}</dd>
           <dt>Repository</dt>
