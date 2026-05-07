@@ -276,6 +276,9 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(path) = state.current_path() {
                 let assets = app_handle.state::<crate::assets::AssetScopeState>();
                 crate::assets::set_scope_for_path(&app_handle, &assets, &path)?;
+                if let Err(e) = crate::vcs::git_init_if_needed(&path) {
+                    eprintln!("noxe vcs: git init skipped: {e}");
+                }
             }
             state.start_watcher(&app_handle)?;
             if let Some(path) = state.current_path() {
@@ -321,6 +324,9 @@ pub async fn vault_open(
     if let Some(path) = state.current_path() {
         let assets = app.state::<crate::assets::AssetScopeState>();
         crate::assets::set_scope_for_path(&app, &assets, &path)?;
+        if let Err(e) = crate::vcs::git_init_if_needed(&path) {
+            eprintln!("noxe vcs: git init skipped: {e}");
+        }
     }
     state.start_watcher(&app)?;
     let path = state.current_path().ok_or(IpcError::NotFound)?;
@@ -396,6 +402,7 @@ pub fn notes_read(path: PathBuf) -> Result<NoteFile, IpcError> {
 pub fn notes_save(
     app: AppHandle,
     state: tauri::State<'_, VaultState>,
+    vcs_state: tauri::State<'_, crate::vcs::VcsState>,
     input: SaveInput,
 ) -> Result<SaveResult, IpcError> {
     let result = io::save_atomic(&input, &state.fingerprint_cache)?;
@@ -409,6 +416,7 @@ pub fn notes_save(
     };
     app.emit("vault:fileChanged", event)
         .map_err(|err| IpcError::Other(err.to_string()))?;
+    crate::vcs::on_note_saved(&vcs_state, &state, &result.path, false);
     Ok(result)
 }
 
@@ -416,6 +424,7 @@ pub fn notes_save(
 pub fn notes_create(
     app: AppHandle,
     state: tauri::State<'_, VaultState>,
+    vcs_state: tauri::State<'_, crate::vcs::VcsState>,
     folder: String,
     title: Option<String>,
 ) -> Result<VaultPath, IpcError> {
@@ -438,6 +447,7 @@ pub fn notes_create(
         },
     )
     .map_err(|err| IpcError::Other(err.to_string()))?;
+    crate::vcs::on_note_saved(&vcs_state, &state, &path, true);
     Ok(VaultPath { path })
 }
 

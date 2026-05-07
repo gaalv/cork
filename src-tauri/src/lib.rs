@@ -4,6 +4,7 @@ pub mod index;
 pub mod menu;
 pub mod settings;
 pub mod vault;
+pub mod vcs;
 
 pub use error::IpcError;
 
@@ -141,9 +142,12 @@ pub fn run() {
         .manage(vault::VaultState::default())
         .manage(index::IndexState::default())
         .manage(assets::AssetScopeState::default())
+        .manage(vcs::VcsState::default())
         .setup(|app| {
             vault::setup(app)?;
             index::setup(app)?;
+            // Start the VCS debounce worker
+            vcs::start_worker(&app.state::<vcs::VcsState>());
             let menu = menu::build_app_menu(app.handle())?;
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| {
@@ -215,7 +219,11 @@ pub fn run() {
             index::links_incoming,
             index::index_search,
             index::index_status,
-            index::index_rebuild
+            index::index_rebuild,
+            // === F18 VCS ===
+            vcs::vcs_status,
+            vcs::vcs_history,
+            vcs::vcs_restore
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -13,6 +13,8 @@ pub struct VaultSettings {
     pub attachments_folder: Option<String>,
     pub offline_mode: Option<bool>,
     pub auto_rewrite_links_on_rename: Option<bool>,
+    /// When `true` (default), save events trigger a local git auto-commit.
+    pub git_auto_commit: Option<bool>,
 }
 
 pub fn load_vault_settings(vault_root: &Path) -> Result<VaultSettings, IpcError> {
