@@ -62,7 +62,7 @@ export function TopBar() {
         className="ml-auto flex w-[min(420px,45vw)] items-center gap-2 rounded-full border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-1.5 text-left text-[13px] text-[var(--color-noxe-muted)] hover:border-[var(--color-noxe-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
       >
         <CommandIcon size={14} />
-        <span>Vá para nota, comando ou pesquisa…</span>
+        <span>Go to note, command or search…</span>
         <span className="ml-auto flex items-center gap-1" aria-hidden="true">
           <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">⌘</kbd>
           <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">K</kbd>
@@ -71,9 +71,10 @@ export function TopBar() {
 
       <button
         type="button"
+        onClick={() => navigate({ kind: "note", id: "new" })}
         className="flex items-center gap-1.5 rounded-full bg-[var(--color-noxe-primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
       >
-        <Plus size={12} weight="bold" /> Nova nota
+        <Plus size={12} weight="bold" /> New note
       </button>
     </header>
   );

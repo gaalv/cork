@@ -79,7 +79,7 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
           aria-label="Command palette"
           value={query}
           onValueChange={setQuery}
-          placeholder="Vá para nota, comando ou pesquisa…"
+          placeholder="Go to note, command or search…"
           className="w-full border-b border-[var(--color-noxe-border)] bg-transparent px-4 py-3 text-sm outline-none"
         />
         <Command.List className="max-h-[420px] overflow-y-auto p-2">

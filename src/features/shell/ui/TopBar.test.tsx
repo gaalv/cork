@@ -31,8 +31,8 @@ describe("TopBar", () => {
     render(<TopBar />);
 
     expect(screen.getByText("Vault: Vault")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Vá para nota/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Nova nota" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Go to note/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New note" })).toBeInTheDocument();
   });
 
   it("renders note breadcrumbs and opens the folder drawer", () => {
