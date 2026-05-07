@@ -89,6 +89,7 @@ mod tests {
             attachments_folder: Some("_attachments".to_string()),
             offline_mode: None,
             auto_rewrite_links_on_rename: Some(true),
+            git_auto_commit: None,
         };
 
         save_vault_settings(dir.path(), &settings).unwrap();
