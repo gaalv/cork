@@ -29,7 +29,7 @@ export function HomeView() {
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           <HomeHero />
           {isEmpty ? <EmptyHome /> : null}
-          <PinnedGrid notes={sections.pinned} onOpen={openNote} onPinToggle={togglePinAction} onChanged={sections.refresh} />
+          <PinnedGrid notes={sections.starred} onOpen={openNote} onPinToggle={togglePinAction} onChanged={sections.refresh} />
           <RecentsList notes={sections.recents} onOpen={openNote} />
           <TagPills tags={sections.tagsTop} />
           <AllNotesGrid

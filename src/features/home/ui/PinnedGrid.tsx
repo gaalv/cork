@@ -12,16 +12,16 @@ type PinnedGridProps = {
 
 export function PinnedGrid({ notes, onOpen, onPinToggle, onChanged }: PinnedGridProps) {
   return (
-    <section aria-labelledby="home-pinned-heading" className="space-y-3">
+    <section aria-labelledby="home-starred-heading" className="space-y-3">
       <div>
-        <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Pinned</p>
-        <h2 id="home-pinned-heading" className="text-lg font-semibold">
+        <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Starred</p>
+        <h2 id="home-starred-heading" className="text-lg font-semibold">
           Start here
         </h2>
       </div>
       {notes.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--color-noxe-border)] p-5 text-sm text-[var(--color-noxe-muted)]">
-          Pin important notes to keep them one click away.
+          Star important notes to keep them one click away.
         </p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

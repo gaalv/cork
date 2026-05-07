@@ -1,7 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import { HomeHero } from "./HomeHero";
@@ -9,18 +8,30 @@ import { greetingForHour } from "./homeGreeting";
 import { HomeSkeletons } from "./Skeletons";
 
 beforeEach(() => {
-  useShellStore.getState().reset();
-  useVaultStore.setState({ openVault: vi.fn().mockResolvedValue(undefined) });
+  useVaultStore.setState({ notes: [], openVault: vi.fn().mockResolvedValue(undefined) });
 });
 
 describe("HomeHero", () => {
-  it("renders quick actions", () => {
+  it("greets and shows today's date", () => {
     render(<HomeHero />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Command ⌘K" }));
-
     expect(screen.getByRole("heading").textContent).toMatch(/Good/);
-    expect(useShellStore.getState().paletteOpen).toBe(true);
+    // Date label includes the current year
+    expect(screen.getByText(new RegExp(String(new Date().getFullYear())))).toBeInTheDocument();
+  });
+
+  it("nudges when inbox notes are stale", () => {
+    const yesterday = Date.now() - 24 * 60 * 60 * 1000;
+    useVaultStore.setState({
+      notes: [
+        { id: "n1", path: "/v/a.md", title: "A", folder: "", size: 1, mtime: yesterday },
+        { id: "n2", path: "/v/b.md", title: "B", folder: "", size: 1, mtime: yesterday },
+      ],
+    });
+
+    render(<HomeHero />);
+    expect(screen.getByText(/sitting in your Inbox/i)).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("varies greeting by day part", () => {

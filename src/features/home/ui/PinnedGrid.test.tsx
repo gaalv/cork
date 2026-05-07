@@ -28,7 +28,7 @@ describe("home sections", () => {
   it("shows an empty pinned state", () => {
     render(<PinnedGrid notes={[]} onOpen={vi.fn()} onPinToggle={vi.fn()} />);
 
-    expect(screen.getByText(/Pin important notes/)).toBeInTheDocument();
+    expect(screen.getByText(/Star important notes/)).toBeInTheDocument();
   });
 
   it("opens recent notes", () => {

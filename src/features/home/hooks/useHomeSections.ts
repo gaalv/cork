@@ -6,7 +6,7 @@ import { client } from "@/shared/ipc/client";
 import type { TagCount } from "@/shared/ipc/IpcContract";
 import type { JsonRecord, NoteEntry } from "@/shared/ipc/types";
 
-const PINNED_LIMIT = 6;
+const STARRED_LIMIT = 4;
 const RECENTS_LIMIT = 8;
 const TAG_LIMIT = 6;
 const PAGE_SIZE = 30;
@@ -19,7 +19,7 @@ export type HomeNote = NoteEntry & {
 };
 
 export type HomeSections = {
-  pinned: HomeNote[];
+  starred: HomeNote[];
   recents: NoteEntry[];
   tagsTop: TagCount[];
   allPage: NoteEntry[];
@@ -33,7 +33,7 @@ export type HomeSections = {
 
 export function useHomeSections(): HomeSections {
   const vaultNotes = useVaultStore((state) => state.notes);
-  const [pinned, setPinned] = useState<HomeNote[]>([]);
+  const [starred, setStarred] = useState<HomeNote[]>([]);
   const [recents, setRecents] = useState<NoteEntry[]>([]);
   const [tags, setTags] = useState<TagCount[]>([]);
   const [allPage, setAllPage] = useState<NoteEntry[]>([]);
@@ -53,8 +53,8 @@ export function useHomeSections(): HomeSections {
       ]);
       const enriched = await enrichNotes(recentNotes);
       const flags = buildFlagsMap(enriched);
-      const pinnedNotes = enriched.filter((note) => note.pinned).slice(0, PINNED_LIMIT);
-      setPinned(pinnedNotes);
+      const starredNotes = enriched.filter((note) => note.starred).slice(0, STARRED_LIMIT);
+      setStarred(starredNotes);
       setRecents(recentNotes.slice(0, RECENTS_LIMIT));
       setTags(tagCounts.slice(0, TAG_LIMIT));
       setAllPage(firstPage);
@@ -66,8 +66,8 @@ export function useHomeSections(): HomeSections {
       const fallback = [...vaultNotes].sort((left, right) => right.mtime - left.mtime);
       const enriched = await enrichNotes(fallback);
       const flags = buildFlagsMap(enriched);
-      const fallbackPinned = enriched.filter((note) => note.pinned).slice(0, PINNED_LIMIT);
-      setPinned(fallbackPinned);
+      const fallbackStarred = enriched.filter((note) => note.starred).slice(0, STARRED_LIMIT);
+      setStarred(fallbackStarred);
       setRecents(fallback.slice(0, RECENTS_LIMIT));
       setTags([]);
       setAllPage(fallback.slice(0, PAGE_SIZE));
@@ -132,7 +132,7 @@ export function useHomeSections(): HomeSections {
     };
   }, [pageCount]);
 
-  return { pinned, recents, tagsTop: tags, allPage, hasMore, isLoading, error, loadMore, refresh: load, flagsByPath };
+  return { starred, recents, tagsTop: tags, allPage, hasMore, isLoading, error, loadMore, refresh: load, flagsByPath };
 }
 
 async function enrichNotes(notes: NoteEntry[]): Promise<HomeNote[]> {

@@ -1,46 +1,47 @@
-import { useShellStore } from "@/features/shell/state/shellStore";
-import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { useMemo } from "react";
 
-import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import { greetingForHour } from "./homeGreeting";
 
 export function HomeHero() {
-  const openVault = useVaultStore((state) => state.openVault);
-  const openPalette = useShellStore((state) => state.openPalette);
-  const greeting = greetingForHour(new Date().getHours());
+  const notes = useVaultStore((state) => state.notes);
+  const now = new Date();
+  const greeting = greetingForHour(now.getHours());
+
+  const dateLabel = useMemo(
+    () =>
+      now.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [now.toDateString()],
+  );
+
+  const staleInbox = useMemo(() => {
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return notes.filter((note) => !note.folder && note.mtime < startOfToday).length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, now.toDateString()]);
 
   return (
     <section className="rounded-3xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-6 shadow-sm">
-      <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Home</p>
-      <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-[var(--color-noxe-ink)]">{greeting} 👋</h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--color-noxe-muted)]">
-            Pick up from pinned notes, recent work, or browse the full vault.
+      <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">{dateLabel}</p>
+      <div className="mt-2 flex flex-col gap-2">
+        <h1 className="text-3xl font-semibold text-[var(--color-noxe-ink)]">{greeting} 👋</h1>
+        {staleInbox > 0 ? (
+          <p className="max-w-2xl text-sm text-[var(--color-noxe-muted)]">
+            You have <span className="font-medium text-[var(--color-noxe-ink)]">{staleInbox}</span>{" "}
+            note{staleInbox === 1 ? "" : "s"} sitting in your Inbox from earlier days. Take a moment to
+            file them into folders or add tags.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => void createAndOpenNote()} className="rounded-full bg-[var(--color-noxe-primary)] px-4 py-2 text-sm text-[var(--color-noxe-primary-foreground)]">
-            New Note ⌘N
-          </button>
-          <button
-            type="button"
-            onClick={openPalette}
-            className="rounded-full border border-[var(--color-noxe-border)] px-4 py-2 text-sm hover:border-[var(--color-noxe-border-strong)]"
-          >
-            Command ⌘K
-          </button>
-          <button
-            type="button"
-            onClick={() => void openVault()}
-            className="rounded-full border border-[var(--color-noxe-border)] px-4 py-2 text-sm hover:border-[var(--color-noxe-border-strong)]"
-          >
-            Open Vault
-          </button>
-        </div>
+        ) : (
+          <p className="max-w-2xl text-sm text-[var(--color-noxe-muted)]">Your Inbox is tidy. Nice work.</p>
+        )}
       </div>
     </section>
   );
 }
-

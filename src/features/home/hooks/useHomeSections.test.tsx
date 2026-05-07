@@ -39,13 +39,13 @@ describe("useHomeSections", () => {
     clientMock.notes.recent.mockResolvedValue(notes);
     clientMock.tags.list.mockResolvedValue([{ tag: "dev", count: 2 }]);
     clientMock.notes.read.mockImplementation((path: string) =>
-      Promise.resolve({ path, frontmatter: { pinned: path.endsWith("a.md") }, body: "# Snippet", mtime: 1 }),
+      Promise.resolve({ path, frontmatter: { starred: path.endsWith("a.md") }, body: "# Snippet", mtime: 1 }),
     );
 
     const { result } = renderHook(() => useHomeSections());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.pinned.map((note) => note.id)).toEqual(["n1"]);
+    expect(result.current.starred.map((note) => note.id)).toEqual(["n1"]);
     expect(result.current.recents).toHaveLength(3);
     expect(result.current.tagsTop[0]?.tag).toBe("dev");
     expect(result.current.allPage.map((note) => note.id)).toEqual(["n1", "n2"]);
