@@ -28,18 +28,40 @@ describe("insightsStore.parseTags", () => {
   });
 });
 
-describe("insightsStore.parseRelated", () => {
-  it("parses array of objects", () => {
-    expect(__test__.parseRelated('[{"title":"A","reason":"r"},{"title":"B"}]')).toEqual([
-      { title: "A", reason: "r" },
-      { title: "B" },
-    ]);
+describe("insightsStore.parseKeywords", () => {
+  it("parses comma-separated lowercase keywords", () => {
+    expect(__test__.parseKeywords("Foo, BAR, baz")).toEqual(["foo", "bar", "baz"]);
   });
-  it("parses array of strings", () => {
-    expect(__test__.parseRelated('["A","B"]')).toEqual([{ title: "A" }, { title: "B" }]);
+  it("dedupes and strips bullets", () => {
+    expect(__test__.parseKeywords("- foo\n- foo\n* bar")).toEqual(["foo", "bar"]);
   });
-  it("falls back to bullet list", () => {
-    expect(__test__.parseRelated("- One\n- Two")).toEqual([{ title: "One" }, { title: "Two" }]);
+});
+
+describe("insightsStore.resolveRelatedNotes", () => {
+  it("filters self, dedupes by id, sorts by reason count then rank", async () => {
+    const search = vi.fn(async (q: string) => {
+      if (q === "alpha") {
+        return [
+          { id: "self", title: "Self", path: "x.md", rank: 10 },
+          { id: "n1", title: "First", path: "a.md", rank: 5 },
+        ];
+      }
+      if (q === "beta") {
+        return [{ id: "n1", title: "First", path: "a.md", rank: 7 }];
+      }
+      if (q === "gamma") {
+        return [{ id: "n2", title: "Second", path: "b.md", rank: 9 }];
+      }
+      return [];
+    });
+    const result = await __test__.resolveRelatedNotes(["alpha", "beta", "gamma"], "self", search);
+    expect(result.map((r) => r.id)).toEqual(["n1", "n2"]);
+    expect(result[0]).toMatchObject({ id: "n1", title: "First", path: "a.md", reason: "alpha, beta" });
+  });
+
+  it("returns empty when no hits", async () => {
+    const search = vi.fn(async () => []);
+    expect(await __test__.resolveRelatedNotes(["x"], "self", search)).toEqual([]);
   });
 });
 

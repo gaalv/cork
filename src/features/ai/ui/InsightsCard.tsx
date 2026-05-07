@@ -6,9 +6,8 @@ import { useInsightsStore } from "@/features/ai/state/insightsStore";
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
-import { useVaultStore } from "@/features/vault/state/vaultStore";
 
-import type { InsightKind, RelatedNote } from "@/features/ai/state/insightsStore";
+import type { InsightKind } from "@/features/ai/state/insightsStore";
 
 type InsightsCardProps = {
   noteId: string | null;
@@ -75,7 +74,6 @@ function ActiveInsightsCard({ noteId, body, title }: { noteId: string; body: str
   const insights = useInsightsStore((state) => state.byNote[noteId]);
   const generate = useInsightsStore((state) => state.generate);
   const navigate = useShellStore((state) => state.navigate);
-  const notes = useVaultStore((state) => state.notes);
 
   const variables = useMemo(
     () => ({
@@ -101,13 +99,6 @@ function ActiveInsightsCard({ noteId, body, title }: { noteId: string; body: str
     const next = currentTagSet.has(tag) ? currentTags : [...currentTags, tag];
     if (next === currentTags) return;
     updateFrontmatter(noteId, { tags: next });
-  }
-
-  function openRelated(rel: RelatedNote) {
-    const target = notes.find((note) => note.title.toLowerCase() === rel.title.toLowerCase());
-    if (target) {
-      navigate({ kind: "note", id: target.id });
-    }
   }
 
   return (
@@ -178,30 +169,27 @@ function ActiveInsightsCard({ noteId, body, title }: { noteId: string; body: str
       >
         {related.status === "ready" && related.data && related.data.length > 0 ? (
           <ul className="space-y-1">
-            {related.data.map((rel) => {
-              const known = notes.some((note) => note.title.toLowerCase() === rel.title.toLowerCase());
-              return (
-                <li key={rel.title}>
-                  <button
-                    type="button"
-                    onClick={() => openRelated(rel)}
-                    disabled={!known}
-                    className={`text-left text-xs ${
-                      known
-                        ? "text-[var(--color-noxe-ink)] hover:underline"
-                        : "text-[var(--color-noxe-muted)]"
-                    }`}
-                  >
-                    {rel.title}
-                    {!known ? " (not in vault)" : ""}
-                  </button>
-                  {rel.reason ? (
-                    <span className="block text-[11px] text-[var(--color-noxe-muted)]">{rel.reason}</span>
-                  ) : null}
-                </li>
-              );
-            })}
+            {related.data.map((rel) => (
+              <li key={rel.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate({ kind: "note", id: rel.id })}
+                  className="text-left text-xs text-[var(--color-noxe-link,#2563eb)] hover:underline"
+                >
+                  [[{rel.title}]]
+                </button>
+                {rel.reason ? (
+                  <span className="ml-1 text-[11px] text-[var(--color-noxe-muted)]">
+                    · {rel.reason}
+                  </span>
+                ) : null}
+              </li>
+            ))}
           </ul>
+        ) : related.status === "ready" ? (
+          <p className="text-xs text-[var(--color-noxe-muted)]">
+            No related notes found in this vault yet.
+          </p>
         ) : null}
       </InsightSection>
     </section>

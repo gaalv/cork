@@ -1,12 +1,15 @@
 import { create } from "zustand";
 
 import { cacheClear, runSkill } from "@/features/ai/services/skillsClient";
+import { client } from "@/shared/ipc/client";
 import type { AiSkillError } from "@/shared/ipc/IpcContract";
 
 export type InsightKind = "summary" | "tags" | "related";
 
 export type RelatedNote = {
+  id: string;
   title: string;
+  path: string;
   reason?: string;
 };
 
@@ -70,31 +73,61 @@ function parseTags(raw: string): string[] {
     .filter(Boolean);
 }
 
-function parseRelated(raw: string): RelatedNote[] {
+function parseKeywords(raw: string): string[] {
   const trimmed = raw.trim();
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .map((entry) => {
-          if (typeof entry === "string") return { title: entry.trim() };
-          if (entry && typeof entry === "object" && typeof (entry as { title?: unknown }).title === "string") {
-            const reasonValue = (entry as { reason?: unknown }).reason;
-            const reason = typeof reasonValue === "string" ? reasonValue : undefined;
-            return { title: ((entry as { title: string }).title).trim(), reason };
-          }
-          return null;
-        })
-        .filter((entry): entry is RelatedNote => entry !== null && entry.title.length > 0);
-    }
-  } catch {
-    // fall through
+  const parts = trimmed.split(/[\n,]/);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    const cleaned = part
+      .replace(/^[-*\d.\s]+/, "")
+      .replace(/^#/, "")
+      .trim()
+      .toLowerCase();
+    if (!cleaned) continue;
+    if (seen.has(cleaned)) continue;
+    seen.add(cleaned);
+    out.push(cleaned);
   }
-  return trimmed
-    .split(/\n+/)
-    .map((line) => line.replace(/^[-*\d.\s]+/, "").trim())
-    .filter(Boolean)
-    .map((title) => ({ title }));
+  return out;
+}
+
+async function resolveRelatedNotes(
+  keywords: string[],
+  selfNoteId: string,
+  searchFn: (q: string, limit?: number) => Promise<Array<{ id: string; title: string; path: string; rank: number }>>,
+  limit = 5,
+): Promise<RelatedNote[]> {
+  const byId = new Map<string, { entry: RelatedNote; rank: number; reasons: Set<string> }>();
+  for (const keyword of keywords.slice(0, 8)) {
+    let hits;
+    try {
+      hits = await searchFn(keyword, 5);
+    } catch {
+      continue;
+    }
+    for (const hit of hits) {
+      if (hit.id === selfNoteId) continue;
+      const existing = byId.get(hit.id);
+      if (existing) {
+        existing.reasons.add(keyword);
+        existing.rank = Math.max(existing.rank, hit.rank);
+      } else {
+        byId.set(hit.id, {
+          entry: { id: hit.id, title: hit.title, path: hit.path },
+          rank: hit.rank,
+          reasons: new Set([keyword]),
+        });
+      }
+    }
+  }
+  return [...byId.values()]
+    .sort((a, b) => {
+      if (b.reasons.size !== a.reasons.size) return b.reasons.size - a.reasons.size;
+      return b.rank - a.rank;
+    })
+    .slice(0, limit)
+    .map(({ entry, reasons }) => ({ ...entry, reason: [...reasons].slice(0, 3).join(", ") }));
 }
 
 function setSlot(
@@ -158,7 +191,9 @@ export const useInsightsStore = create<InsightsState>((set, get) => ({
       } else if (kind === "tags") {
         slot = { status: "ready", data: parseTags(result.output), cachedHit: result.cacheHit };
       } else {
-        slot = { status: "ready", data: parseRelated(result.output), cachedHit: result.cacheHit };
+        const keywords = parseKeywords(result.output);
+        const resolved = await resolveRelatedNotes(keywords, noteId, (q, limit) => client.notes.search(q, limit));
+        slot = { status: "ready", data: resolved, cachedHit: result.cacheHit };
       }
 
       set((state) => setSlot(state, noteId, kind, slot));
@@ -170,4 +205,4 @@ export const useInsightsStore = create<InsightsState>((set, get) => ({
   },
 }));
 
-export const __test__ = { parseTags, parseRelated };
+export const __test__ = { parseTags, parseKeywords, resolveRelatedNotes };
