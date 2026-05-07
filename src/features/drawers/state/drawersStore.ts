@@ -6,10 +6,12 @@ const MAX_SEARCH_HISTORY = 10;
 export type DrawersStore = {
   expandedFolders: Set<string>;
   expandedTags: Set<string>;
+  selectedFolder: string | null;
   selectedTag: string | null;
   searchHistory: string[];
   toggleFolder: (folder: string) => void;
   setFolderExpanded: (folder: string, expanded: boolean) => void;
+  selectFolder: (folder: string | null) => void;
   toggleTag: (tag: string) => void;
   setTagExpanded: (tag: string, expanded: boolean) => void;
   selectTag: (tag: string | null) => void;
@@ -21,6 +23,7 @@ export type DrawersStore = {
 export const useDrawersStore = create<DrawersStore>((set) => ({
   expandedFolders: new Set<string>(),
   expandedTags: new Set<string>(),
+  selectedFolder: null,
   selectedTag: null,
   searchHistory: loadSearchHistory(),
 
@@ -30,6 +33,10 @@ export const useDrawersStore = create<DrawersStore>((set) => ({
 
   setFolderExpanded(folder, expanded) {
     set((state) => ({ expandedFolders: withExpansion(state.expandedFolders, folder, expanded) }));
+  },
+
+  selectFolder(folder) {
+    set({ selectedFolder: folder });
   },
 
   toggleTag(tag) {
@@ -68,6 +75,7 @@ export const useDrawersStore = create<DrawersStore>((set) => ({
     set({
       expandedFolders: new Set<string>(),
       expandedTags: new Set<string>(),
+      selectedFolder: null,
       selectedTag: null,
       searchHistory: loadSearchHistory(),
     });

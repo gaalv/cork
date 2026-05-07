@@ -3,9 +3,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import { Providers } from "@/app/Providers";
 import { installThemeRuntime } from "@/features/settings/runtime/themeRuntime";
+import { installQuickCaptureRuntime } from "@/features/quick-capture/services/registerQuickCapture";
 import "@/index.css";
 
 installThemeRuntime();
+void installQuickCaptureRuntime();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

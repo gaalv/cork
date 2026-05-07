@@ -7,7 +7,12 @@ pub mod vault;
 
 pub use error::IpcError;
 
-use tauri::{Emitter, Manager, PhysicalPosition, Position, WebviewWindow};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, WebviewWindow, WindowEvent};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+
+const QUICK_CAPTURE_EVENT: &str = "quick-capture:new";
 
 /// Health check for the IPC bridge — used by the smoke test and as a
 /// reference for typed IPC contracts.
@@ -48,12 +53,91 @@ fn ensure_window_visible(window: &WebviewWindow) -> Result<(), tauri::Error> {
     Ok(())
 }
 
+fn show_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+        let _ = ensure_window_visible(&window);
+    }
+}
+
+fn toggle_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        match window.is_visible() {
+            Ok(true) => {
+                let _ = window.hide();
+            }
+            _ => show_main_window(app),
+        }
+    }
+}
+
+fn trigger_quick_capture(app: &AppHandle) {
+    show_main_window(app);
+    let _ = app.emit(QUICK_CAPTURE_EVENT, ());
+}
+
+fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
+    let quick = MenuItemBuilder::with_id("tray:quick-capture", "Quick capture")
+        .accelerator("CmdOrCtrl+Shift+I")
+        .build(app)?;
+    let show = MenuItemBuilder::with_id("tray:show", "Show Noxe").build(app)?;
+    let separator = PredefinedMenuItem::separator(app)?;
+    let quit = MenuItemBuilder::with_id("tray:quit", "Quit Noxe").build(app)?;
+
+    let menu = MenuBuilder::new(app).items(&[&quick, &show, &separator, &quit]).build()?;
+
+    let icon = app
+        .default_window_icon()
+        .cloned()
+        .ok_or_else(|| tauri::Error::AssetNotFound("tray icon".into()))?;
+
+    TrayIconBuilder::with_id("noxe-tray")
+        .icon(icon)
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "tray:quick-capture" => trigger_quick_capture(app),
+            "tray:show" => show_main_window(app),
+            "tray:quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                toggle_main_window(tray.app_handle());
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
+fn register_quick_capture_shortcut(app: &AppHandle) -> Result<(), String> {
+    let shortcut = Shortcut::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyI);
+    let app_for_handler = app.clone();
+    app.global_shortcut()
+        .on_shortcut(shortcut, move |_, _, event| {
+            if event.state == ShortcutState::Pressed {
+                trigger_quick_capture(&app_for_handler);
+            }
+        })
+        .map_err(|err| err.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(vault::VaultState::default())
         .manage(index::IndexState::default())
         .manage(assets::AssetScopeState::default())
@@ -67,6 +151,19 @@ pub fn run() {
             });
             if let Some(window) = app.get_webview_window("main") {
                 ensure_window_visible(&window)?;
+                let app_handle = app.handle().clone();
+                window.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                        api.prevent_close();
+                    }
+                });
+            }
+            build_tray(app.handle())?;
+            if let Err(err) = register_quick_capture_shortcut(app.handle()) {
+                eprintln!("noxe: failed to register global shortcut: {err}");
             }
             Ok(())
         })

@@ -1,5 +1,6 @@
 import { AISuggestionCard } from "./AISuggestionCard";
 import { BacklinksList } from "./BacklinksList";
+import { NoteFolderField } from "./NoteFolderField";
 import { NoteMetaFooter } from "./NoteMetaFooter";
 import { Outline } from "./Outline";
 import { RecentsList } from "./RecentsList";
@@ -42,6 +43,7 @@ export function NoteMetaPanel({ noteId, body, recents, updated, created, onOpenN
         {collapsed ? "Show meta" : "Hide meta"}
       </button>
       <Outline items={outline} activeId={activeId} onSelect={(item) => onSelectHeading?.(item)} />
+      <NoteFolderField noteId={noteId} />
       <BacklinksList backlinks={backlinks} onOpen={onOpenNote} />
       <RecentsList notes={recents} currentNoteId={noteId} onOpen={onOpenNote} />
       <AISuggestionCard />

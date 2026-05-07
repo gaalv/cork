@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 
+import { useDrawersStore } from "@/features/drawers/state/drawersStore";
 import { useFolderTree } from "@/features/drawers/hooks/useFolderTree";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { cn } from "@/shared/utils/cn";
 
 import { FolderNode } from "./FolderNode";
 
@@ -12,6 +14,8 @@ type FoldersDrawerProps = {
 export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
   const notes = useVaultStore((state) => state.notes);
   const tree = useFolderTree();
+  const selectedFolder = useDrawersStore((state) => state.selectedFolder);
+  const selectFolder = useDrawersStore((state) => state.selectFolder);
   const rootNotes = useMemo(() => notes.filter((note) => !note.folder).sort((a, b) => a.title.localeCompare(b.title)), [notes]);
 
   if (notes.length === 0) {
@@ -19,7 +23,28 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
   }
 
   return (
-    <section role="region" aria-label="Folders drawer" className="space-y-3 text-sm">
+    <section
+      role="region"
+      aria-label="Folders drawer"
+      className="space-y-3 text-sm"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && selectedFolder !== null) {
+          event.preventDefault();
+          selectFolder(null);
+        }
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => selectFolder(null)}
+        className={cn(
+          "inline-flex items-center rounded-full border border-[var(--color-noxe-border)] px-3 py-1 text-xs text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)]",
+          selectedFolder === null && "bg-[var(--color-noxe-panel-2)] text-[var(--color-noxe-ink)] ring-1 ring-[var(--color-noxe-ring)]",
+        )}
+        aria-pressed={selectedFolder === null}
+      >
+        Root {selectedFolder === null ? "(default for new notes)" : ""}
+      </button>
       {rootNotes.length > 0 ? (
         <div>
           <p className="mb-1 text-xs font-medium text-[var(--color-noxe-muted)]">Root</p>
