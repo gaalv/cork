@@ -10,6 +10,7 @@ const { clientMock } = vi.hoisted(() => ({
     notes: { read: vi.fn(), byId: vi.fn() },
     links: { incoming: vi.fn(), outgoing: vi.fn() },
     events: { on: vi.fn() },
+    vcs: { status: vi.fn(), history: vi.fn(), restore: vi.fn() },
   },
 }));
 
@@ -21,10 +22,14 @@ beforeEach(() => {
   clientMock.links.incoming.mockReset();
   clientMock.links.outgoing.mockReset();
   clientMock.events.on.mockReset();
+  clientMock.vcs.status.mockReset();
+  clientMock.vcs.history.mockReset();
   clientMock.events.on.mockResolvedValue(vi.fn());
   clientMock.links.incoming.mockResolvedValue([]);
   clientMock.links.outgoing.mockResolvedValue([]);
   clientMock.notes.read.mockResolvedValue({ path: "/vault/a.md", frontmatter: { created: "2026-05-06" }, body: "# Alpha\nBody", mtime: 1 });
+  clientMock.vcs.status.mockResolvedValue({ enabled: true, repoPath: "/vault", hasGit: true });
+  clientMock.vcs.history.mockResolvedValue([]);
   useVaultStore.setState({
     path: "/vault",
     notes: [{ id: "n1", path: "/vault/a.md", title: "Alpha", folder: "", size: 1, mtime: 1 }],

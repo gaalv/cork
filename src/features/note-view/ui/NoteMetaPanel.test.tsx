@@ -10,6 +10,7 @@ const { clientMock } = vi.hoisted(() => ({
     links: { incoming: vi.fn() },
     notes: { byId: vi.fn() },
     events: { on: vi.fn() },
+    vcs: { status: vi.fn(), history: vi.fn(), restore: vi.fn() },
   },
 }));
 
@@ -20,8 +21,12 @@ beforeEach(() => {
   clientMock.links.incoming.mockReset();
   clientMock.notes.byId.mockReset();
   clientMock.events.on.mockReset();
+  clientMock.vcs.status.mockReset();
+  clientMock.vcs.history.mockReset();
   clientMock.links.incoming.mockResolvedValue([]);
   clientMock.events.on.mockResolvedValue(vi.fn());
+  clientMock.vcs.status.mockResolvedValue({ enabled: true, repoPath: "/vault", hasGit: true });
+  clientMock.vcs.history.mockResolvedValue([]);
 });
 
 describe("NoteMetaPanel", () => {
