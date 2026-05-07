@@ -2,6 +2,7 @@ import type {
   BulkFrontmatterResult,
   BulkMoveResult,
   BulkPathResult,
+  CommitEntry,
   CreateNoteInput,
   FolderCreateInput,
   FolderMoveInput,
@@ -23,6 +24,7 @@ import type {
   VaultPath,
   VaultSettings,
   AppSettings,
+  VcsStatus,
 } from "./types";
 
 export type TagCount = {
@@ -235,6 +237,19 @@ export type IpcCommandMap = {
   };
   "index.rebuild": {
     args: undefined;
+    result: void;
+  };
+  // === F18 VCS ===
+  "vcs.status": {
+    args: undefined;
+    result: VcsStatus;
+  };
+  "vcs.history": {
+    args: { notePath: string; limit?: number };
+    result: CommitEntry[];
+  };
+  "vcs.restore": {
+    args: { notePath: string; sha: string };
     result: void;
   };
 };

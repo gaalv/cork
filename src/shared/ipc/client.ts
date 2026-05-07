@@ -64,6 +64,10 @@ const commandNames: Record<IpcCommandName, string> = {
   "index.search": "index_search",
   "index.status": "index_status",
   "index.rebuild": "index_rebuild",
+  // === F18 VCS ===
+  "vcs.status": "vcs_status",
+  "vcs.history": "vcs_history",
+  "vcs.restore": "vcs_restore",
 };
 
 type RustArgs = Record<string, unknown> | undefined;
@@ -136,6 +140,11 @@ export const client = {
     status: () => invokeCommand("index.status", undefined),
     rebuild: () => invokeCommand("index.rebuild", undefined),
   },
+  vcs: {
+    status: () => invokeCommand("vcs.status", undefined),
+    history: (notePath: string, limit?: number) => invokeCommand("vcs.history", { notePath, limit }),
+    restore: (notePath: string, sha: string) => invokeCommand("vcs.restore", { notePath, sha }),
+  },
   events: {
     on: <Name extends IpcEventName>(
       event: Name,
@@ -160,6 +169,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.status":
     case "index.rebuild":
     case "notes.starred":
+    case "vcs.status":
       return undefined;
     case "vault.open":
     case "vault.removeRecent":
@@ -173,6 +183,8 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "links.outgoing":
     case "links.incoming":
     case "index.search":
+    case "vcs.history":
+    case "vcs.restore":
       return args as RustArgs;
     case "notes.byTag": {
       const input = args as { tag: string };

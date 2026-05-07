@@ -54,6 +54,7 @@ export type VaultSettings = {
   attachmentsFolder?: string;
   offlineMode?: boolean;
   autoRewriteLinksOnRename?: boolean;
+  gitAutoCommit?: boolean;
 };
 
 export type NoteEntry = {
@@ -158,4 +159,19 @@ export type VaultFolderChangedEvent = {
   oldPath?: string;
   kind: FolderChangeKind;
   source: FileChangeSource;
+};
+
+// === F18 VCS ===
+export type CommitEntry = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  authorName: string;
+  isoDate: string;
+};
+
+export type VcsStatus = {
+  enabled: boolean;
+  repoPath: string | null;
+  hasGit: boolean;
 };
