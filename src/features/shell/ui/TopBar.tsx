@@ -1,4 +1,4 @@
-import { ArrowLeft, Brain, Command as CommandIcon, Plus, Star, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, Command as CommandIcon, Plus, Star, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { toggleStar } from "@/features/drawers/services/starService";
@@ -6,7 +6,6 @@ import { flushEditorSave } from "@/features/editor/hooks/useAutoSave";
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
-import { useAiStore } from "@/features/ai/state/aiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { VaultSwitcher } from "@/features/vault-switcher/ui/VaultSwitcher";
@@ -29,8 +28,6 @@ export function TopBar() {
   const [busyStar, setBusyStar] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
   const vaultName = vaultPath ? vaultPath.split(/[\\/]/).filter(Boolean).at(-1) ?? "Vault" : "No vault open";
-  const toggleAiPanel = useAiStore((state) => state.togglePanel);
-  const aiPanelOpen = useAiStore((state) => state.panelOpen);
 
   const starred = activeBuffer?.frontmatter.starred === true;
 
@@ -127,22 +124,6 @@ export function TopBar() {
           className="rounded-full p-1.5 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none disabled:opacity-50"
         >
           <Trash size={16} />
-        </button>
-      )}
-
-      {view.kind === "note" && (
-        <button
-          type="button"
-          aria-label="Toggle AI chat"
-          aria-pressed={aiPanelOpen}
-          onClick={toggleAiPanel}
-          className={`rounded-full p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none ${
-            aiPanelOpen
-              ? "bg-[var(--color-noxe-panel-2)] text-[var(--color-noxe-ink)]"
-              : "text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)]"
-          }`}
-        >
-          <Brain size={16} />
         </button>
       )}
 

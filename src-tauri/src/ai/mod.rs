@@ -1,11 +1,7 @@
 use std::collections::HashMap;
-use std::io::Write;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::sync::mpsc;
+use std::process::Command;
 use std::sync::Mutex;
-use std::thread;
-use std::time::Duration;
 
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -105,14 +101,6 @@ pub fn setup(app: &AppHandle) -> Result<(), IpcError> {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SendPromptInput {
-    pub provider: String,
-    pub prompt: String,
-    pub context: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RunSkillInput {
     pub skill_id: String,
     #[serde(default)]
@@ -158,7 +146,7 @@ pub fn binary_available(binary: &str) -> bool {
         .unwrap_or(false)
 }
 
-const TIMEOUT_SECS: u64 = 60;
+// ── Helpers (used by runner.rs) ───────────────────────────────────────────────
 
 /// Read the current AI provider slug from app settings (`disabled` / `claude` / `copilot`).
 fn current_provider(app: &AppHandle) -> String {
@@ -168,70 +156,6 @@ fn current_provider(app: &AppHandle) -> String {
 }
 
 // ── Tauri commands ────────────────────────────────────────────────────────────
-
-/// Send a prompt to the configured AI provider CLI (legacy F20 primitive — kept for
-/// backwards compatibility with the chat panel until it is removed in F22).
-#[tauri::command]
-pub fn ai_send_prompt(input: SendPromptInput) -> Result<String, AiError> {
-    if input.provider == "disabled" {
-        return Err(AiError::provider_disabled(
-            "AI provider is disabled. Configure a provider in Settings → AI.",
-        ));
-    }
-
-    let binary = binary_for_provider(&input.provider).ok_or_else(|| {
-        AiError::provider_disabled(format!("Unknown AI provider: {}", input.provider))
-    })?;
-
-    if !binary_available(binary) {
-        return Err(AiError::binary_not_found(format!(
-            "Binary '{}' not found on PATH. Please install it and restart Noxe.",
-            binary
-        )));
-    }
-
-    let full_prompt = format!("{}\n\n---\nContext:\n{}", input.prompt, input.context);
-
-    let mut child = Command::new(binary)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| AiError::subprocess_failed(format!("Failed to spawn '{}': {}", binary, e)))?;
-
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(full_prompt.as_bytes())
-            .map_err(|e| AiError::subprocess_failed(format!("Failed to write stdin: {}", e)))?;
-    }
-
-    let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
-        let _ = tx.send(child.wait_with_output());
-    });
-
-    let output = rx
-        .recv_timeout(Duration::from_secs(TIMEOUT_SECS))
-        .map_err(|_| {
-            AiError::timeout(format!(
-                "AI request timed out after {} seconds.",
-                TIMEOUT_SECS
-            ))
-        })?
-        .map_err(|e| AiError::subprocess_failed(format!("Subprocess error: {}", e)))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(AiError::subprocess_failed(format!(
-            "Process '{}' exited with error: {}",
-            binary,
-            stderr.trim()
-        )));
-    }
-
-    let reply = String::from_utf8_lossy(&output.stdout).into_owned();
-    Ok(reply)
-}
 
 /// Run a registered skill end-to-end (cache → spawn → telemetry).
 #[tauri::command]
@@ -374,43 +298,5 @@ mod tests {
         assert_eq!(AiError::timeout("x").kind, "timeout");
         assert_eq!(AiError::skill_not_found("x").kind, "skill_not_found");
         assert_eq!(AiError::internal("x").kind, "internal");
-    }
-
-    #[test]
-    fn provider_disabled_returns_error_without_subprocess() {
-        let input = SendPromptInput {
-            provider: "disabled".to_string(),
-            prompt: "hello".to_string(),
-            context: "".to_string(),
-        };
-        let result = ai_send_prompt(input);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().kind, "provider_disabled");
-    }
-
-    #[test]
-    fn unknown_provider_returns_provider_disabled_error() {
-        let input = SendPromptInput {
-            provider: "openai".to_string(),
-            prompt: "hello".to_string(),
-            context: "".to_string(),
-        };
-        let result = ai_send_prompt(input);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().kind, "provider_disabled");
-    }
-
-    #[test]
-    fn missing_binary_returns_binary_not_found() {
-        let input = SendPromptInput {
-            provider: "claude".to_string(),
-            prompt: "hello".to_string(),
-            context: "".to_string(),
-        };
-        if !binary_available("claude") {
-            let result = ai_send_prompt(input);
-            assert!(result.is_err());
-            assert_eq!(result.unwrap_err().kind, "binary_not_found");
-        }
     }
 }

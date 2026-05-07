@@ -9,7 +9,6 @@ import { NoteMetaPanel } from "@/features/note-view/ui/NoteMetaPanel";
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
-import { ChatPanel } from "@/features/ai/ui/ChatPanel";
 import { client } from "@/shared/ipc/client";
 
 import type { NoteEntry } from "@/shared/ipc/types";
@@ -150,7 +149,6 @@ export function NoteView({ noteId, title }: NoteViewProps) {
         created={typeof buffer?.frontmatter.created === "string" ? buffer.frontmatter.created : undefined}
         onOpenNote={openNote}
       />
-      <ChatPanel noteId={noteId} />
     </main>
   );
 }

@@ -230,8 +230,6 @@ pub fn run() {
             vcs::vcs_status,
             vcs::vcs_history,
             vcs::vcs_restore,
-            // === F20 AI ===
-            ai::ai_send_prompt,
             // === F21 AI Infrastructure ===
             ai::ai_run_skill,
             ai::ai_cache_clear,

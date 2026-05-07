@@ -19,7 +19,6 @@ import type {
   SaveInput,
   AppSettings,
   VaultSettings,
-  AiProvider,
 } from "./types";
 
 const commandNames: Record<IpcCommandName, string> = {
@@ -71,8 +70,6 @@ const commandNames: Record<IpcCommandName, string> = {
   "vcs.status": "vcs_status",
   "vcs.history": "vcs_history",
   "vcs.restore": "vcs_restore",
-  // === F20 AI ===
-  "ai.sendPrompt": "ai_send_prompt",
   // === F21 AI Infrastructure ===
   "ai.runSkill": "ai_run_skill",
   "ai.cacheClear": "ai_cache_clear",
@@ -160,8 +157,6 @@ export const client = {
     restore: (notePath: string, sha: string) => invokeCommand("vcs.restore", { notePath, sha }),
   },
   ai: {
-    sendPrompt: (provider: AiProvider, prompt: string, context: string) =>
-      invokeCommand("ai.sendPrompt", { provider, prompt, context }),
     runSkill: (skillId: string, variables: Record<string, string>) =>
       invokeCommand("ai.runSkill", { skillId, variables }),
     cacheClear: (skillId?: string) => invokeCommand("ai.cacheClear", { skillId }),
@@ -215,8 +210,6 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.search":
     case "vcs.history":
     case "vcs.restore":
-      return args as RustArgs;
-    case "ai.sendPrompt":
       return args as RustArgs;
     case "ai.runSkill": {
       const input = args as { skillId: string; variables: Record<string, string> };

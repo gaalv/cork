@@ -41,7 +41,7 @@ describe("NoteMetaPanel", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Title" })).toBeInTheDocument());
     expect(screen.getByText("No backlinks yet.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI Suggestions" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI Insights" })).toBeInTheDocument();
   });
 
   it("toggles collapsed state", () => {

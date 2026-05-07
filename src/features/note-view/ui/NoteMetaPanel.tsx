@@ -1,4 +1,4 @@
-import { AISuggestionCard } from "./AISuggestionCard";
+import { InsightsCard } from "@/features/ai/ui/InsightsCard";
 import { BacklinksList } from "./BacklinksList";
 import { NoteFolderField } from "./NoteFolderField";
 import { NoteMetaFooter } from "./NoteMetaFooter";
@@ -9,6 +9,7 @@ import { useBacklinks } from "@/features/note-view/hooks/useBacklinks";
 import { useOutline } from "@/features/note-view/hooks/useOutline";
 import { useScrollSpy } from "@/features/note-view/hooks/useScrollSpy";
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { NoteHistory } from "@/features/vcs/ui/NoteHistory";
 
 import type { OutlineItem } from "@/features/note-view/hooks/useOutline";
@@ -27,6 +28,9 @@ export function NoteMetaPanel({ noteId, body, updated, created, onOpenNote, onSe
   const collapsed = useNoteViewStore((state) => state.panelCollapsed);
   const toggleCollapsed = useNoteViewStore((state) => state.togglePanelCollapsed);
   const activeNotePath = useNoteViewStore((state) => state.activeNotePath);
+  const noteTitle = useVaultStore((state) =>
+    noteId ? state.notes.find((note) => note.id === noteId)?.title ?? "" : "",
+  );
   const outline = useOutline(body);
   const activeId = useScrollSpy(outline.map((item) => item.id));
   const { backlinks } = useBacklinks(noteId);
@@ -48,7 +52,7 @@ export function NoteMetaPanel({ noteId, body, updated, created, onOpenNote, onSe
       <TagsField noteId={noteId} />
       <NoteHistory notePath={activeNotePath} noteId={noteId} />
       <BacklinksList backlinks={backlinks} onOpen={onOpenNote} />
-      <AISuggestionCard />
+      <InsightsCard noteId={noteId} body={body} title={noteTitle} />
       <NoteMetaFooter body={body} created={created} updated={updated} />
     </aside>
   );
