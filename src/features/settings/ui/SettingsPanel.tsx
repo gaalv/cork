@@ -362,6 +362,23 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
             </button>
           }
         />
+        <SettingRow
+          label="Enable local version history"
+          description={hasVaultSettings ? "Auto-commit note saves to a local git repository inside the vault." : "Open a vault to edit this per-vault setting."}
+          scope="vault"
+          control={
+            <input
+              type="checkbox"
+              aria-label="Enable local version history"
+              className="accent-[var(--color-noxe-accent)]"
+              checked={resolved.gitAutoCommit}
+              disabled={!hasVaultSettings}
+              onChange={(event) => {
+                void settingsBridge.set("vcs.gitAutoCommit", event.currentTarget.checked, "vault");
+              }}
+            />
+          }
+        />
       </div>
     );
   }

@@ -38,6 +38,8 @@ export const settingsBridge = {
         return vault.dailyTemplatePath;
       case "assets.offlineMode":
         return useVaultSettingsStore.getState().settings.offlineMode ?? app.assets.offlineMode;
+      case "vcs.gitAutoCommit":
+        return vault.gitAutoCommit;
     }
   },
 
@@ -94,6 +96,7 @@ async function setGlobalSetting(key: SettingKey, value: SettingValue): Promise<v
     case "wikilinks.autoRewriteOnRename":
     case "daily.pathPattern":
     case "daily.templatePath":
+    case "vcs.gitAutoCommit":
       throw new Error(`${key} is a per-vault setting`);
   }
 }
@@ -116,6 +119,9 @@ async function setVaultSetting(key: SettingKey, value: SettingValue): Promise<vo
     case "assets.offlineMode":
       await store.update({ offlineMode: Boolean(value) });
       useAppSettingsStore.getState().applyVaultSettings({ ...(useAppSettingsStore.getState().vaultSettings ?? {}), offlineMode: Boolean(value) });
+      return;
+    case "vcs.gitAutoCommit":
+      await store.update({ gitAutoCommit: Boolean(value) });
       return;
     case "appearance.density":
     case "appearance.theme":

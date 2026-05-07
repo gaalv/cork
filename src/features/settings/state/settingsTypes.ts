@@ -35,6 +35,7 @@ export type VaultScopedSettings = {
   attachmentsFolder?: string;
   autoRewriteLinksOnRename?: boolean;
   offlineMode?: boolean;
+  gitAutoCommit?: boolean;
 };
 
 export type SettingScope = "global" | "vault";
@@ -52,7 +53,8 @@ export type SettingKey =
   | "markdown.highlight"
   | "daily.pathPattern"
   | "daily.templatePath"
-  | "assets.offlineMode";
+  | "assets.offlineMode"
+  | "vcs.gitAutoCommit";
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   appearance: { density: "comfortable", theme: "system" },
@@ -77,6 +79,7 @@ export const DEFAULT_VAULT_SETTINGS: Required<VaultScopedSettings> = {
   dailyPathPattern: "Daily/YYYY/MM/YYYY-MM-DD.md",
   dailyTemplatePath: ".noxe/templates/daily.md",
   offlineMode: false,
+  gitAutoCommit: true,
 };
 
 export type SettingsChangedDetail = {

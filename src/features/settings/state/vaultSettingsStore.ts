@@ -58,6 +58,7 @@ export function resolvedVaultSettings(settings: VaultScopedSettings): Required<V
     dailyPathPattern: settings.dailyPathPattern ?? DEFAULT_VAULT_SETTINGS.dailyPathPattern,
     dailyTemplatePath: settings.dailyTemplatePath ?? DEFAULT_VAULT_SETTINGS.dailyTemplatePath,
     offlineMode: settings.offlineMode ?? DEFAULT_VAULT_SETTINGS.offlineMode,
+    gitAutoCommit: settings.gitAutoCommit ?? DEFAULT_VAULT_SETTINGS.gitAutoCommit,
   };
 }
 
@@ -72,6 +73,7 @@ export function normalizeVaultSettings(value: unknown): VaultScopedSettings {
     dailyPathPattern: stringOrUndefined(candidate.dailyPathPattern),
     dailyTemplatePath: stringOrUndefined(candidate.dailyTemplatePath),
     offlineMode: booleanOrUndefined(candidate.offlineMode),
+    gitAutoCommit: booleanOrUndefined(candidate.gitAutoCommit),
   };
 }
 
