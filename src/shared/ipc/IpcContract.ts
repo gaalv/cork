@@ -273,6 +273,7 @@ export type IpcEventMap = {
   "index:progress": IndexProgressEvent;
   "index:ready": IndexStatus;
   "index:error": IndexErrorEvent;
+  "index:updated": null;
 };
 
 export type IpcEventName = keyof IpcEventMap;

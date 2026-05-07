@@ -42,7 +42,7 @@ describe("NoteView", () => {
   it("renders editor split with metadata panel", async () => {
     render(<NoteView noteId="n1" title="Alpha" />);
 
-    expect(screen.getByTestId("note-view")).toHaveTextContent("Alpha");
+    expect(screen.getByLabelText("Note title")).toHaveValue("Alpha");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Outline" })).toBeInTheDocument());
     expect(screen.getByLabelText("Note metadata")).toBeInTheDocument();
   });

@@ -15,6 +15,8 @@ type VaultSettingsStore = {
   save: (settings: VaultScopedSettings) => Promise<void>;
   update: (patch: VaultScopedSettings) => Promise<void>;
   apply: (settings: VaultSettings, hasVault?: boolean) => void;
+  addLibraryTag: (name: string) => Promise<void>;
+  removeLibraryTag: (name: string) => Promise<void>;
   reset: () => void;
 };
 
@@ -46,6 +48,24 @@ export const useVaultSettingsStore = create<VaultSettingsStore>((set, get) => ({
     set({ settings: normalizeVaultSettings(settings), hasVault, isLoading: false });
   },
 
+  async addLibraryTag(name) {
+    const cleaned = normalizeTagName(name);
+    if (!cleaned) return;
+    const current = get().settings.tagLibrary ?? [];
+    if (current.includes(cleaned)) return;
+    const next = [...current, cleaned].sort((a, b) => a.localeCompare(b));
+    await get().update({ tagLibrary: next });
+  },
+
+  async removeLibraryTag(name) {
+    const cleaned = normalizeTagName(name);
+    if (!cleaned) return;
+    const current = get().settings.tagLibrary ?? [];
+    const next = current.filter((tag) => tag !== cleaned);
+    if (next.length === current.length) return;
+    await get().update({ tagLibrary: next });
+  },
+
   reset() {
     set({ settings: {}, hasVault: false, isLoading: false });
   },
@@ -59,6 +79,7 @@ export function resolvedVaultSettings(settings: VaultScopedSettings): Required<V
     dailyTemplatePath: settings.dailyTemplatePath ?? DEFAULT_VAULT_SETTINGS.dailyTemplatePath,
     offlineMode: settings.offlineMode ?? DEFAULT_VAULT_SETTINGS.offlineMode,
     gitAutoCommit: settings.gitAutoCommit ?? DEFAULT_VAULT_SETTINGS.gitAutoCommit,
+    tagLibrary: settings.tagLibrary ?? DEFAULT_VAULT_SETTINGS.tagLibrary,
   };
 }
 
@@ -74,6 +95,7 @@ export function normalizeVaultSettings(value: unknown): VaultScopedSettings {
     dailyTemplatePath: stringOrUndefined(candidate.dailyTemplatePath),
     offlineMode: booleanOrUndefined(candidate.offlineMode),
     gitAutoCommit: booleanOrUndefined(candidate.gitAutoCommit),
+    tagLibrary: stringArrayOrUndefined(candidate.tagLibrary),
   };
 }
 
@@ -83,4 +105,29 @@ function stringOrUndefined(value: unknown): string | undefined {
 
 function booleanOrUndefined(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
+}
+
+function stringArrayOrUndefined(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") continue;
+    const cleaned = normalizeTagName(entry);
+    if (!cleaned || seen.has(cleaned)) continue;
+    seen.add(cleaned);
+    result.push(cleaned);
+  }
+  return result;
+}
+
+export function normalizeTagName(input: string): string {
+  return input
+    .trim()
+    .replace(/^#+/, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^A-Za-z0-9_\-./]/g, "")
+    .replace(/\/{2,}/g, "/")
+    .replace(/^\/+|\/+$/g, "")
+    .toLowerCase();
 }

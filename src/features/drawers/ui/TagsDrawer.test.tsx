@@ -61,6 +61,8 @@ describe("TagsDrawer", () => {
 
     render(<TagsDrawer />);
 
-    expect(await screen.findByText("No tags in this vault yet.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No tags yet. Create tags above or add them from the right sidebar of any note."),
+    ).toBeInTheDocument();
   });
 });

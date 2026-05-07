@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
-import { Trash } from "@phosphor-icons/react";
+import { useEffect, useRef } from "react";
 
 import { useAutoSave } from "@/features/editor/hooks/useAutoSave";
 import { useExternalReconciler } from "@/features/editor/hooks/useExternalReconciler";
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { Editor } from "@/features/editor/ui/Editor";
-import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { NoteIconPicker } from "@/features/note-view/ui/NoteIconPicker";
 import { NoteMetaPanel } from "@/features/note-view/ui/NoteMetaPanel";
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
@@ -29,7 +27,7 @@ export function NoteView({ noteId, title }: NoteViewProps) {
   const buffer = useEditorStore((state) => state.buffers.get(noteId));
   const setActiveNotePath = useNoteViewStore((state) => state.setActiveNotePath);
   const toggleLiveMode = useNoteViewStore((state) => state.toggleLiveMode);
-  const [editingTitle, setEditingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   useAutoSave();
   useExternalReconciler();
 
@@ -89,17 +87,24 @@ export function NoteView({ noteId, title }: NoteViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, toggleLiveMode, note?.path, title]);
 
-  async function renameTitle(next: string) {
-    if (!note) {
+  async function commitTitle(next: string) {
+    if (!note) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === title) return;
+    if (/[\\/:*?"<>|]/.test(trimmed)) {
+      window.alert("Note title cannot contain path separators or reserved characters");
       return;
     }
-    const result = await client.notes.rename({ oldPath: note.path, newName: next });
-    await loadNotes();
-    const renamed = useVaultStore.getState().notes.find((entry) => entry.path === result.path);
-    if (renamed) {
-      navigate({ kind: "note", id: renamed.id });
+    try {
+      const result = await client.notes.rename({ oldPath: note.path, newName: trimmed });
+      await loadNotes();
+      const renamed = useVaultStore.getState().notes.find((entry) => entry.path === result.path);
+      if (renamed) {
+        navigate({ kind: "note", id: renamed.id });
+      }
+    } catch (error) {
+      window.alert(`Failed to rename: ${(error as Error).message ?? "unknown error"}`);
     }
-    setEditingTitle(false);
   }
 
   const openNote = (entry: NoteEntry) => navigate({ kind: "note", id: entry.id });
@@ -107,36 +112,31 @@ export function NoteView({ noteId, title }: NoteViewProps) {
   return (
     <main className="relative flex flex-1 overflow-hidden" data-testid="note-view">
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="group/title mx-auto w-full max-w-[780px] px-8 pt-8 lg:pt-10">
+        <div className="mx-auto w-full max-w-[780px] px-8 pt-8 lg:pt-10">
           <div className="flex items-center gap-2">
             <NoteIconPicker noteId={noteId} />
-            {editingTitle ? (
-              <InlineRename
-                initial={title}
-                label="Rename note"
-                onCommit={renameTitle}
-                onCancel={() => setEditingTitle(false)}
-                className="min-w-0 flex-1 text-2xl font-semibold"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setEditingTitle(true)}
-                className="-ml-1 min-w-0 flex-1 truncate rounded px-1 text-left text-2xl font-semibold text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
-                aria-label={`Rename note "${title}"`}
-              >
-                {title}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => void deleteNote()}
-              aria-label="Delete note"
-              title="Delete note (⌘⌫)"
-              className="shrink-0 rounded-md p-1.5 text-[var(--color-noxe-muted)] opacity-0 transition-opacity hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none group-hover/title:opacity-100"
-            >
-              <Trash size={16} />
-            </button>
+            <input
+              ref={titleInputRef}
+              key={noteId}
+              type="text"
+              defaultValue={title}
+              aria-label="Note title"
+              placeholder="Untitled"
+              spellCheck={false}
+              onBlur={(event) => void commitTitle(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  event.currentTarget.value = title;
+                  event.currentTarget.blur();
+                }
+              }}
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-2xl font-semibold text-[var(--color-noxe-ink)] outline-none focus:outline-none focus:ring-0 placeholder:text-[var(--color-noxe-muted)]"
+            />
           </div>
         </div>
         <div className="mt-4 min-h-0 flex-1">

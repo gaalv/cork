@@ -58,6 +58,7 @@ export type VaultSettings = {
   offlineMode?: boolean;
   autoRewriteLinksOnRename?: boolean;
   gitAutoCommit?: boolean;
+  tagLibrary?: string[];
 };
 
 export type NoteEntry = {

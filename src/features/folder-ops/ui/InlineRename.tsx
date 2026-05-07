@@ -9,9 +9,20 @@ type InlineRenameProps = {
   onCommit: (value: string) => Promise<void> | void;
   onCancel?: () => void;
   className?: string;
+  variant?: "boxed" | "ghost";
+  placeholder?: string;
 };
 
-export function InlineRename({ initial, label, validate, onCommit, onCancel, className }: InlineRenameProps) {
+export function InlineRename({
+  initial,
+  label,
+  validate,
+  onCommit,
+  onCancel,
+  className,
+  variant = "boxed",
+  placeholder,
+}: InlineRenameProps) {
   const [value, setValue] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -56,6 +67,7 @@ export function InlineRename({ initial, label, validate, onCommit, onCancel, cla
         aria-label={label}
         value={value}
         disabled={isSaving}
+        placeholder={placeholder}
         onChange={(event) => {
           setValue(event.target.value);
           setError(null);
@@ -72,7 +84,9 @@ export function InlineRename({ initial, label, validate, onCommit, onCancel, cla
           }
         }}
         className={cn(
-          "min-w-0 rounded-md border border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-panel)] px-2 py-1 text-[13px] text-[var(--color-noxe-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-accent-soft)]",
+          variant === "boxed"
+            ? "min-w-0 rounded-md border border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-panel)] px-2 py-1 text-[13px] text-[var(--color-noxe-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-accent-soft)]"
+            : "min-w-0 border-0 bg-transparent p-0 text-[var(--color-noxe-ink)] outline-none focus:outline-none focus:ring-0 placeholder:text-[var(--color-noxe-muted)]",
           className,
         )}
       />

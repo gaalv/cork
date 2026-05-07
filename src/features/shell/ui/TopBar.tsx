@@ -1,7 +1,8 @@
-import { ArrowLeft, Brain, Command as CommandIcon, Plus, Star } from "@phosphor-icons/react";
+import { ArrowLeft, Brain, Command as CommandIcon, Plus, Star, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { toggleStar } from "@/features/drawers/services/starService";
+import { flushEditorSave } from "@/features/editor/hooks/useAutoSave";
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
@@ -26,6 +27,7 @@ export function TopBar() {
   const activeBuffer = useEditorStore((state) => (view.kind === "note" ? state.buffers.get(view.id) ?? null : null));
   const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
   const [busyStar, setBusyStar] = useState(false);
+  const [busyDelete, setBusyDelete] = useState(false);
   const vaultName = vaultPath ? vaultPath.split(/[\\/]/).filter(Boolean).at(-1) ?? "Vault" : "No vault open";
   const toggleAiPanel = useAiStore((state) => state.togglePanel);
   const aiPanelOpen = useAiStore((state) => state.panelOpen);
@@ -38,6 +40,9 @@ export function TopBar() {
     try {
       if (activeBuffer) {
         updateFrontmatter(activeNote.id, { starred: !starred });
+        // Persist immediately so the indexer can refresh derived views
+        // (Starred drawer, etc.) without waiting for the autosave debounce.
+        await flushEditorSave(activeNote.id);
       } else {
         await toggleStar(activeNote);
         await loadNotes();
@@ -46,6 +51,24 @@ export function TopBar() {
       pushToast({ title: "Failed to toggle star", description: (error as Error).message ?? "Unknown error" });
     } finally {
       setBusyStar(false);
+    }
+  }
+
+  async function onDeleteNote() {
+    if (!activeNote || busyDelete) return;
+    const ok = window.confirm(
+      `Move "${activeNote.title}" to system trash?\n\nIt will be removed from this vault and can be restored from your operating system trash.`,
+    );
+    if (!ok) return;
+    setBusyDelete(true);
+    try {
+      await client.notes.trash(activeNote.path);
+      await loadNotes();
+      navigate({ kind: "home" });
+    } catch (error) {
+      pushToast({ title: "Failed to delete note", description: (error as Error).message ?? "Unknown error" });
+    } finally {
+      setBusyDelete(false);
     }
   }
 
@@ -81,7 +104,7 @@ export function TopBar() {
           type="button"
           aria-label={starred ? "Remove star" : "Star note"}
           aria-pressed={starred}
-          title={starred ? "Unstar (saves on next autosave)" : "Star (saves on next autosave)"}
+          title={starred ? "Unstar note" : "Star note"}
           disabled={busyStar || !activeNote}
           onClick={() => void onToggleStar()}
           className={`ml-1 rounded-full p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none disabled:opacity-50 ${
@@ -91,6 +114,19 @@ export function TopBar() {
           }`}
         >
           <Star size={16} weight={starred ? "fill" : "regular"} />
+        </button>
+      )}
+
+      {view.kind === "note" && (
+        <button
+          type="button"
+          aria-label="Delete note"
+          title="Delete note (⌘⌫)"
+          disabled={busyDelete || !activeNote}
+          onClick={() => void onDeleteNote()}
+          className="rounded-full p-1.5 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none disabled:opacity-50"
+        >
+          <Trash size={16} />
         </button>
       )}
 

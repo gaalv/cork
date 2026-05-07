@@ -82,11 +82,16 @@ impl IndexState {
         let error_sink: worker::ErrorSink = Arc::new(move |message| {
             let _ = error_app.emit("index:error", IndexErrorEvent { message });
         });
+        let update_app = app.clone();
+        let update_sink: worker::UpdateSink = Arc::new(move || {
+            let _ = update_app.emit("index:updated", ());
+        });
         let sender = worker::spawn_worker(
             db_path,
             vault_path.clone(),
             Some(progress_sink),
             Some(error_sink),
+            Some(update_sink),
         );
         sender
             .send(IndexJob::BuildAll)

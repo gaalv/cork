@@ -32,7 +32,7 @@ describe("ViewRouter", () => {
     await waitFor(() => expect(screen.getAllByRole("button", { name: /Alpha/ }).length).toBeGreaterThan(0));
     fireEvent.click(screen.getAllByRole("button", { name: /Alpha/ })[0]!);
 
-    expect(screen.getByTestId("note-view")).toHaveTextContent("Alpha");
+    expect(screen.getByLabelText("Note title")).toHaveValue("Alpha");
   });
 
   it("returns to home on Escape from a drawer-less note", () => {

@@ -16,6 +16,9 @@ export function StarredDrawer({ onOpenNote }: StarredDrawerProps) {
 
   useEffect(() => {
     let cancelled = false;
+    let unlistenChanged: (() => void) | undefined;
+    let unlistenIndexed: (() => void) | undefined;
+
     const load = async () => {
       try {
         setIsLoading(true);
@@ -36,9 +39,24 @@ export function StarredDrawer({ onOpenNote }: StarredDrawerProps) {
     };
 
     void load();
-    void client.events.on("vault:fileChanged", () => void load()).catch(() => undefined);
+    void client.events
+      .on("vault:fileChanged", () => void load())
+      .then((un) => {
+        if (cancelled) un();
+        else unlistenChanged = un;
+      })
+      .catch(() => undefined);
+    void client.events
+      .on("index:updated", () => void load())
+      .then((un) => {
+        if (cancelled) un();
+        else unlistenIndexed = un;
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
+      unlistenChanged?.();
+      unlistenIndexed?.();
     };
   }, []);
 

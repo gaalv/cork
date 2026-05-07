@@ -49,12 +49,17 @@ pub enum IndexPhase {
 
 pub type ProgressSink = Arc<dyn Fn(IndexProgress) + Send + Sync + 'static>;
 pub type ErrorSink = Arc<dyn Fn(String) + Send + Sync + 'static>;
+/// Invoked after each successfully processed job (Upsert/Remove/Rename/BuildAll).
+/// The frontend listens to a corresponding event to refresh derived views
+/// (starred drawer, tag tree, etc.) once the index has caught up.
+pub type UpdateSink = Arc<dyn Fn() + Send + Sync + 'static>;
 
 pub fn spawn_worker(
     db_path: PathBuf,
     vault_path: PathBuf,
     progress_sink: Option<ProgressSink>,
     error_sink: Option<ErrorSink>,
+    update_sink: Option<UpdateSink>,
 ) -> Sender<IndexJob> {
     let (sender, receiver) = mpsc::channel::<IndexJob>();
     thread::spawn(move || {
@@ -83,6 +88,8 @@ pub fn spawn_worker(
             };
             if let Err(error) = result {
                 emit_error(&error_sink, error.to_string());
+            } else if let Some(sink) = update_sink.as_deref() {
+                sink();
             }
         }
     });

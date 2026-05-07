@@ -15,6 +15,9 @@ pub struct VaultSettings {
     pub auto_rewrite_links_on_rename: Option<bool>,
     /// When `true` (default), save events trigger a local git auto-commit.
     pub git_auto_commit: Option<bool>,
+    /// User-curated tag library for standalone tag creation. Tags listed here
+    /// appear in the Tags drawer even if no note currently uses them.
+    pub tag_library: Option<Vec<String>>,
 }
 
 pub fn load_vault_settings(vault_root: &Path) -> Result<VaultSettings, IpcError> {
@@ -90,6 +93,7 @@ mod tests {
             offline_mode: None,
             auto_rewrite_links_on_rename: Some(true),
             git_auto_commit: None,
+            tag_library: Some(vec!["draft".to_string(), "review".to_string()]),
         };
 
         save_vault_settings(dir.path(), &settings).unwrap();

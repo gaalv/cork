@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { client } from "@/shared/ipc/client";
+import { useVaultSettingsStore } from "@/features/settings/state/vaultSettingsStore";
 
 import type { TagCount } from "@/shared/ipc/IpcContract";
 
@@ -21,9 +22,13 @@ export function useTagTree() {
   const [tags, setTags] = useState<TagCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const libraryTags = useVaultSettingsStore((state) => state.settings.tagLibrary);
 
   useEffect(() => {
     let cancelled = false;
+    let unlistenChanged: (() => void) | undefined;
+    let unlistenIndexed: (() => void) | undefined;
+
     const load = async () => {
       try {
         setIsLoading(true);
@@ -44,19 +49,42 @@ export function useTagTree() {
     };
 
     void load();
-    void client.events.on("vault:fileChanged", () => void load()).catch(() => undefined);
+    void client.events
+      .on("vault:fileChanged", () => void load())
+      .then((un) => {
+        if (cancelled) un();
+        else unlistenChanged = un;
+      })
+      .catch(() => undefined);
+    void client.events
+      .on("index:updated", () => void load())
+      .then((un) => {
+        if (cancelled) un();
+        else unlistenIndexed = un;
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
+      unlistenChanged?.();
+      unlistenIndexed?.();
     };
   }, []);
 
-  const tree = useMemo(() => buildTagTree(tags), [tags]);
+  const tree = useMemo(() => buildTagTree(tags, libraryTags ?? []), [tags, libraryTags]);
   return { tree, isLoading, error };
 }
 
-export function buildTagTree(tags: TagCount[]): TagTreeNode[] {
+export function buildTagTree(tags: TagCount[], libraryTags: string[] = []): TagTreeNode[] {
+  const merged: TagCount[] = [...tags];
+  const seen = new Set(tags.map((tag) => tag.tag));
+  for (const name of libraryTags) {
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    merged.push({ tag: name, count: 0 });
+  }
+
   const roots = new Map<string, MutableTagTreeNode>();
-  for (const tag of tags) {
+  for (const tag of merged) {
     const segments = tag.tag.split("/").filter(Boolean).slice(0, 4);
     let siblings = roots;
     let currentTag = "";

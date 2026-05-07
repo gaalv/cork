@@ -40,6 +40,7 @@ export type VaultScopedSettings = {
   autoRewriteLinksOnRename?: boolean;
   offlineMode?: boolean;
   gitAutoCommit?: boolean;
+  tagLibrary?: string[];
 };
 
 export type SettingScope = "global" | "vault";
@@ -86,6 +87,7 @@ export const DEFAULT_VAULT_SETTINGS: Required<VaultScopedSettings> = {
   dailyTemplatePath: ".noxe/templates/daily.md",
   offlineMode: false,
   gitAutoCommit: true,
+  tagLibrary: [],
 };
 
 export type SettingsChangedDetail = {
