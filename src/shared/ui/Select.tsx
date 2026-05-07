@@ -1,5 +1,6 @@
 import { CaretDown, Check } from "@phosphor-icons/react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@/shared/utils/cn";
 
@@ -19,6 +20,8 @@ export type SelectProps<T extends string | number> = {
   placeholder?: string;
 };
 
+type Position = { left: number; top: number; width: number; placement: "below" | "above" };
+
 export function Select<T extends string | number>({
   value,
   options,
@@ -30,6 +33,7 @@ export function Select<T extends string | number>({
 }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(() => Math.max(0, options.findIndex((option) => option.value === value)));
+  const [position, setPosition] = useState<Position | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const listId = useId();
@@ -42,10 +46,10 @@ export function Select<T extends string | number>({
     }
     const onClickOutside = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (!triggerRef.current || !listRef.current) {
+      if (!triggerRef.current) {
         return;
       }
-      if (target && !triggerRef.current.contains(target) && !listRef.current.contains(target)) {
+      if (target && !triggerRef.current.contains(target) && (!listRef.current || !listRef.current.contains(target))) {
         setOpen(false);
       }
     };
@@ -60,6 +64,29 @@ export function Select<T extends string | number>({
     const next = Math.max(0, options.findIndex((option) => option.value === value));
     setActiveIndex(next);
   }, [open, options, value]);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) {
+      return undefined;
+    }
+    const computePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const estimatedHeight = Math.min(options.length * 36 + 8, 280);
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const placement: Position["placement"] = spaceBelow < estimatedHeight && rect.top > spaceBelow ? "above" : "below";
+      const top = placement === "below" ? rect.bottom + 4 : rect.top - estimatedHeight - 4;
+      setPosition({ left: rect.left, top, width: rect.width, placement });
+    };
+    computePosition();
+    const onChange = () => computePosition();
+    window.addEventListener("resize", onChange);
+    window.addEventListener("scroll", onChange, true);
+    return () => {
+      window.removeEventListener("resize", onChange);
+      window.removeEventListener("scroll", onChange, true);
+    };
+  }, [open, options.length]);
 
   function commit(index: number) {
     const option = options[index];
@@ -104,64 +131,68 @@ export function Select<T extends string | number>({
         <CaretDown size={12} weight="bold" className="shrink-0 text-[var(--color-noxe-muted)]" />
       </button>
 
-      {open ? (
-        <ul
-          ref={listRef}
-          id={listId}
-          role="listbox"
-          aria-label={ariaLabel}
-          tabIndex={-1}
-          className="absolute left-0 right-0 z-50 mt-1 rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] py-1 shadow-lg"
-          onKeyDown={(event) => {
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              setActiveIndex((prev) => Math.min(options.length - 1, prev + 1));
-            } else if (event.key === "ArrowUp") {
-              event.preventDefault();
-              setActiveIndex((prev) => Math.max(0, prev - 1));
-            } else if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              commit(activeIndex);
-            } else if (event.key === "Escape") {
-              event.preventDefault();
-              setOpen(false);
-              triggerRef.current?.focus();
-            }
-          }}
-        >
-          {options.map((option, index) => {
-            const isSelected = option.value === value;
-            const isActive = index === activeIndex;
-            return (
-              <li
-                key={`${option.value}`}
-                role="option"
-                aria-selected={isSelected}
-                tabIndex={isActive ? 0 : -1}
-                ref={(node) => {
-                  if (isActive && open && node) {
-                    node.focus({ preventScroll: true });
-                  }
-                }}
-                onClick={() => commit(index)}
-                onMouseEnter={() => setActiveIndex(index)}
-                className={cn(
-                  "flex cursor-pointer items-center justify-between gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-noxe-ink)] outline-none",
-                  isActive && "bg-[var(--color-noxe-panel-2)]",
-                )}
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate">{option.label}</span>
-                  {option.description ? (
-                    <span className="truncate text-[11px] text-[var(--color-noxe-muted)]">{option.description}</span>
-                  ) : null}
-                </span>
-                {isSelected ? <Check size={12} weight="bold" className="shrink-0 text-[var(--color-noxe-accent)]" /> : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      {open && position
+        ? createPortal(
+            <ul
+              ref={listRef}
+              id={listId}
+              role="listbox"
+              aria-label={ariaLabel}
+              tabIndex={-1}
+              style={{ position: "fixed", left: position.left, top: position.top, width: position.width, maxHeight: 280 }}
+              className="z-[60] overflow-y-auto rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] py-1 shadow-lg"
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  setActiveIndex((prev) => Math.min(options.length - 1, prev + 1));
+                } else if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  setActiveIndex((prev) => Math.max(0, prev - 1));
+                } else if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  commit(activeIndex);
+                } else if (event.key === "Escape") {
+                  event.preventDefault();
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }
+              }}
+            >
+              {options.map((option, index) => {
+                const isSelected = option.value === value;
+                const isActive = index === activeIndex;
+                return (
+                  <li
+                    key={`${option.value}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    tabIndex={isActive ? 0 : -1}
+                    ref={(node) => {
+                      if (isActive && open && node) {
+                        node.focus({ preventScroll: true });
+                      }
+                    }}
+                    onClick={() => commit(index)}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    className={cn(
+                      "flex cursor-pointer items-center justify-between gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-noxe-ink)] outline-none",
+                      isActive && "bg-[var(--color-noxe-panel-2)]",
+                    )}
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate">{option.label}</span>
+                      {option.description ? (
+                        <span className="truncate text-[11px] text-[var(--color-noxe-muted)]">{option.description}</span>
+                      ) : null}
+                    </span>
+                    {isSelected ? <Check size={12} weight="bold" className="shrink-0 text-[var(--color-noxe-accent)]" /> : null}
+                  </li>
+                );
+              })}
+            </ul>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
