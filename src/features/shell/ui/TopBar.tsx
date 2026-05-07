@@ -92,13 +92,18 @@ type BreadcrumbProps = {
 function Breadcrumb({ vaultName, folder, note, title, onFolderClick }: BreadcrumbProps) {
   const [editing, setEditing] = useState(false);
   const loadNotes = useVaultStore((state) => state.loadNotes);
+  const navigate = useShellStore((state) => state.navigate);
 
   async function renameNote(nextTitle: string) {
     if (!note) {
       return;
     }
-    await client.notes.rename({ oldPath: note.path, newName: nextTitle });
+    const result = await client.notes.rename({ oldPath: note.path, newName: nextTitle });
     await loadNotes();
+    const renamed = useVaultStore.getState().notes.find((entry) => entry.path === result.path);
+    if (renamed) {
+      navigate({ kind: "note", id: renamed.id });
+    }
     setEditing(false);
   }
 
