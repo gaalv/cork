@@ -18,21 +18,21 @@ export function StarredDrawer({ onOpenNote }: StarredDrawerProps) {
     let cancelled = false;
     let unlistenChanged: (() => void) | undefined;
     let unlistenIndexed: (() => void) | undefined;
+    let seq = 0;
 
     const load = async () => {
+      const ticket = ++seq;
       try {
-        setIsLoading(true);
+        if (ticket === 1) setIsLoading(true);
         const starred = await client.notes.starred();
-        if (!cancelled) {
-          setNotes(starred);
-          setError(null);
-        }
+        if (cancelled || ticket !== seq) return;
+        setNotes(starred);
+        setError(null);
       } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load starred notes");
-        }
+        if (cancelled || ticket !== seq) return;
+        setError(loadError instanceof Error ? loadError.message : "Failed to load starred notes");
       } finally {
-        if (!cancelled) {
+        if (!cancelled && ticket === seq) {
           setIsLoading(false);
         }
       }
