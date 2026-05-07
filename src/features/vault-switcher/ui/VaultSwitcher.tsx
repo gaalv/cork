@@ -131,7 +131,7 @@ export function VaultSwitcher() {
             <button
               type="button"
               onClick={() => selectVault()}
-              className="rounded-md bg-[var(--color-noxe-ink)] px-3 py-1.5 text-[12px] font-medium text-white"
+              className="rounded-md bg-[var(--color-noxe-primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-noxe-primary-foreground)]"
             >
               Open another
             </button>
