@@ -30,7 +30,7 @@ export function HomeHero() {
     <section className="rounded-3xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-6 shadow-sm">
       <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">{dateLabel}</p>
       <div className="mt-2 flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold text-[var(--color-noxe-ink)]">{greeting} 👋</h1>
+        <h1 className="text-3xl font-semibold text-[var(--color-noxe-ink)]">{greeting}</h1>
         {inboxCount > 0 ? (
           <p className="max-w-2xl text-sm text-[var(--color-noxe-muted)]">
             You have <span className="font-medium text-[var(--color-noxe-ink)]">{inboxCount}</span>{" "}
