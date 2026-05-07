@@ -13,7 +13,7 @@ import { AboutDialog } from "./AboutDialog";
 import { SettingRow } from "./SettingRow";
 
 import type { ChangeEvent } from "react";
-import type { AppSettings } from "@/features/settings/state/settingsTypes";
+import type { AppSettings, AppearanceTheme } from "@/features/settings/state/settingsTypes";
 import type { SettingsSectionId } from "@/features/settings/state/settingsUiStore";
 
 const sections: Array<{ id: SettingsSectionId; label: string }> = [
@@ -154,11 +154,22 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
       <div className="space-y-3">
         <SettingRow
           label="Theme"
-          description="Noxe ships with the light theme in v1; additional themes are planned."
+          description="Switch between Light and Dark, or follow your OS appearance."
           scope="app"
           control={
-            <select className={controlClass} value={settings.appearance.theme} disabled aria-label="Theme">
+            <select
+              className={controlClass}
+              value={settings.appearance.theme}
+              aria-label="Theme"
+              onChange={(event) =>
+                void updateSettings({
+                  appearance: { ...settings.appearance, theme: event.target.value as AppearanceTheme },
+                })
+              }
+            >
+              <option value="system">System</option>
               <option value="light">Light</option>
+              <option value="dark">Dark</option>
             </select>
           }
         />

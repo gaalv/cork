@@ -23,7 +23,7 @@ export type RecentVault = {
 export type AppSettings = {
   appearance: {
     density: "comfortable" | "compact";
-    theme: "light";
+    theme: "light" | "dark" | "system";
   };
   editor: {
     autoSaveDebounceMs: number;

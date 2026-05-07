@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
+import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
@@ -57,6 +58,13 @@ export function useShortcuts() {
       "$mod+,": (event) => {
         event.preventDefault();
         openSettings();
+      },
+      "$mod+Shift+l": (event) => {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+        cycleTheme();
       },
       "$mod+d": (event) => {
         if (isEditableTarget(event.target)) {

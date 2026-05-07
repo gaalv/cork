@@ -19,6 +19,25 @@
   --color-noxe-tag-soft: #ccfbf1;
 }
 
+:root[data-theme="dark"] {
+  --color-noxe-bg: #0c0a09;
+  --color-noxe-panel: #1c1917;
+  --color-noxe-panel-2: #292524;
+  --color-noxe-border: #3f3a36;
+  --color-noxe-border-strong: #57534e;
+  --color-noxe-ink: #fafaf9;
+  --color-noxe-muted: #a8a29e;
+  --color-noxe-subtle: #78716c;
+  --color-noxe-accent: #a5b4fc;
+  --color-noxe-accent-soft: #1e1b4b;
+  --color-noxe-tag: #5eead4;
+  --color-noxe-tag-soft: #134e4a;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] *::-webkit-scrollbar-thumb { background: #3f3a36; }
+:root[data-theme="dark"] *::-webkit-scrollbar-thumb:hover { background: #57534e; }
+
 html, body, #root {
   height: 100%;
   overflow: hidden;

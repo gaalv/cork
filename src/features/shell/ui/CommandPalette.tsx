@@ -3,6 +3,7 @@ import { Command } from "cmdk";
 import fuzzysort from "fuzzysort";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
+import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { commandsRegistry } from "@/features/shell/commands/registry";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -262,5 +263,8 @@ function runCommand(
   }
   if (id === "rebuild-index") {
     void actions.rebuild();
+  }
+  if (id === "toggle-theme") {
+    cycleTheme();
   }
 }

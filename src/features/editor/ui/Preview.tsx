@@ -7,6 +7,7 @@ import { useEditorStore } from "@/features/editor/state/editorStore";
 import { baseRehypePlugins, baseRemarkPlugins } from "@/features/editor/preview/plugins";
 import { MermaidDiagram } from "@/features/editor/preview/mermaidRenderer";
 import { highlightCode } from "@/features/editor/preview/shikiHighlighter";
+import { useResolvedTheme } from "@/features/settings/runtime/themeRuntime";
 import { client } from "@/shared/ipc/client";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
@@ -173,6 +174,7 @@ function toggleFirstTask(source: string, checked: boolean) {
 
 function HighlightedCode({ code, lang }: { code: string; lang: string }) {
   const [html, setHtml] = useState<string>(`<pre><code>${code}</code></pre>`);
+  const theme = useResolvedTheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -184,7 +186,7 @@ function HighlightedCode({ code, lang }: { code: string; lang: string }) {
     return () => {
       cancelled = true;
     };
-  }, [code, lang]);
+  }, [code, lang, theme]);
 
   return <span data-shiki-code dangerouslySetInnerHTML={{ __html: html }} />;
 }

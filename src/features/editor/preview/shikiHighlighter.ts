@@ -1,7 +1,9 @@
 import type { HighlighterGeneric } from "shiki";
 
+import { resolveActiveTheme } from "@/features/settings/runtime/themeRuntime";
+
 type DevLang = "javascript" | "typescript" | "python" | "rust" | "shellscript" | "json" | "yaml" | "markdown";
-type DevTheme = "vitesse-light";
+type DevTheme = "vitesse-light" | "vitesse-dark";
 type Highlighter = HighlighterGeneric<DevLang, DevTheme>;
 
 let highlighterPromise: Promise<Highlighter> | null = null;
@@ -32,7 +34,8 @@ export async function highlightCode(code: string, lang = "text"): Promise<string
   }
   try {
     const highlighter = await getHighlighter();
-    return highlighter.codeToHtml(code, { lang: resolvedLang, theme: "vitesse-light" });
+    const theme: DevTheme = resolveActiveTheme() === "dark" ? "vitesse-dark" : "vitesse-light";
+    return highlighter.codeToHtml(code, { lang: resolvedLang, theme });
   } catch {
     return `<pre><code>${escapeHtml(code)}</code></pre>`;
   }
@@ -41,7 +44,7 @@ export async function highlightCode(code: string, lang = "text"): Promise<string
 async function getHighlighter(): Promise<Highlighter> {
   highlighterPromise ??= import("shiki").then(({ createHighlighter }) =>
     createHighlighter({
-      themes: ["vitesse-light"],
+      themes: ["vitesse-light", "vitesse-dark"],
       langs: ["javascript", "typescript", "python", "rust", "shellscript", "json", "yaml", "markdown"],
     }) as Promise<Highlighter>,
   );

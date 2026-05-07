@@ -64,9 +64,11 @@ async function setGlobalSetting(key: SettingKey, value: SettingValue): Promise<v
     case "appearance.density":
       await store.updateSettings({ appearance: { ...current.appearance, density: value === "compact" ? "compact" : "comfortable" } });
       return;
-    case "appearance.theme":
-      await store.updateSettings({ appearance: { ...current.appearance, theme: "light" } });
+    case "appearance.theme": {
+      const next = value === "dark" || value === "system" ? value : "light";
+      await store.updateSettings({ appearance: { ...current.appearance, theme: next } });
       return;
+    }
     case "editor.autoSaveDebounceMs":
       await store.updateSettings({ editor: { ...current.editor, autoSaveDebounceMs: Number(value) } });
       return;

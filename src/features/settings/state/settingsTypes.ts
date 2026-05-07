@@ -1,5 +1,5 @@
 export type AppearanceDensity = "comfortable" | "compact";
-export type AppearanceTheme = "light";
+export type AppearanceTheme = "light" | "dark" | "system";
 
 export type AppSettings = {
   appearance: {
@@ -55,7 +55,7 @@ export type SettingKey =
   | "assets.offlineMode";
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-  appearance: { density: "comfortable", theme: "light" },
+  appearance: { density: "comfortable", theme: "system" },
   editor: {
     autoSaveDebounceMs: 500,
     previewDefault: true,

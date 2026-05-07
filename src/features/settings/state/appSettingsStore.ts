@@ -170,7 +170,7 @@ export function normalizeAppSettings(value: unknown): AppSettings {
   return {
     appearance: {
       density: appearance.density === "compact" ? "compact" : DEFAULT_APP_SETTINGS.appearance.density,
-      theme: "light",
+      theme: normalizeTheme(appearance.theme),
     },
     editor: {
       autoSaveDebounceMs: numberOr(editor.autoSaveDebounceMs, DEFAULT_APP_SETTINGS.editor.autoSaveDebounceMs),
@@ -206,4 +206,8 @@ function booleanOr(value: unknown, fallback: boolean): boolean {
 
 function stringOr(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+}
+
+function normalizeTheme(value: unknown): "light" | "dark" | "system" {
+  return value === "light" || value === "dark" || value === "system" ? value : DEFAULT_APP_SETTINGS.appearance.theme;
 }

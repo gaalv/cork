@@ -3,6 +3,7 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
 import { useIndexStore } from "@/features/index/state/indexStore";
+import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { switchVault } from "@/features/vault-switcher/services/switchVault";
@@ -46,6 +47,9 @@ export async function dispatchMenuAction(action: string): Promise<void> {
       return;
     case "open-settings":
       useSettingsUiStore.getState().openSettings();
+      return;
+    case "toggle-theme":
+      cycleTheme();
       return;
     case "reveal-vault": {
       const path = useVaultStore.getState().path;
