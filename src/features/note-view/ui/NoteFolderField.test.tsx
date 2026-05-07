@@ -27,17 +27,17 @@ beforeEach(() => {
 });
 
 describe("NoteFolderField", () => {
-  it("lists existing folders + Root", () => {
+  it("opens a popover with all folders + Root", () => {
     render(<NoteFolderField noteId="n1" />);
-    const select = screen.getByLabelText("Move note to folder") as HTMLSelectElement;
-    const options = Array.from(select.options).map((option) => option.value);
-    expect(options).toEqual(["", "archive", "Inbox"]);
-    expect(select.value).toBe("Inbox");
+    fireEvent.click(screen.getByRole("combobox", { name: "Move note to folder" }));
+    const options = screen.getAllByRole("option").map((node) => node.textContent);
+    expect(options).toEqual(["Root", "archive", "Inbox"]);
   });
 
   it("invokes notes.move when the user picks a different folder", () => {
     render(<NoteFolderField noteId="n1" />);
-    fireEvent.change(screen.getByLabelText("Move note to folder"), { target: { value: "archive" } });
+    fireEvent.click(screen.getByRole("combobox", { name: "Move note to folder" }));
+    fireEvent.click(screen.getByRole("option", { name: "archive" }));
     expect(clientMock.notes.move).toHaveBeenCalledWith({
       notePath: "/vault/Inbox/Note.md",
       destFolder: "archive",

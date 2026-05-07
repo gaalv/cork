@@ -11,6 +11,7 @@ import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { AboutDialog } from "./AboutDialog";
 import { SettingRow } from "./SettingRow";
+import { Select } from "@/shared/ui/Select";
 
 import type { ChangeEvent } from "react";
 import type { AppSettings, AppearanceTheme } from "@/features/settings/state/settingsTypes";
@@ -157,20 +158,20 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           description="Switch between Light and Dark, or follow your OS appearance."
           scope="app"
           control={
-            <select
-              className={controlClass}
+            <Select<AppearanceTheme>
+              ariaLabel="Theme"
               value={settings.appearance.theme}
-              aria-label="Theme"
-              onChange={(event) =>
+              options={[
+                { value: "system", label: "System" },
+                { value: "light", label: "Light" },
+                { value: "dark", label: "Dark" },
+              ]}
+              onChange={(next) =>
                 void updateSettings({
-                  appearance: { ...settings.appearance, theme: event.target.value as AppearanceTheme },
+                  appearance: { ...settings.appearance, theme: next },
                 })
               }
-            >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
+            />
           }
         />
         <SettingRow
@@ -178,9 +179,13 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           description="Interface language selection is reserved for localization support."
           scope="app"
           control={
-            <select className={controlClass} value="en" disabled aria-label="Language">
-              <option value="en">English</option>
-            </select>
+            <Select
+              ariaLabel="Language"
+              value="en"
+              disabled
+              options={[{ value: "en", label: "English" }]}
+              onChange={() => {}}
+            />
           }
         />
       </div>
@@ -207,11 +212,16 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           description="Choose the editor font stack."
           scope="app"
           control={
-            <select className={controlClass} value={settings.editor.fontFamily} aria-label="Font family" onChange={(event) => patchEditor({ fontFamily: event.currentTarget.value })}>
-              <option value="system-ui">System UI</option>
-              <option value="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace">Monospace</option>
-              <option value="Georgia, Cambria, Times New Roman, Times, serif">Serif</option>
-            </select>
+            <Select
+              ariaLabel="Font family"
+              value={settings.editor.fontFamily}
+              options={[
+                { value: "system-ui", label: "System UI" },
+                { value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", label: "Monospace" },
+                { value: "Georgia, Cambria, Times New Roman, Times, serif", label: "Serif" },
+              ]}
+              onChange={(next) => patchEditor({ fontFamily: next })}
+            />
           }
         />
         <SettingRow
@@ -238,11 +248,16 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           description="Set how many spaces a tab occupies."
           scope="app"
           control={
-            <select className={controlClass} value={settings.editor.tabSize} aria-label="Tab size" onChange={(event) => patchEditor({ tabSize: Number(event.currentTarget.value) })}>
-              <option value={2}>2 spaces</option>
-              <option value={4}>4 spaces</option>
-              <option value={8}>8 spaces</option>
-            </select>
+            <Select<number>
+              ariaLabel="Tab size"
+              value={settings.editor.tabSize}
+              options={[
+                { value: 2, label: "2 spaces" },
+                { value: 4, label: "4 spaces" },
+                { value: 8, label: "8 spaces" },
+              ]}
+              onChange={(next) => patchEditor({ tabSize: next })}
+            />
           }
         />
         <SettingRow
