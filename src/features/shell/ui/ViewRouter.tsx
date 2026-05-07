@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { CalendarView } from "@/features/calendar/ui/CalendarView";
 import { HomeView } from "@/features/home/ui/HomeView";
 import { NoteView } from "@/features/note-view/ui/NoteView";
 
@@ -37,6 +38,10 @@ export function ViewRouter() {
       return <HomeView />;
     }
     return <NoteView title={note?.title ?? "Untitled"} noteId={view.id} />;
+  }
+
+  if (view.kind === "calendar") {
+    return <CalendarView />;
   }
 
   return <HomeView />;

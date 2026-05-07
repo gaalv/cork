@@ -1,4 +1,4 @@
-import { ClockCounterClockwise, FolderSimple, GearSix, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
+import { CalendarBlank, ClockCounterClockwise, FolderSimple, GearSix, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
 
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -40,6 +40,12 @@ export function Rail({ className }: RailProps) {
           label="Home"
           active={view.kind === "home" && drawer === null}
           onClick={() => navigate({ kind: "home" })}
+        />
+        <RailButton
+          icon={<CalendarBlank size={18} />}
+          label="Calendar"
+          active={view.kind === "calendar" && drawer === null}
+          onClick={() => navigate({ kind: "calendar" })}
         />
         {drawerButtons.map((button) => (
           <RailButton
