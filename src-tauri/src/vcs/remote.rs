@@ -491,21 +491,8 @@ pub fn build_conflict_filename(path: &Path, host: &str, stamp: &str) -> String {
     }
 }
 
-/// Returns `(stored_url, remote_url)`.
-/// `remote_url` is what we hand to `git remote add` (may carry the token).
-/// `stored_url` is the sanitized version saved to vault settings (no token).
-fn compose_authed_url(input_url: &str, token: Option<&str>) -> (String, String) {
-    let stored = strip_userinfo(input_url);
-    let remote = match token {
-        Some(t) if !t.is_empty() && stored.starts_with("https://") => {
-            let rest = &stored["https://".len()..];
-            format!("https://x-access-token:{t}@{rest}")
-        }
-        _ => stored.clone(),
-    };
-    (stored, remote)
-}
-
+/// Sanitizes a URL by dropping any `user:pass@` segment so that the value
+/// stored in vault settings never carries credentials.
 fn strip_userinfo(url: &str) -> String {
     if let Some(rest) = url.strip_prefix("https://") {
         if let Some(at) = rest.find('@') {
@@ -569,22 +556,54 @@ pub fn vcs_remote_enable(
 
     let url_set: String;
     if let Some(url) = input.url.clone() {
-        let (stored, remote_url) = compose_authed_url(url.trim(), input.token.as_deref());
+        let trimmed_url = url.trim().to_string();
+        let stored = strip_userinfo(&trimmed_url);
+        let token = input
+            .token
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty());
+
         let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
-        run_git_check(&vault_root, &["remote", "add", "origin", &remote_url])
+        // Always store the sanitized URL (no token) as the remote URL.
+        // Authentication is configured separately so it never lands in
+        // .git/config in plaintext when not needed, and so we can use
+        // http.extraHeader which bypasses any credential helper.
+        run_git_check(&vault_root, &["remote", "add", "origin", &stored])
             .map_err(IpcError::Other)?;
-        // When a token is supplied, disable any inherited credential helper
-        // for this repo so the URL-embedded credentials are actually used.
-        // Without this, helpers like `osxkeychain` or the gh helper override
-        // the URL credentials with the active gh account, causing 403s when
-        // pushing to a different account's repo.
-        // When no token is supplied, restore the inherited helper so the
-        // global gh/keychain config takes over again.
-        if input.token.as_deref().map(|s| !s.is_empty()).unwrap_or(false) {
-            let _ = run_git(&vault_root, &["config", "--local", "credential.helper", ""]);
-        } else {
-            let _ = run_git(&vault_root, &["config", "--local", "--unset-all", "credential.helper"]);
+
+        // Reset any previous per-remote auth overrides.
+        let _ = run_git(
+            &vault_root,
+            &["config", "--local", "--unset-all", "credential.helper"],
+        );
+        let _ = run_git(
+            &vault_root,
+            &["config", "--local", "--remove-section", "http \"https://github.com/\""],
+        );
+
+        if let Some(t) = token {
+            // Disable inherited credential helpers and use an explicit
+            // Authorization header for github.com. This bypasses
+            // osxkeychain / the gh credential helper entirely so the
+            // user-supplied PAT is actually used.
+            let _ = run_git(
+                &vault_root,
+                &["config", "--local", "credential.helper", ""],
+            );
+            let header = format!("AUTHORIZATION: Bearer {t}");
+            run_git_check(
+                &vault_root,
+                &[
+                    "config",
+                    "--local",
+                    "http.https://github.com/.extraheader",
+                    &header,
+                ],
+            )
+            .map_err(IpcError::Other)?;
         }
+
         run_git_check(&vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
         url_set = stored;
     } else {
@@ -593,9 +612,17 @@ pub fn vcs_remote_enable(
                 "gh CLI not found. Install GitHub CLI and run `gh auth login`.".into(),
             ));
         }
-        // Clear any leftover credential.helper override from a previous
-        // token-based connection so gh's helper takes effect again.
-        let _ = run_git(&vault_root, &["config", "--local", "--unset-all", "credential.helper"]);
+        // Clear any leftover credential.helper or extraHeader override
+        // from a previous token-based connection so gh's helper takes
+        // effect again.
+        let _ = run_git(
+            &vault_root,
+            &["config", "--local", "--unset-all", "credential.helper"],
+        );
+        let _ = run_git(
+            &vault_root,
+            &["config", "--local", "--remove-section", "http \"https://github.com/\""],
+        );
         let auth = Command::new("gh")
             .args(["auth", "status"])
             .output()
@@ -655,6 +682,15 @@ pub fn vcs_remote_disable(
 ) -> Result<RemoteInfo, IpcError> {
     let vault_root = vault_state.current_path().ok_or(IpcError::NotFound)?;
     let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
+    // Strip any per-repo auth overrides we may have set during enable.
+    let _ = run_git(
+        &vault_root,
+        &["config", "--local", "--unset-all", "credential.helper"],
+    );
+    let _ = run_git(
+        &vault_root,
+        &["config", "--local", "--remove-section", "http \"https://github.com/\""],
+    );
     let mut settings = load_vault_settings(&vault_root).unwrap_or_default();
     settings.git_remote = Some(GitRemoteSettings {
         enabled: false,
@@ -736,45 +772,27 @@ mod tests {
     }
 
     #[test]
-    fn compose_authed_url_injects_token_for_https() {
-        let (stored, remote) = compose_authed_url(
-            "https://github.com/me/vault.git",
-            Some("ghp_secrettoken"),
-        );
-        assert_eq!(stored, "https://github.com/me/vault.git");
+    fn strip_userinfo_drops_existing_userinfo_in_https() {
         assert_eq!(
-            remote,
-            "https://x-access-token:ghp_secrettoken@github.com/me/vault.git"
+            strip_userinfo("https://oldtoken@github.com/me/vault.git"),
+            "https://github.com/me/vault.git"
         );
     }
 
     #[test]
-    fn compose_authed_url_strips_existing_userinfo_before_storing() {
-        let (stored, remote) = compose_authed_url(
-            "https://oldtoken@github.com/me/vault.git",
-            Some("ghp_new"),
-        );
-        assert_eq!(stored, "https://github.com/me/vault.git");
+    fn strip_userinfo_passes_clean_url_through() {
         assert_eq!(
-            remote,
-            "https://x-access-token:ghp_new@github.com/me/vault.git"
+            strip_userinfo("https://github.com/me/vault.git"),
+            "https://github.com/me/vault.git"
         );
     }
 
     #[test]
-    fn compose_authed_url_no_token_returns_clean_pair() {
-        let (stored, remote) =
-            compose_authed_url("https://github.com/me/vault.git", None);
-        assert_eq!(stored, "https://github.com/me/vault.git");
-        assert_eq!(remote, "https://github.com/me/vault.git");
-    }
-
-    #[test]
-    fn compose_authed_url_skips_token_for_ssh() {
-        let (stored, remote) =
-            compose_authed_url("git@github.com:me/vault.git", Some("ghp_x"));
-        assert_eq!(stored, "git@github.com:me/vault.git");
-        assert_eq!(remote, "git@github.com:me/vault.git");
+    fn strip_userinfo_leaves_ssh_urls_untouched() {
+        assert_eq!(
+            strip_userinfo("git@github.com:me/vault.git"),
+            "git@github.com:me/vault.git"
+        );
     }
 
     #[test]
