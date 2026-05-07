@@ -10,6 +10,7 @@ import { useBacklinks } from "@/features/note-view/hooks/useBacklinks";
 import { useOutline } from "@/features/note-view/hooks/useOutline";
 import { useScrollSpy } from "@/features/note-view/hooks/useScrollSpy";
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
+import { NoteHistory } from "@/features/vcs/ui/NoteHistory";
 
 import type { OutlineItem } from "@/features/note-view/hooks/useOutline";
 import type { NoteEntry } from "@/shared/ipc/types";
@@ -27,6 +28,7 @@ type NoteMetaPanelProps = {
 export function NoteMetaPanel({ noteId, body, recents, updated, created, onOpenNote, onSelectHeading }: NoteMetaPanelProps) {
   const collapsed = useNoteViewStore((state) => state.panelCollapsed);
   const toggleCollapsed = useNoteViewStore((state) => state.togglePanelCollapsed);
+  const activeNotePath = useNoteViewStore((state) => state.activeNotePath);
   const outline = useOutline(body);
   const activeId = useScrollSpy(outline.map((item) => item.id));
   const { backlinks } = useBacklinks(noteId);
@@ -46,6 +48,7 @@ export function NoteMetaPanel({ noteId, body, recents, updated, created, onOpenN
       <Outline items={outline} activeId={activeId} onSelect={(item) => onSelectHeading?.(item)} />
       <NoteFolderField noteId={noteId} />
       <TagsField noteId={noteId} />
+      <NoteHistory notePath={activeNotePath} noteId={noteId} />
       <BacklinksList backlinks={backlinks} onOpen={onOpenNote} />
       <RecentsList notes={recents} currentNoteId={noteId} onOpen={onOpenNote} />
       <AISuggestionCard />
