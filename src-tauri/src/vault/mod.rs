@@ -295,7 +295,7 @@ pub struct VaultPath {
 }
 
 #[tauri::command]
-pub fn vault_open(
+pub async fn vault_open(
     app: AppHandle,
     state: tauri::State<'_, VaultState>,
     path: Option<PathBuf>,
@@ -303,10 +303,14 @@ pub fn vault_open(
     let path = match path {
         Some(path) => path,
         None => {
-            let folder = app
-                .dialog()
-                .file()
-                .blocking_pick_folder()
+            let (tx, rx) = std::sync::mpsc::channel();
+            app.dialog().file().pick_folder(move |folder| {
+                let _ = tx.send(folder);
+            });
+            let folder = tauri::async_runtime::spawn_blocking(move || rx.recv())
+                .await
+                .map_err(|err| IpcError::Other(err.to_string()))?
+                .map_err(|err| IpcError::Other(err.to_string()))?
                 .ok_or_else(|| IpcError::Other("folder selection cancelled".to_string()))?;
             folder
                 .into_path()
