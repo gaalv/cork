@@ -28,10 +28,15 @@ These features were proposed but deferred from the current sprint because each i
 - Need to decide: shell out to `git` CLI (small, robust) vs `git2` (libgit2 binding, heavy).
 
 **Sketch when picked up.**
-1. v0 — local git only: `git init` on the vault, autocommit on save with a debounce, show local history.
+1. v0 — local git only: `git init` on the vault, autocommit on save with a debounce, show local history. ✅ **Implemented in F18** — see `.specs/features/F18-local-git-sync/`.
 2. v1 — GitHub: `gh auth status` integration to authorise; `gh repo create --private`; auto push on commit.
 3. v2 — multi-device: pull-on-open, per-file conflict resolver UI ("keep mine / keep theirs / 3-way merge").
-4. Sidebar: list commits touching the open note; clicking a commit shows a diff and a "Restore this version" button that writes the file at that revision.
+4. Sidebar: list commits touching the open note; clicking a commit shows a diff and a "Restore this version" button that writes the file at that revision. ✅ **Implemented in F18 (without diff view — diff is still deferred).**
+
+**Still deferred (D2 remainder):**
+- GitHub OAuth / remote push (v1)
+- Multi-device pull-on-open + conflict resolution UI (v2–v3)
+- In-sidebar diff view
 
 ## D3 — AI integration (Claude Code + Copilot CLI)
 
