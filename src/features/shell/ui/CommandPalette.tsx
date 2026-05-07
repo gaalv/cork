@@ -3,6 +3,7 @@ import { Command } from "cmdk";
 import fuzzysort from "fuzzysort";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
+import { useGenerateNoteStore } from "@/features/ai/state/generateNoteStore";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
@@ -149,7 +150,9 @@ function filterPaletteItems(items: PaletteItem[], query: string): PaletteItem[] 
 }
 
 function groupItems(items: PaletteItem[], query: string): Array<[string, PaletteItem[]]> {
-  const order = query.trim() ? ["Notes", "Commands", "Tags", "Vault Actions", "Recents", "Pinned"] : ["Recents", "Pinned", "Commands", "Tags", "Vault Actions"];
+  const order = query.trim()
+    ? ["Notes", "Commands", "AI", "Tags", "Vault Actions", "Recents", "Pinned"]
+    : ["Recents", "Pinned", "Commands", "AI", "Tags", "Vault Actions"];
   return order
     .map((section) => [section, items.filter((item) => item.section === section)] as [string, PaletteItem[]])
     .filter(([, sectionItems]) => sectionItems.length > 0);
@@ -270,5 +273,8 @@ function runCommand(
   }
   if (id === "toggle-theme") {
     cycleTheme();
+  }
+  if (id === "ai-generate-note") {
+    useGenerateNoteStore.getState().openModal();
   }
 }

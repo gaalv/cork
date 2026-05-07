@@ -4,6 +4,7 @@ import { useIndexStore } from "@/features/index/state/indexStore";
 import { useShortcuts } from "@/features/shell/hooks/useShortcuts";
 import { startMenuActionListener, stopMenuActionListener } from "@/features/shell/menu/menuActions";
 import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
+import { GenerateNoteModal } from "@/features/ai/ui/GenerateNoteModal";
 import { BulkActionsBar } from "@/features/folder-ops/ui/BulkActionsBar";
 import { CommandPalette } from "@/features/shell/ui/CommandPalette";
 import { DrawerHost } from "@/features/shell/ui/DrawerHost";
@@ -44,6 +45,7 @@ export function Shell() {
       <div data-testid="shell" className="h-full bg-[var(--color-noxe-bg)]">
         <EmptyVault />
         <CommandPalette />
+        <GenerateNoteModal />
         <HelpModal />
         <SettingsPanel />
         <Toaster />
@@ -67,6 +69,7 @@ export function Shell() {
       </div>
       <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
       <CommandPalette />
+      <GenerateNoteModal />
       <HelpModal />
       <SettingsPanel />
       <Toaster />
