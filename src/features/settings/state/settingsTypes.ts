@@ -1,5 +1,6 @@
 export type AppearanceDensity = "comfortable" | "compact";
 export type AppearanceTheme = "light" | "dark" | "system";
+export type AiProvider = "disabled" | "claude" | "copilot";
 
 export type AppSettings = {
   appearance: {
@@ -26,6 +27,9 @@ export type AppSettings = {
   };
   assets: {
     offlineMode: boolean;
+  };
+  ai: {
+    provider: AiProvider;
   };
 };
 
@@ -54,7 +58,8 @@ export type SettingKey =
   | "daily.pathPattern"
   | "daily.templatePath"
   | "assets.offlineMode"
-  | "vcs.gitAutoCommit";
+  | "vcs.gitAutoCommit"
+  | "ai.provider";
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   appearance: { density: "comfortable", theme: "system" },
@@ -71,6 +76,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   vault: { recentLimit: 8 },
   markdown: { callouts: true, footnotes: true, highlight: true },
   assets: { offlineMode: false },
+  ai: { provider: "disabled" },
 };
 
 export const DEFAULT_VAULT_SETTINGS: Required<VaultScopedSettings> = {

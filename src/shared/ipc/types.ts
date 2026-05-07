@@ -46,6 +46,9 @@ export type AppSettings = {
   assets: {
     offlineMode: boolean;
   };
+  ai: {
+    provider: AiProvider;
+  };
 };
 
 export type VaultSettings = {
@@ -174,4 +177,11 @@ export type VcsStatus = {
   enabled: boolean;
   repoPath: string | null;
   hasGit: boolean;
+};
+
+export type AiProvider = "disabled" | "claude" | "copilot";
+
+export type AiError = {
+  kind: "provider_disabled" | "binary_not_found" | "subprocess_failed" | "timeout";
+  message: string;
 };

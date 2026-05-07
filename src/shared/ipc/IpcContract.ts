@@ -24,6 +24,7 @@ import type {
   VaultPath,
   VaultSettings,
   AppSettings,
+  AiProvider,
   VcsStatus,
 } from "./types";
 
@@ -251,6 +252,11 @@ export type IpcCommandMap = {
   "vcs.restore": {
     args: { notePath: string; sha: string };
     result: void;
+  };
+  // === F20 AI ===
+  "ai.sendPrompt": {
+    args: { provider: AiProvider; prompt: string; context: string };
+    result: string;
   };
 };
 

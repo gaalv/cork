@@ -19,6 +19,7 @@ import type {
   SaveInput,
   AppSettings,
   VaultSettings,
+  AiProvider,
 } from "./types";
 
 const commandNames: Record<IpcCommandName, string> = {
@@ -68,6 +69,8 @@ const commandNames: Record<IpcCommandName, string> = {
   "vcs.status": "vcs_status",
   "vcs.history": "vcs_history",
   "vcs.restore": "vcs_restore",
+  // === F20 AI ===
+  "ai.sendPrompt": "ai_send_prompt",
 };
 
 type RustArgs = Record<string, unknown> | undefined;
@@ -145,6 +148,10 @@ export const client = {
     history: (notePath: string, limit?: number) => invokeCommand("vcs.history", { notePath, limit }),
     restore: (notePath: string, sha: string) => invokeCommand("vcs.restore", { notePath, sha }),
   },
+  ai: {
+    sendPrompt: (provider: AiProvider, prompt: string, context: string) =>
+      invokeCommand("ai.sendPrompt", { provider, prompt, context }),
+  },
   events: {
     on: <Name extends IpcEventName>(
       event: Name,
@@ -185,6 +192,8 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.search":
     case "vcs.history":
     case "vcs.restore":
+      return args as RustArgs;
+    case "ai.sendPrompt":
       return args as RustArgs;
     case "notes.byTag": {
       const input = args as { tag: string };

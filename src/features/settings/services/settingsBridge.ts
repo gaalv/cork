@@ -40,6 +40,8 @@ export const settingsBridge = {
         return useVaultSettingsStore.getState().settings.offlineMode ?? app.assets.offlineMode;
       case "vcs.gitAutoCommit":
         return vault.gitAutoCommit;
+      case "ai.provider":
+        return app.ai?.provider ?? "disabled";
     }
   },
 
@@ -92,6 +94,12 @@ async function setGlobalSetting(key: SettingKey, value: SettingValue): Promise<v
     case "assets.offlineMode":
       await store.updateSettings({ assets: { offlineMode: Boolean(value) } });
       return;
+    case "ai.provider": {
+      const provider = String(value);
+      const aiProvider = provider === "claude" || provider === "copilot" ? provider : "disabled";
+      await store.updateSettings({ ai: { provider: aiProvider } });
+      return;
+    }
     case "vault.attachmentsFolder":
     case "wikilinks.autoRewriteOnRename":
     case "daily.pathPattern":
@@ -131,6 +139,7 @@ async function setVaultSetting(key: SettingKey, value: SettingValue): Promise<vo
     case "markdown.callouts":
     case "markdown.footnotes":
     case "markdown.highlight":
+    case "ai.provider":
       throw new Error(`${key} is a global setting`);
   }
 }

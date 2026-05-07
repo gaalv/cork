@@ -4,7 +4,7 @@ import { client } from "@/shared/ipc/client";
 
 import { DEFAULT_APP_SETTINGS } from "./settingsTypes";
 
-import type { AppSettings } from "./settingsTypes";
+import type { AppSettings, AiProvider } from "./settingsTypes";
 import type { VaultSettings } from "@/shared/ipc/types";
 
 type SettingsClient = {
@@ -113,6 +113,7 @@ function mergeAppSettings(current: AppSettings, patch: Partial<AppSettings>): Ap
     vault: { ...current.vault, ...patch.vault },
     markdown: { ...current.markdown, ...patch.markdown },
     assets: { ...current.assets, ...patch.assets },
+    ai: { ...current.ai, ...patch.ai },
   };
 }
 
@@ -189,6 +190,7 @@ export function normalizeAppSettings(value: unknown): AppSettings {
       highlight: booleanOr(markdown.highlight, DEFAULT_APP_SETTINGS.markdown.highlight),
     },
     assets: { offlineMode: booleanOr(assets.offlineMode, DEFAULT_APP_SETTINGS.assets.offlineMode) },
+    ai: { provider: normalizeAiProvider(isRecord(value.ai) ? (value.ai as Record<string, unknown>).provider : undefined) },
   };
 }
 
@@ -210,4 +212,8 @@ function stringOr(value: unknown, fallback: string): string {
 
 function normalizeTheme(value: unknown): "light" | "dark" | "system" {
   return value === "light" || value === "dark" || value === "system" ? value : DEFAULT_APP_SETTINGS.appearance.theme;
+}
+
+function normalizeAiProvider(value: unknown): AiProvider {
+  return value === "claude" || value === "copilot" ? value : "disabled";
 }

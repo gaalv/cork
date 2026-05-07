@@ -15,7 +15,7 @@ import { TemplatesSection } from "./TemplatesSection";
 import { Select } from "@/shared/ui/Select";
 
 import type { ChangeEvent } from "react";
-import type { AppSettings, AppearanceTheme } from "@/features/settings/state/settingsTypes";
+import type { AppSettings, AppearanceTheme, AiProvider } from "@/features/settings/state/settingsTypes";
 import type { SettingsSectionId } from "@/features/settings/state/settingsUiStore";
 
 const sections: Array<{ id: SettingsSectionId; label: string }> = [
@@ -25,6 +25,7 @@ const sections: Array<{ id: SettingsSectionId; label: string }> = [
   { id: "markdown", label: "Markdown" },
   { id: "daily", label: "Daily Notes" },
   { id: "templates", label: "Templates" },
+  { id: "ai", label: "AI" },
   { id: "advanced", label: "Advanced" },
   { id: "about", label: "About" },
 ];
@@ -477,6 +478,32 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
 
   if (section === "templates") {
     return <TemplatesSection vaultPath={vaultPath} />;
+  }
+
+  if (section === "ai") {
+    return (
+      <div className="space-y-3">
+        <SettingRow
+          label="AI Provider"
+          description="Choose the CLI assistant Noxe will use for the AI chat panel. Requires the binary to be installed and available on PATH."
+          scope="app"
+          control={
+            <Select<AiProvider>
+              ariaLabel="AI Provider"
+              value={settings.ai?.provider ?? "disabled"}
+              options={[
+                { value: "disabled", label: "Disabled" },
+                { value: "claude", label: "Claude (claude CLI)" },
+                { value: "copilot", label: "Copilot (copilot CLI)" },
+              ]}
+              onChange={(next) =>
+                void updateSettings({ ai: { ...settings.ai, provider: next } })
+              }
+            />
+          }
+        />
+      </div>
+    );
   }
 
   return <Placeholder title={sections.find((item) => item.id === section)?.label ?? "Settings"} />;
