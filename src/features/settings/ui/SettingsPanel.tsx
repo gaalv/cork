@@ -11,6 +11,7 @@ import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { AboutDialog } from "./AboutDialog";
 import { SettingRow } from "./SettingRow";
+import { TemplatesSection } from "./TemplatesSection";
 import { Select } from "@/shared/ui/Select";
 
 import type { ChangeEvent } from "react";
@@ -23,6 +24,7 @@ const sections: Array<{ id: SettingsSectionId; label: string }> = [
   { id: "files", label: "Files & Vaults" },
   { id: "markdown", label: "Markdown" },
   { id: "daily", label: "Daily Notes" },
+  { id: "templates", label: "Templates" },
   { id: "advanced", label: "Advanced" },
   { id: "about", label: "About" },
 ];
@@ -460,6 +462,10 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
         />
       </div>
     );
+  }
+
+  if (section === "templates") {
+    return <TemplatesSection vaultPath={vaultPath} />;
   }
 
   return <Placeholder title={sections.find((item) => item.id === section)?.label ?? "Settings"} />;
