@@ -578,8 +578,12 @@ pub fn vcs_remote_enable(
         // Without this, helpers like `osxkeychain` or the gh helper override
         // the URL credentials with the active gh account, causing 403s when
         // pushing to a different account's repo.
+        // When no token is supplied, restore the inherited helper so the
+        // global gh/keychain config takes over again.
         if input.token.as_deref().map(|s| !s.is_empty()).unwrap_or(false) {
             let _ = run_git(&vault_root, &["config", "--local", "credential.helper", ""]);
+        } else {
+            let _ = run_git(&vault_root, &["config", "--local", "--unset-all", "credential.helper"]);
         }
         run_git_check(&vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
         url_set = stored;
@@ -589,6 +593,9 @@ pub fn vcs_remote_enable(
                 "gh CLI not found. Install GitHub CLI and run `gh auth login`.".into(),
             ));
         }
+        // Clear any leftover credential.helper override from a previous
+        // token-based connection so gh's helper takes effect again.
+        let _ = run_git(&vault_root, &["config", "--local", "--unset-all", "credential.helper"]);
         let auth = Command::new("gh")
             .args(["auth", "status"])
             .output()
