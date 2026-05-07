@@ -531,6 +531,72 @@ fn append_log(vault_root: &Path, line: &str) -> std::io::Result<()> {
 
 // ── IPC commands ─────────────────────────────────────────────────────────────
 
+fn create_repo_via_api(token: &str, name: &str) -> Result<String, String> {
+    // Use curl to keep deps minimal. -sS = silent + show errors. -w writes the
+    // HTTP status code on stdout after the body, separated by a marker.
+    let body = format!(
+        r#"{{"name":"{}","private":true,"auto_init":false}}"#,
+        name.replace('"', "\\\"")
+    );
+    let auth_header = format!("Authorization: Bearer {token}");
+    let out = Command::new("curl")
+        .args([
+            "-sS",
+            "-X",
+            "POST",
+            "-H",
+            &auth_header,
+            "-H",
+            "Accept: application/vnd.github+json",
+            "-H",
+            "X-GitHub-Api-Version: 2022-11-28",
+            "-H",
+            "User-Agent: noxe-app",
+            "-w",
+            "\n__HTTP_STATUS__:%{http_code}",
+            "-d",
+            &body,
+            "https://api.github.com/user/repos",
+        ])
+        .output()
+        .map_err(|e| format!("curl failed to start: {e}"))?;
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        return Err(format!(
+            "curl error: {}",
+            if stderr.is_empty() {
+                "non-zero exit".into()
+            } else {
+                stderr
+            }
+        ));
+    }
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let (body_part, status_part) = stdout
+        .rsplit_once("\n__HTTP_STATUS__:")
+        .ok_or("malformed curl response")?;
+    let status: u32 = status_part.trim().parse().unwrap_or(0);
+    if !(200..300).contains(&status) {
+        // Try to surface GitHub's message field.
+        let msg = body_part
+            .split("\"message\"")
+            .nth(1)
+            .and_then(|s| s.split('"').nth(1))
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| body_part.trim().to_string());
+        return Err(format!("GitHub API {status}: {msg}"));
+    }
+    // Pull clone_url out of the JSON without bringing in serde_json — quick
+    // string scan is fine since the value is a simple URL.
+    let url = body_part
+        .split("\"clone_url\"")
+        .nth(1)
+        .and_then(|s| s.split('"').nth(1))
+        .map(|s| s.to_string())
+        .ok_or("clone_url not in response")?;
+    Ok(url)
+}
+
 #[tauri::command]
 pub fn vcs_remote_enable(
     vault_state: tauri::State<'_, VaultState>,
@@ -546,8 +612,25 @@ pub fn vcs_remote_enable(
     super::git_init_if_needed(&vault_root).map_err(IpcError::Other)?;
 
     let url_set: String;
-    if let Some(url) = input.url.clone() {
-        let (stored, remote_url) = compose_authed_url(url.trim(), input.token.as_deref());
+    let token = input.token.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let url_in = input.url.as_deref().map(str::trim).filter(|s| !s.is_empty());
+
+    if let Some(url) = url_in {
+        // Connect to an existing repo (with optional PAT for cross-account auth).
+        let (stored, remote_url) = compose_authed_url(url, token);
+        let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
+        run_git_check(&vault_root, &["remote", "add", "origin", &remote_url])
+            .map_err(IpcError::Other)?;
+        run_git_check(&vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
+        url_set = stored;
+    } else if let Some(t) = token {
+        // Create a new private repo via the GitHub REST API using the token.
+        let name = format!(
+            "noxe-vault-{}",
+            chrono::Utc::now().format("%Y%m%d%H%M%S")
+        );
+        let clone_url = create_repo_via_api(t, &name).map_err(IpcError::Other)?;
+        let (stored, remote_url) = compose_authed_url(&clone_url, Some(t));
         let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
         run_git_check(&vault_root, &["remote", "add", "origin", &remote_url])
             .map_err(IpcError::Other)?;
@@ -556,7 +639,7 @@ pub fn vcs_remote_enable(
     } else {
         if !gh_available() {
             return Err(IpcError::Other(
-                "gh CLI not found. Install GitHub CLI and run `gh auth login`.".into(),
+                "gh CLI not found. Install GitHub CLI and run `gh auth login`, or paste a personal access token.".into(),
             ));
         }
         let auth = Command::new("gh")
@@ -565,7 +648,7 @@ pub fn vcs_remote_enable(
             .map_err(|e| IpcError::Other(e.to_string()))?;
         if !auth.status.success() {
             return Err(IpcError::Other(
-                "gh is not authenticated. Run `gh auth login`.".into(),
+                "gh is not authenticated. Run `gh auth login` or paste a personal access token.".into(),
             ));
         }
         let name = format!(
