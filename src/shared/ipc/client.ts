@@ -239,8 +239,9 @@ function toRustArgs<Name extends IpcCommandName>(
     case "index.search":
     case "vcs.history":
     case "vcs.restore":
-    case "vcs.remoteEnable":
       return args as RustArgs;
+    case "vcs.remoteEnable":
+      return { input: args } as RustArgs;
     case "ai.runSkill": {
       const input = args as { skillId: string; variables: Record<string, string> };
       return { input: { skillId: input.skillId, variables: input.variables } };
