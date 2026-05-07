@@ -54,6 +54,10 @@ pub struct RemoteInfo {
 #[serde(rename_all = "camelCase")]
 pub struct EnableRemoteInput {
     pub url: Option<String>,
+    /// Optional personal access token. When provided alongside an https URL,
+    /// it is embedded in the remote URL stored in `.git/config` so that push
+    /// authenticates as the token's owner — bypassing the active `gh` account.
+    pub token: Option<String>,
 }
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -251,6 +255,72 @@ pub fn gh_available() -> bool {
         .unwrap_or(false)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GhAccount {
+    pub user: String,
+    pub host: String,
+}
+
+/// Best-effort active gh account discovery. Parses `gh auth status` output.
+pub fn gh_active_account() -> Option<GhAccount> {
+    let out = Command::new("gh").args(["auth", "status"]).output().ok()?;
+    let combined = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let mut current_host: Option<String> = None;
+    for line in combined.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        // Lines like "github.com" (host header) — no leading bullet
+        if !trimmed.starts_with('-')
+            && !trimmed.starts_with('✓')
+            && !trimmed.starts_with('x')
+            && !trimmed.contains(':')
+            && trimmed.contains('.')
+        {
+            current_host = Some(trimmed.to_string());
+            continue;
+        }
+        // Lines like "✓ Logged in to github.com account <user> (...)"
+        if let Some(idx) = trimmed.find("account ") {
+            let rest = &trimmed[idx + "account ".len()..];
+            let user = rest.split_whitespace().next().unwrap_or("").trim().to_string();
+            // Try to recover host from the same line if present.
+            let host = trimmed
+                .split_whitespace()
+                .find(|w| w.contains('.') && !w.contains('('))
+                .map(|s| s.trim_end_matches(':').to_string())
+                .or_else(|| current_host.clone())
+                .unwrap_or_else(|| "github.com".to_string());
+            if !user.is_empty() {
+                return Some(GhAccount { user, host });
+            }
+        }
+        // Lines like "- Active account: true" / "- Logged in to github.com as <user>"
+        if let Some(rest) = trimmed.strip_prefix("- Logged in to ") {
+            let mut parts = rest.split_whitespace();
+            let host = parts
+                .next()
+                .unwrap_or("github.com")
+                .trim_end_matches(':')
+                .to_string();
+            if let Some(as_idx) = rest.find(" as ") {
+                let after = &rest[as_idx + 4..];
+                let user = after.split_whitespace().next().unwrap_or("").to_string();
+                if !user.is_empty() {
+                    return Some(GhAccount { user, host });
+                }
+            }
+        }
+    }
+    None
+}
+
 fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
     Command::new("git")
         .current_dir(vault_root)
@@ -399,6 +469,31 @@ pub fn build_conflict_filename(path: &Path, host: &str, stamp: &str) -> String {
     }
 }
 
+/// Returns `(stored_url, remote_url)`.
+/// `remote_url` is what we hand to `git remote add` (may carry the token).
+/// `stored_url` is the sanitized version saved to vault settings (no token).
+fn compose_authed_url(input_url: &str, token: Option<&str>) -> (String, String) {
+    let stored = strip_userinfo(input_url);
+    let remote = match token {
+        Some(t) if !t.is_empty() && stored.starts_with("https://") => {
+            let rest = &stored["https://".len()..];
+            format!("https://x-access-token:{t}@{rest}")
+        }
+        _ => stored.clone(),
+    };
+    (stored, remote)
+}
+
+fn strip_userinfo(url: &str) -> String {
+    if let Some(rest) = url.strip_prefix("https://") {
+        if let Some(at) = rest.find('@') {
+            // Drop "user:pass@" segment, keep host+path.
+            return format!("https://{}", &rest[at + 1..]);
+        }
+    }
+    url.to_string()
+}
+
 fn hostname() -> String {
     std::env::var("HOSTNAME")
         .or_else(|_| std::env::var("COMPUTERNAME"))
@@ -452,10 +547,12 @@ pub fn vcs_remote_enable(
 
     let url_set: String;
     if let Some(url) = input.url.clone() {
+        let (stored, remote_url) = compose_authed_url(url.trim(), input.token.as_deref());
         let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
-        run_git_check(&vault_root, &["remote", "add", "origin", &url]).map_err(IpcError::Other)?;
+        run_git_check(&vault_root, &["remote", "add", "origin", &remote_url])
+            .map_err(IpcError::Other)?;
         run_git_check(&vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
-        url_set = url;
+        url_set = stored;
     } else {
         if !gh_available() {
             return Err(IpcError::Other(
@@ -599,6 +696,48 @@ mod tests {
         let p = PathBuf::from("README");
         let s = build_conflict_filename(&p, "h", "t");
         assert_eq!(s, "README (conflict from h t).md");
+    }
+
+    #[test]
+    fn compose_authed_url_injects_token_for_https() {
+        let (stored, remote) = compose_authed_url(
+            "https://github.com/me/vault.git",
+            Some("ghp_secrettoken"),
+        );
+        assert_eq!(stored, "https://github.com/me/vault.git");
+        assert_eq!(
+            remote,
+            "https://x-access-token:ghp_secrettoken@github.com/me/vault.git"
+        );
+    }
+
+    #[test]
+    fn compose_authed_url_strips_existing_userinfo_before_storing() {
+        let (stored, remote) = compose_authed_url(
+            "https://oldtoken@github.com/me/vault.git",
+            Some("ghp_new"),
+        );
+        assert_eq!(stored, "https://github.com/me/vault.git");
+        assert_eq!(
+            remote,
+            "https://x-access-token:ghp_new@github.com/me/vault.git"
+        );
+    }
+
+    #[test]
+    fn compose_authed_url_no_token_returns_clean_pair() {
+        let (stored, remote) =
+            compose_authed_url("https://github.com/me/vault.git", None);
+        assert_eq!(stored, "https://github.com/me/vault.git");
+        assert_eq!(remote, "https://github.com/me/vault.git");
+    }
+
+    #[test]
+    fn compose_authed_url_skips_token_for_ssh() {
+        let (stored, remote) =
+            compose_authed_url("git@github.com:me/vault.git", Some("ghp_x"));
+        assert_eq!(stored, "git@github.com:me/vault.git");
+        assert_eq!(remote, "git@github.com:me/vault.git");
     }
 
     #[test]

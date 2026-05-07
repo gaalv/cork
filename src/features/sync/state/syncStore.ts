@@ -8,7 +8,7 @@ type SyncState = {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  enable: (url?: string) => Promise<RemoteInfo>;
+  enable: (input?: { url?: string; token?: string }) => Promise<RemoteInfo>;
   disable: () => Promise<RemoteInfo>;
   syncNow: () => Promise<RemoteInfo>;
 };
@@ -27,10 +27,10 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       set({ error: err instanceof Error ? err.message : String(err) });
     }
   },
-  enable: async (url?: string) => {
+  enable: async (input?: { url?: string; token?: string }) => {
     set({ loading: true, error: null });
     try {
-      const remote = await client.vcs.remoteEnable(url);
+      const remote = await client.vcs.remoteEnable(input);
       await get().refresh();
       return remote;
     } catch (err) {

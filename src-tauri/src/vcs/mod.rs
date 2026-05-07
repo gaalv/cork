@@ -21,6 +21,7 @@ pub struct VcsStatus {
     pub repo_path: Option<PathBuf>,
     pub has_git: bool,
     pub has_gh: bool,
+    pub gh_account: Option<remote::GhAccount>,
     pub remote: Option<remote::RemoteInfo>,
 }
 
@@ -261,6 +262,7 @@ pub fn vcs_status(
 ) -> Result<VcsStatus, IpcError> {
     let has_git = git_available();
     let has_gh = remote::gh_available();
+    let gh_account = if has_gh { remote::gh_active_account() } else { None };
     let current = state.current_path();
     let repo_path = current.as_ref().and_then(|p| {
         if p.join(".git").exists() {
@@ -285,6 +287,7 @@ pub fn vcs_status(
         repo_path,
         has_git,
         has_gh,
+        gh_account,
         remote: remote_info,
     })
 }

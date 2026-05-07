@@ -167,7 +167,8 @@ export const client = {
     history: (notePath: string, limit?: number) =>
       invokeCommand("vcs.history", { notePath, limit }),
     restore: (notePath: string, sha: string) => invokeCommand("vcs.restore", { notePath, sha }),
-    remoteEnable: (url?: string) => invokeCommand("vcs.remoteEnable", { url }),
+    remoteEnable: (input?: { url?: string; token?: string }) =>
+      invokeCommand("vcs.remoteEnable", input ?? { url: undefined }),
     remoteDisable: () => invokeCommand("vcs.remoteDisable", undefined),
     remoteSyncNow: () => invokeCommand("vcs.remoteSyncNow", undefined),
   },

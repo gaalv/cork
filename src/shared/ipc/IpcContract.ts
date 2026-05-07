@@ -279,7 +279,7 @@ export type IpcCommandMap = {
     result: void;
   };
   "vcs.remoteEnable": {
-    args: { url?: string };
+    args: { url?: string; token?: string };
     result: RemoteInfo;
   };
   "vcs.remoteDisable": {

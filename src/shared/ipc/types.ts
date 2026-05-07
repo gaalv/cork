@@ -185,11 +185,17 @@ export type RemoteInfo = {
   lastError: string | null;
 };
 
+export type GhAccount = {
+  user: string;
+  host: string;
+};
+
 export type VcsStatus = {
   enabled: boolean;
   repoPath: string | null;
   hasGit: boolean;
   hasGh: boolean;
+  ghAccount: GhAccount | null;
   remote: RemoteInfo | null;
 };
 
