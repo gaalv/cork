@@ -573,6 +573,14 @@ pub fn vcs_remote_enable(
         let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
         run_git_check(&vault_root, &["remote", "add", "origin", &remote_url])
             .map_err(IpcError::Other)?;
+        // When a token is supplied, disable any inherited credential helper
+        // for this repo so the URL-embedded credentials are actually used.
+        // Without this, helpers like `osxkeychain` or the gh helper override
+        // the URL credentials with the active gh account, causing 403s when
+        // pushing to a different account's repo.
+        if input.token.as_deref().map(|s| !s.is_empty()).unwrap_or(false) {
+            let _ = run_git(&vault_root, &["config", "--local", "credential.helper", ""]);
+        }
         run_git_check(&vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
         url_set = stored;
     } else {
