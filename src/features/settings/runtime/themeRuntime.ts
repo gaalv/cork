@@ -36,8 +36,11 @@ export function resolveActiveTheme(): ResolvedTheme {
   return activeResolved;
 }
 
+let installed: (() => void) | null = null;
+
 export function installThemeRuntime(): () => void {
   if (typeof window === "undefined") return () => undefined;
+  if (installed) return installed;
 
   const mql = getMql();
   let lastChoice = useAppSettingsStore.getState().settings.appearance.theme;
@@ -64,10 +67,12 @@ export function installThemeRuntime(): () => void {
   const onMql = () => apply();
   mql?.addEventListener?.("change", onMql);
 
-  return () => {
+  installed = () => {
     unsubStore();
     mql?.removeEventListener?.("change", onMql);
+    installed = null;
   };
+  return installed;
 }
 
 export function cycleTheme(): void {
@@ -90,6 +95,10 @@ export function useResolvedTheme(): ResolvedTheme {
 
 export const __test__ = {
   reset() {
+    if (installed) {
+      installed();
+    }
+    installed = null;
     activeResolved = "light";
     listeners.clear();
     if (typeof document !== "undefined") {

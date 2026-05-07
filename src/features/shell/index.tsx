@@ -4,7 +4,6 @@ import { useIndexStore } from "@/features/index/state/indexStore";
 import { useShortcuts } from "@/features/shell/hooks/useShortcuts";
 import { startMenuActionListener, stopMenuActionListener } from "@/features/shell/menu/menuActions";
 import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
-import { installThemeRuntime } from "@/features/settings/runtime/themeRuntime";
 import { BulkActionsBar } from "@/features/folder-ops/ui/BulkActionsBar";
 import { CommandPalette } from "@/features/shell/ui/CommandPalette";
 import { DrawerHost } from "@/features/shell/ui/DrawerHost";
@@ -27,10 +26,8 @@ export function Shell() {
   const loadVaultSettings = useAppSettingsStore((state) => state.loadVaultSettings);
 
   useEffect(() => {
-    const dispose = installThemeRuntime();
     startMenuActionListener();
     return () => {
-      dispose();
       void stopMenuActionListener();
     };
   }, []);
