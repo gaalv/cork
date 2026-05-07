@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { CaretRight, FileText, Folder, FolderOpen } from "@phosphor-icons/react";
+import { CaretRight, Folder, FolderOpen } from "@phosphor-icons/react";
 
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
 import { folderOps, validateFolderName } from "@/features/folder-ops/services/folderOps";
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { resolveNoteIcon } from "@/shared/ui/noteIcons";
 import { cn } from "@/shared/utils/cn";
 
 import { FolderRowMenu } from "./FolderRowMenu";
@@ -109,19 +110,22 @@ export function FolderNode({ node, depth = 0, onOpenNote }: FolderNodeProps) {
             <FolderNode key={child.path} node={child} depth={depth + 1} onOpenNote={onOpenNote} />
           ))}
           {hasNotes ? (
-            node.notes.map((note) => (
-              <li key={note.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-1 rounded-md py-1 pr-2 text-left text-xs text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)]"
-                  style={{ paddingLeft: `${(depth + 1) * 12 + 18}px` }}
-                  onClick={() => onOpenNote?.(note.id)}
-                >
-                  <FileText size={12} />
-                  <span className="truncate">{note.title}</span>
-                </button>
-              </li>
-            ))
+            node.notes.map((note) => {
+              const NoteIcon = resolveNoteIcon(undefined);
+              return (
+                <li key={note.id}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-1.5 rounded-md py-1 pr-2 text-left text-xs text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)]"
+                    style={{ paddingLeft: `${(depth + 1) * 12 + 18}px` }}
+                    onClick={() => onOpenNote?.(note.id)}
+                  >
+                    <NoteIcon size={12} weight="duotone" className="shrink-0" />
+                    <span className="truncate">{note.title}</span>
+                  </button>
+                </li>
+              );
+            })
           ) : !hasChildren ? (
             <li className="py-1 pr-2 text-xs text-[var(--color-noxe-muted)]" style={{ paddingLeft: `${(depth + 1) * 12 + 18}px` }}>
               (no notes)

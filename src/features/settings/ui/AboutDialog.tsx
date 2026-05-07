@@ -4,7 +4,6 @@ import { arch, platform, version as osVersion } from "@tauri-apps/plugin-os";
 
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { DiagnosticsButton } from "./DiagnosticsButton";
-import { ShortcutsList } from "./ShortcutsList";
 
 type RuntimeInfo = {
   appName: string;
@@ -64,10 +63,6 @@ export function AboutDialog() {
         <div className="mt-4">
           <DiagnosticsButton />
         </div>
-      </section>
-      <section>
-        <h3 className="mb-3 text-sm font-semibold">Keyboard Shortcuts</h3>
-        <ShortcutsList />
       </section>
     </div>
   );

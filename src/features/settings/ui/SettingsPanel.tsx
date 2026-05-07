@@ -11,6 +11,7 @@ import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { AboutDialog } from "./AboutDialog";
 import { SettingRow } from "./SettingRow";
+import { ShortcutsList } from "./ShortcutsList";
 import { TemplatesSection } from "./TemplatesSection";
 import { Select } from "@/shared/ui/Select";
 
@@ -27,6 +28,7 @@ const sections: Array<{ id: SettingsSectionId; label: string }> = [
   { id: "templates", label: "Templates" },
   { id: "ai", label: "AI" },
   { id: "advanced", label: "Advanced" },
+  { id: "shortcuts", label: "Shortcuts" },
   { id: "about", label: "About" },
 ];
 
@@ -151,6 +153,17 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
   const { settings, updateSettings, patchEditor, vaultSettings, hasVaultSettings, applyVaultSettings, vaultPath, pushToast, rebuildIndex, rebuilding, setRebuilding } = context;
   if (section === "about") {
     return <AboutDialog />;
+  }
+
+  if (section === "shortcuts") {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-[var(--color-noxe-muted)]">
+          Speed up your workflow with these keyboard shortcuts. Press <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px]">?</kbd> anywhere to revisit this list.
+        </p>
+        <ShortcutsList />
+      </div>
+    );
   }
 
   if (section === "general") {

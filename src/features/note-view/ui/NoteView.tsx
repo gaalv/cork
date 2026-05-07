@@ -6,6 +6,7 @@ import { useExternalReconciler } from "@/features/editor/hooks/useExternalReconc
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { Editor } from "@/features/editor/ui/Editor";
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
+import { NoteIconPicker } from "@/features/note-view/ui/NoteIconPicker";
 import { NoteMetaPanel } from "@/features/note-view/ui/NoteMetaPanel";
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -106,37 +107,37 @@ export function NoteView({ noteId, title }: NoteViewProps) {
   return (
     <main className="relative flex flex-1 overflow-hidden" data-testid="note-view">
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="mx-auto w-full max-w-[780px] px-8 pt-8 lg:pt-10">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Note</p>
+        <div className="group/title mx-auto w-full max-w-[780px] px-8 pt-8 lg:pt-10">
+          <div className="flex items-center gap-2">
+            <NoteIconPicker noteId={noteId} />
+            {editingTitle ? (
+              <InlineRename
+                initial={title}
+                label="Rename note"
+                onCommit={renameTitle}
+                onCancel={() => setEditingTitle(false)}
+                className="min-w-0 flex-1 text-2xl font-semibold"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingTitle(true)}
+                className="-ml-1 min-w-0 flex-1 truncate rounded px-1 text-left text-2xl font-semibold text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+                aria-label={`Rename note "${title}"`}
+              >
+                {title}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => void deleteNote()}
               aria-label="Delete note"
               title="Delete note (⌘⌫)"
-              className="rounded-md p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+              className="shrink-0 rounded-md p-1.5 text-[var(--color-noxe-muted)] opacity-0 transition-opacity hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none group-hover/title:opacity-100"
             >
-              <Trash size={15} />
+              <Trash size={16} />
             </button>
           </div>
-          {editingTitle ? (
-            <InlineRename
-              initial={title}
-              label="Rename note"
-              onCommit={renameTitle}
-              onCancel={() => setEditingTitle(false)}
-              className="mt-1 text-2xl font-semibold"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditingTitle(true)}
-              className="mt-1 -ml-1 max-w-full truncate rounded px-1 text-left text-2xl font-semibold text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
-              aria-label={`Rename note "${title}"`}
-            >
-              {title}
-            </button>
-          )}
         </div>
         <div className="mt-4 min-h-0 flex-1">
           <Editor className="h-full min-h-0" />

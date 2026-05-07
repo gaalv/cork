@@ -1,5 +1,7 @@
 import { NoteCardMenu } from "./NoteCardMenu";
 
+import { resolveNoteIcon } from "@/shared/ui/noteIcons";
+
 import type { HomeNote } from "@/features/home/hooks/useHomeSections";
 import type { MouseEvent } from "react";
 import type { NoteEntry } from "@/shared/ipc/types";
@@ -11,13 +13,17 @@ type NoteCardProps = {
   onChanged?: () => void;
   selected?: boolean;
   onSelectClick?: (event: MouseEvent, note: NoteEntry) => boolean;
-  flags?: { pinned: boolean; starred: boolean };
+  flags?: { pinned: boolean; starred: boolean; icon?: string };
 };
 
 export function NoteCard({ note, onOpen, onPinToggle, onChanged, selected = false, onSelectClick, flags }: NoteCardProps) {
   const homeNote = isHomeNote(note) ? note : null;
   const pinned = flags?.pinned ?? homeNote?.pinned ?? false;
   const starred = flags?.starred ?? homeNote?.starred ?? false;
+  const iconKey =
+    flags?.icon ??
+    (homeNote && typeof homeNote.frontmatter.icon === "string" ? (homeNote.frontmatter.icon as string) : undefined);
+  const Icon = resolveNoteIcon(iconKey);
   const snippet = homeNote?.snippet ?? (note.folder || "No preview available");
 
   return (
@@ -31,10 +37,13 @@ export function NoteCard({ note, onOpen, onPinToggle, onChanged, selected = fals
             }
             onOpen(note);
           }}
-          className="min-w-0 flex-1 text-left focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+          className="flex min-w-0 flex-1 items-start gap-2 text-left focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
         >
-          <span className="block truncate font-medium text-[var(--color-noxe-ink)]">{note.title}</span>
-          <span className="mt-2 line-clamp-2 block text-sm text-[var(--color-noxe-muted)]">{snippet}</span>
+          <Icon size={16} weight="duotone" className="mt-0.5 shrink-0 text-[var(--color-noxe-muted)]" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium text-[var(--color-noxe-ink)]">{note.title}</span>
+            <span className="mt-2 line-clamp-2 block text-sm text-[var(--color-noxe-muted)]">{snippet}</span>
+          </span>
         </button>
         <NoteCardMenu note={note} pinned={pinned} starred={starred} onOpen={onOpen} onPinToggle={onPinToggle} onChanged={onChanged} />
       </div>

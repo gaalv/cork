@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type SettingsSectionId = "general" | "editor" | "files" | "markdown" | "daily" | "templates" | "ai" | "advanced" | "about";
+export type SettingsSectionId = "general" | "editor" | "files" | "markdown" | "daily" | "templates" | "ai" | "advanced" | "shortcuts" | "about";
 
 type SettingsUiStore = {
   open: boolean;

@@ -13,7 +13,7 @@ type AllNotesGridProps = {
   onOpen: (note: NoteEntry) => void;
   onPinToggle: (note: NoteEntry) => Promise<void> | void;
   onChanged?: () => void;
-  flagsByPath?: Map<string, { pinned: boolean; starred: boolean }>;
+  flagsByPath?: Map<string, { pinned: boolean; starred: boolean; icon?: string }>;
 };
 
 export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, onChanged, flagsByPath }: AllNotesGridProps) {

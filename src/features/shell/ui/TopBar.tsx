@@ -1,6 +1,8 @@
 import { ArrowLeft, Brain, Command as CommandIcon, Plus, Star } from "@phosphor-icons/react";
 import { useState } from "react";
 
+import { toggleStar } from "@/features/drawers/services/starService";
+import { useEditorStore } from "@/features/editor/state/editorStore";
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { useAiStore } from "@/features/ai/state/aiStore";
@@ -16,12 +18,36 @@ export function TopBar() {
   const navigate = useShellStore((state) => state.navigate);
   const openPalette = useShellStore((state) => state.openPalette);
   const toggleDrawer = useShellStore((state) => state.toggleDrawer);
+  const pushToast = useShellStore((state) => state.pushToast);
   const vaultPath = useVaultStore((state) => state.path);
   const notes = useVaultStore((state) => state.notes);
+  const loadNotes = useVaultStore((state) => state.loadNotes);
   const activeNote = view.kind === "note" ? notes.find((note) => note.id === view.id) : null;
+  const activeBuffer = useEditorStore((state) => (view.kind === "note" ? state.buffers.get(view.id) ?? null : null));
+  const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
+  const [busyStar, setBusyStar] = useState(false);
   const vaultName = vaultPath ? vaultPath.split(/[\\/]/).filter(Boolean).at(-1) ?? "Vault" : "No vault open";
   const toggleAiPanel = useAiStore((state) => state.togglePanel);
   const aiPanelOpen = useAiStore((state) => state.panelOpen);
+
+  const starred = activeBuffer?.frontmatter.starred === true;
+
+  async function onToggleStar() {
+    if (!activeNote || busyStar) return;
+    setBusyStar(true);
+    try {
+      if (activeBuffer) {
+        updateFrontmatter(activeNote.id, { starred: !starred });
+      } else {
+        await toggleStar(activeNote);
+        await loadNotes();
+      }
+    } catch (error) {
+      pushToast({ title: "Failed to toggle star", description: (error as Error).message ?? "Unknown error" });
+    } finally {
+      setBusyStar(false);
+    }
+  }
 
   return (
     <header
@@ -53,10 +79,18 @@ export function TopBar() {
       {view.kind === "note" && (
         <button
           type="button"
-          aria-label="Toggle star"
-          className="ml-1 rounded-full p-1.5 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+          aria-label={starred ? "Remove star" : "Star note"}
+          aria-pressed={starred}
+          title={starred ? "Unstar (saves on next autosave)" : "Star (saves on next autosave)"}
+          disabled={busyStar || !activeNote}
+          onClick={() => void onToggleStar()}
+          className={`ml-1 rounded-full p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none disabled:opacity-50 ${
+            starred
+              ? "bg-[var(--color-noxe-panel-2)] text-yellow-500"
+              : "text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)]"
+          }`}
         >
-          <Star size={16} />
+          <Star size={16} weight={starred ? "fill" : "regular"} />
         </button>
       )}
 

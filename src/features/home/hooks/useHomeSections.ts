@@ -28,7 +28,7 @@ export type HomeSections = {
   error: string | null;
   loadMore: () => void;
   refresh: () => Promise<void>;
-  flagsByPath: Map<string, { pinned: boolean; starred: boolean }>;
+  flagsByPath: Map<string, { pinned: boolean; starred: boolean; icon?: string }>;
 };
 
 export function useHomeSections(): HomeSections {
@@ -41,7 +41,7 @@ export function useHomeSections(): HomeSections {
   const [pageCount, setPageCount] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [flagsByPath, setFlagsByPath] = useState<Map<string, { pinned: boolean; starred: boolean }>>(new Map());
+  const [flagsByPath, setFlagsByPath] = useState<Map<string, { pinned: boolean; starred: boolean; icon?: string }>>(new Map());
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -167,10 +167,11 @@ async function enrichNotes(notes: NoteEntry[]): Promise<HomeNote[]> {
     .sort((left, right) => right.mtime - left.mtime);
 }
 
-function buildFlagsMap(notes: HomeNote[]): Map<string, { pinned: boolean; starred: boolean }> {
-  const map = new Map<string, { pinned: boolean; starred: boolean }>();
+function buildFlagsMap(notes: HomeNote[]): Map<string, { pinned: boolean; starred: boolean; icon?: string }> {
+  const map = new Map<string, { pinned: boolean; starred: boolean; icon?: string }>();
   for (const note of notes) {
-    map.set(note.path, { pinned: note.pinned, starred: note.starred });
+    const icon = typeof note.frontmatter.icon === "string" ? note.frontmatter.icon : undefined;
+    map.set(note.path, { pinned: note.pinned, starred: note.starred, icon });
   }
   return map;
 }
