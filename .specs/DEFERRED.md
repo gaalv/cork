@@ -4,18 +4,21 @@ These features were proposed but deferred from the current sprint because each i
 
 ## D1 — Calendar / agenda + Google Calendar integration
 
-**Idea.** Dedicated screen with a calendar view (month/week) that surfaces daily notes plus events. Optional Google Calendar OAuth so events can be opened as notes (one note per event).
+**Status.** v0 (month grid with daily-note indicators) and v1 (right-side agenda panel) were implemented in **F19** — see `.specs/features/F19-calendar-view/`.
 
-**Why deferred.**
-- Calendar UI itself is non-trivial (month grid, week grid, navigation, event blocks).
-- Google Calendar requires OAuth2 client registration, token refresh storage, and an offline strategy.
-- Touches new IPC endpoints and probably a new sqlite table.
+**What was implemented in F19:**
+- `{ kind: "calendar" }` screen accessible from the Rail sidebar (`CalendarBlank` icon).
+- Month grid with 7-column DOW header, up to 6 rows of day cells, prev/next/today navigation, and month+year title.
+- Day cells highlight today, show a dot indicator when a daily note or `event:`-frontmatter note exists for that day.
+- Clicking a day with a daily note opens it; clicking a day without one opens the Agenda panel.
+- Agenda panel lists the daily note + event notes for the selected day, each clickable; shows "Create daily note" CTA when none exists; dismissable via close button or Escape.
 
-**Sketch when picked up.**
-1. Read-only calendar view that aggregates `Daily/` notes by date — no Google API yet.
-2. Frontmatter `event:` field on regular notes that pins them to a date.
-3. Behind a settings flag: Google Calendar sync (one-way pull) using `tauri-plugin-oauth` or a Rust OAuth flow. Store `refresh_token` in the OS keychain (`tauri-plugin-stronghold`).
-4. "Create note from event" action.
+**Still deferred:**
+- Google Calendar OAuth / one-way sync (using `tauri-plugin-oauth` or a Rust OAuth flow, store `refresh_token` in OS keychain).
+- Week view and day view.
+- Drag-to-create events.
+- Recurring events.
+- Settings flag to configure calendar source.
 
 ## D2 — GitHub sync (Obsidian-style) + per-note history sidebar
 
