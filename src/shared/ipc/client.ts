@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
+import { emitIpcError } from "./errors";
 import type {
   IpcCommandArgs,
   IpcCommandName,
@@ -91,7 +92,13 @@ export async function invokeCommand<Name extends IpcCommandName>(
   command: Name,
   args: IpcCommandArgs<Name>,
 ): Promise<IpcCommandResult<Name>> {
-  return invoke<IpcCommandResult<Name>>(commandNames[command], toRustArgs(command, args));
+  try {
+    return await invoke<IpcCommandResult<Name>>(commandNames[command], toRustArgs(command, args));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    emitIpcError({ topic: command, message });
+    throw err;
+  }
 }
 
 export const client = {

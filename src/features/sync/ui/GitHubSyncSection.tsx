@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-import { useShellStore } from "@/features/shell/state/shellStore";
 import { useSyncStore } from "@/features/sync/state/syncStore";
 
 function relTime(iso: string | null): string {
@@ -24,7 +24,6 @@ export function GitHubSyncSection() {
   const disable = useSyncStore((s) => s.disable);
   const syncNow = useSyncStore((s) => s.syncNow);
   const loading = useSyncStore((s) => s.loading);
-  const pushToast = useShellStore((s) => s.pushToast);
 
   const [showEnableForm, setShowEnableForm] = useState(false);
   const [url, setUrl] = useState("");
@@ -45,11 +44,11 @@ export function GitHubSyncSection() {
       setShowEnableForm(false);
       setUrl("");
       setToken("");
-      pushToast({ title: "GitHub sync enabled" });
+      toast.success("GitHub sync enabled");
     } catch (err) {
-      pushToast({
-        title: "Could not enable sync",
+      toast.error("Could not enable sync", {
         description: err instanceof Error ? err.message : String(err),
+        duration: 8000,
       });
     }
   };
@@ -59,11 +58,11 @@ export function GitHubSyncSection() {
       return;
     try {
       await disable();
-      pushToast({ title: "GitHub sync disabled" });
+      toast.success("GitHub sync disabled");
     } catch (err) {
-      pushToast({
-        title: "Could not disable sync",
+      toast.error("Could not disable sync", {
         description: err instanceof Error ? err.message : String(err),
+        duration: 8000,
       });
     }
   };
@@ -71,10 +70,11 @@ export function GitHubSyncSection() {
   const onSyncNow = async () => {
     try {
       await syncNow();
+      toast.success("Sync complete");
     } catch (err) {
-      pushToast({
-        title: "Sync failed",
+      toast.error("Sync failed", {
         description: err instanceof Error ? err.message : String(err),
+        duration: 8000,
       });
     }
   };
