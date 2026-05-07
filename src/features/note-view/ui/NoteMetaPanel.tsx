@@ -3,7 +3,6 @@ import { BacklinksList } from "./BacklinksList";
 import { NoteFolderField } from "./NoteFolderField";
 import { NoteMetaFooter } from "./NoteMetaFooter";
 import { Outline } from "./Outline";
-import { RecentsList } from "./RecentsList";
 import { TagsField } from "./TagsField";
 
 import { useBacklinks } from "@/features/note-view/hooks/useBacklinks";
@@ -18,14 +17,13 @@ import type { NoteEntry } from "@/shared/ipc/types";
 type NoteMetaPanelProps = {
   noteId: string | null;
   body: string;
-  recents: NoteEntry[];
   updated?: number;
   created?: string;
   onOpenNote: (note: NoteEntry) => void;
   onSelectHeading?: (item: OutlineItem) => void;
 };
 
-export function NoteMetaPanel({ noteId, body, recents, updated, created, onOpenNote, onSelectHeading }: NoteMetaPanelProps) {
+export function NoteMetaPanel({ noteId, body, updated, created, onOpenNote, onSelectHeading }: NoteMetaPanelProps) {
   const collapsed = useNoteViewStore((state) => state.panelCollapsed);
   const toggleCollapsed = useNoteViewStore((state) => state.togglePanelCollapsed);
   const activeNotePath = useNoteViewStore((state) => state.activeNotePath);
@@ -50,7 +48,6 @@ export function NoteMetaPanel({ noteId, body, recents, updated, created, onOpenN
       <TagsField noteId={noteId} />
       <NoteHistory notePath={activeNotePath} noteId={noteId} />
       <BacklinksList backlinks={backlinks} onOpen={onOpenNote} />
-      <RecentsList notes={recents} currentNoteId={noteId} onOpen={onOpenNote} />
       <AISuggestionCard />
       <NoteMetaFooter body={body} created={created} updated={updated} />
     </aside>

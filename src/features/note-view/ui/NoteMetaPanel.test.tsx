@@ -30,12 +30,11 @@ beforeEach(() => {
 });
 
 describe("NoteMetaPanel", () => {
-  it("renders outline, backlinks, recents, and AI stub", async () => {
+  it("renders outline, backlinks, and AI stub", async () => {
     render(
       <NoteMetaPanel
         noteId="n1"
         body={"# Title\nBody"}
-        recents={[{ id: "n2", path: "/vault/b.md", title: "Beta", folder: "", size: 1, mtime: 1 }]}
         onOpenNote={vi.fn()}
       />,
     );
@@ -46,7 +45,7 @@ describe("NoteMetaPanel", () => {
   });
 
   it("toggles collapsed state", () => {
-    render(<NoteMetaPanel noteId="n1" body="" recents={[]} onOpenNote={vi.fn()} />);
+    render(<NoteMetaPanel noteId="n1" body="" onOpenNote={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Hide meta" }));
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAutoSave } from "@/features/editor/hooks/useAutoSave";
 import { useExternalReconciler } from "@/features/editor/hooks/useExternalReconciler";
@@ -21,7 +21,6 @@ export type NoteViewProps = {
 
 export function NoteView({ noteId, title }: NoteViewProps) {
   const note = useVaultStore((state) => state.notes.find((candidate) => candidate.id === noteId));
-  const notes = useVaultStore((state) => state.notes);
   const navigate = useShellStore((state) => state.navigate);
   const loadNotes = useVaultStore((state) => state.loadNotes);
   const openBuffer = useEditorStore((state) => state.openBuffer);
@@ -79,31 +78,32 @@ export function NoteView({ noteId, title }: NoteViewProps) {
     setEditingTitle(false);
   }
 
-  const recents = useMemo(() => [...notes].sort((left, right) => right.mtime - left.mtime), [notes]);
   const openNote = (entry: NoteEntry) => navigate({ kind: "note", id: entry.id });
 
   return (
     <main className="relative flex flex-1 overflow-hidden" data-testid="note-view">
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden p-6 lg:p-10">
-        <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Note</p>
-        {editingTitle ? (
-          <InlineRename
-            initial={title}
-            label="Rename note"
-            onCommit={renameTitle}
-            onCancel={() => setEditingTitle(false)}
-            className="mt-1 text-2xl font-semibold"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditingTitle(true)}
-            className="mt-1 -ml-1 max-w-full truncate rounded px-1 text-left text-2xl font-semibold text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
-            aria-label={`Rename note "${title}"`}
-          >
-            {title}
-          </button>
-        )}
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="mx-auto w-full max-w-[780px] px-8 pt-8 lg:pt-10">
+          <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Note</p>
+          {editingTitle ? (
+            <InlineRename
+              initial={title}
+              label="Rename note"
+              onCommit={renameTitle}
+              onCancel={() => setEditingTitle(false)}
+              className="mt-1 text-2xl font-semibold"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingTitle(true)}
+              className="mt-1 -ml-1 max-w-full truncate rounded px-1 text-left text-2xl font-semibold text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+              aria-label={`Rename note "${title}"`}
+            >
+              {title}
+            </button>
+          )}
+        </div>
         <div className="mt-4 min-h-0 flex-1">
           <Editor className="h-full min-h-0" />
         </div>
@@ -111,7 +111,6 @@ export function NoteView({ noteId, title }: NoteViewProps) {
       <NoteMetaPanel
         noteId={noteId}
         body={buffer?.body ?? ""}
-        recents={recents}
         updated={buffer?.loadedMtime ?? note?.mtime}
         created={typeof buffer?.frontmatter.created === "string" ? buffer.frontmatter.created : undefined}
         onOpenNote={openNote}
