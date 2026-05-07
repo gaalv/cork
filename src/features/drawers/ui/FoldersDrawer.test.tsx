@@ -28,7 +28,7 @@ describe("FoldersDrawer", () => {
     const onOpenNote = vi.fn();
 
     render(<FoldersDrawer onOpenNote={onOpenNote} />);
-    fireEvent.click(screen.getByRole("treeitem", { name: /work 2/i }).querySelector("button")!);
+    fireEvent.click(screen.getByRole("button", { name: "work" }));
 
     expect(screen.getByRole("button", { name: /Alpha/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Alpha/i }));
@@ -39,7 +39,7 @@ describe("FoldersDrawer", () => {
   it("expands folders with arrow keys", () => {
     render(<FoldersDrawer />);
 
-    fireEvent.keyDown(screen.getByRole("button", { name: /work 2/i }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("button", { name: "work" }), { key: "ArrowRight" });
 
     expect(screen.getByRole("button", { name: /Alpha/i })).toBeInTheDocument();
   });
