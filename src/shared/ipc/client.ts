@@ -261,9 +261,9 @@ function toRustArgs<Name extends IpcCommandName>(
     case "links.outgoing":
     case "links.incoming":
     case "index.search":
+      return args as RustArgs;
     case "vcs.history":
     case "vcs.restore":
-      return args as RustArgs;
     case "vcs.remoteEnable":
       return { input: args } as RustArgs;
     case "ai.runSkill": {

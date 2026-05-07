@@ -22,7 +22,9 @@ describe("ipc client", () => {
   });
 
   it("invokes typed vault commands", async () => {
-    invokeMock.mockResolvedValue([{ id: "1", path: "/v/a.md", title: "A", folder: "", size: 1, mtime: 2 }]);
+    invokeMock.mockResolvedValue([
+      { id: "1", path: "/v/a.md", title: "A", folder: "", size: 1, mtime: 2 },
+    ]);
 
     const result = await client.vault.list();
 
@@ -43,7 +45,7 @@ describe("ipc client", () => {
   it("surfaces invoke errors to callers", async () => {
     invokeMock.mockRejectedValue({ kind: "NotFound" });
 
-    await expect(client.notes.read("missing.md")).rejects.toMatchObject({ kind: "NotFound" });
+    await expect(client.notes.read("missing.md")).rejects.toThrow("NotFound");
   });
 
   it("listens to events and camel-cases payloads", async () => {
