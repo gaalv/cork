@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Trash } from "@phosphor-icons/react";
 
 import { useAutoSave } from "@/features/editor/hooks/useAutoSave";
 import { useExternalReconciler } from "@/features/editor/hooks/useExternalReconciler";
@@ -54,16 +55,38 @@ export function NoteView({ noteId, title }: NoteViewProps) {
     };
   }, [buffer?.dirty, note, noteId, openBuffer]);
 
+  async function deleteNote() {
+    if (!note) return;
+    const ok = window.confirm(`Move "${title}" to system trash?\n\nIt will be removed from this vault and can be restored from your operating system trash.`);
+    if (!ok) return;
+    try {
+      await client.notes.trash(note.path);
+      await loadNotes();
+      navigate({ kind: "home" });
+    } catch (error) {
+      window.alert(`Failed to delete: ${(error as Error).message ?? "unknown error"}`);
+    }
+  }
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === ".") {
         event.preventDefault();
         toggleLiveMode(noteId);
       }
+      if ((event.metaKey || event.ctrlKey) && event.key === "Backspace") {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('input, textarea, [contenteditable="true"]')) {
+          return;
+        }
+        event.preventDefault();
+        void deleteNote();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [noteId, toggleLiveMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId, toggleLiveMode, note?.path, title]);
 
   async function renameTitle(next: string) {
     if (!note) {
@@ -84,7 +107,18 @@ export function NoteView({ noteId, title }: NoteViewProps) {
     <main className="relative flex flex-1 overflow-hidden" data-testid="note-view">
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="mx-auto w-full max-w-[780px] px-8 pt-8 lg:pt-10">
-          <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Note</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[12px] uppercase tracking-wide text-[var(--color-noxe-muted)]">Note</p>
+            <button
+              type="button"
+              onClick={() => void deleteNote()}
+              aria-label="Delete note"
+              title="Delete note (⌘⌫)"
+              className="rounded-md p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+            >
+              <Trash size={15} />
+            </button>
+          </div>
           {editingTitle ? (
             <InlineRename
               initial={title}
