@@ -11,7 +11,7 @@ pub mod vcs;
 pub use error::IpcError;
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
-use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, WebviewWindow, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -67,17 +67,6 @@ fn show_main_window(app: &AppHandle) {
     }
 }
 
-fn toggle_main_window(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        match window.is_visible() {
-            Ok(true) => {
-                let _ = window.hide();
-            }
-            _ => show_main_window(app),
-        }
-    }
-}
-
 fn trigger_quick_capture(app: &AppHandle) {
     show_main_window(app);
     let _ = app.emit(QUICK_CAPTURE_EVENT, ());
@@ -114,7 +103,7 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     TrayIconBuilder::with_id("noxe-tray")
         .icon(icon)
         .menu(&menu)
-        .show_menu_on_left_click(false)
+        .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "tray:quick-capture" => trigger_quick_capture(app),
             "tray:open-todos" => trigger_open_todos(app),
@@ -122,16 +111,6 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
             "tray:show" => show_main_window(app),
             "tray:quit" => app.exit(0),
             _ => {}
-        })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } = event
-            {
-                toggle_main_window(tray.app_handle());
-            }
         })
         .build(app)?;
 
