@@ -11,12 +11,13 @@ type NoteCardProps = {
   onChanged?: () => void;
   selected?: boolean;
   onSelectClick?: (event: MouseEvent, note: NoteEntry) => boolean;
+  flags?: { pinned: boolean; starred: boolean };
 };
 
-export function NoteCard({ note, onOpen, onPinToggle, onChanged, selected = false, onSelectClick }: NoteCardProps) {
+export function NoteCard({ note, onOpen, onPinToggle, onChanged, selected = false, onSelectClick, flags }: NoteCardProps) {
   const homeNote = isHomeNote(note) ? note : null;
-  const pinned = homeNote?.pinned ?? false;
-  const starred = homeNote?.starred ?? false;
+  const pinned = flags?.pinned ?? homeNote?.pinned ?? false;
+  const starred = flags?.starred ?? homeNote?.starred ?? false;
   const snippet = homeNote?.snippet ?? (note.folder || "No preview available");
 
   return (

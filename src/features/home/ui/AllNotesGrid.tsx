@@ -13,9 +13,10 @@ type AllNotesGridProps = {
   onOpen: (note: NoteEntry) => void;
   onPinToggle: (note: NoteEntry) => Promise<void> | void;
   onChanged?: () => void;
+  flagsByPath?: Map<string, { pinned: boolean; starred: boolean }>;
 };
 
-export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, onChanged }: AllNotesGridProps) {
+export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, onChanged, flagsByPath }: AllNotesGridProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const bulkSelection = useBulkSelection(notes.map((note) => note.path));
 
@@ -56,6 +57,7 @@ export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, 
               onChanged={onChanged}
               selected={bulkSelection.isSelected(note.path)}
               onSelectClick={(event, selectedNote) => bulkSelection.handleClick(event.nativeEvent, selectedNote.path)}
+              flags={flagsByPath?.get(note.path)}
             />
           ))}
         </div>

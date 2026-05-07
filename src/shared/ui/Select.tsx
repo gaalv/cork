@@ -111,7 +111,7 @@ export function Select<T extends string | number>({
           role="listbox"
           aria-label={ariaLabel}
           tabIndex={-1}
-          className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] py-1 shadow-lg"
+          className="absolute left-0 right-0 z-50 mt-1 rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] py-1 shadow-lg"
           onKeyDown={(event) => {
             if (event.key === "ArrowDown") {
               event.preventDefault();

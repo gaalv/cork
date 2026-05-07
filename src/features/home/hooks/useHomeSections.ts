@@ -28,6 +28,7 @@ export type HomeSections = {
   error: string | null;
   loadMore: () => void;
   refresh: () => Promise<void>;
+  flagsByPath: Map<string, { pinned: boolean; starred: boolean }>;
 };
 
 export function useHomeSections(): HomeSections {
@@ -40,6 +41,7 @@ export function useHomeSections(): HomeSections {
   const [pageCount, setPageCount] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flagsByPath, setFlagsByPath] = useState<Map<string, { pinned: boolean; starred: boolean }>>(new Map());
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -49,22 +51,28 @@ export function useHomeSections(): HomeSections {
         client.tags.list(),
         client.notes.allPaged(0, PAGE_SIZE),
       ]);
-      const pinnedNotes = await derivePinnedNotes(recentNotes);
+      const enriched = await enrichNotes(recentNotes);
+      const flags = buildFlagsMap(enriched);
+      const pinnedNotes = enriched.filter((note) => note.pinned).slice(0, PINNED_LIMIT);
       setPinned(pinnedNotes);
       setRecents(recentNotes.slice(0, RECENTS_LIMIT));
       setTags(tagCounts.slice(0, TAG_LIMIT));
       setAllPage(firstPage);
       setHasMore(firstPage.length === PAGE_SIZE);
       setPageCount(1);
+      setFlagsByPath(flags);
       setError(null);
     } catch (nextError) {
       const fallback = [...vaultNotes].sort((left, right) => right.mtime - left.mtime);
-      const fallbackPinned = await derivePinnedNotes(fallback);
+      const enriched = await enrichNotes(fallback);
+      const flags = buildFlagsMap(enriched);
+      const fallbackPinned = enriched.filter((note) => note.pinned).slice(0, PINNED_LIMIT);
       setPinned(fallbackPinned);
       setRecents(fallback.slice(0, RECENTS_LIMIT));
       setTags([]);
       setAllPage(fallback.slice(0, PAGE_SIZE));
       setHasMore(fallback.length > PAGE_SIZE);
+      setFlagsByPath(flags);
       setError(errorMessage(nextError));
     } finally {
       setIsLoading(false);
@@ -124,20 +132,19 @@ export function useHomeSections(): HomeSections {
     };
   }, [pageCount]);
 
-  return { pinned, recents, tagsTop: tags, allPage, hasMore, isLoading, error, loadMore, refresh: load };
+  return { pinned, recents, tagsTop: tags, allPage, hasMore, isLoading, error, loadMore, refresh: load, flagsByPath };
 }
 
-async function derivePinnedNotes(notes: NoteEntry[]): Promise<HomeNote[]> {
+async function enrichNotes(notes: NoteEntry[]): Promise<HomeNote[]> {
   const enriched = await Promise.all(
     notes.slice(0, 200).map(async (note) => {
       try {
         const file = await client.notes.read(note.path);
-        const pinned = file.frontmatter.pinned === true;
         return {
           ...note,
           frontmatter: file.frontmatter,
           snippet: firstLine(file.body),
-          pinned,
+          pinned: file.frontmatter.pinned === true,
           starred: file.frontmatter.starred === true,
         } satisfies HomeNote;
       } catch {
@@ -155,11 +162,17 @@ async function derivePinnedNotes(notes: NoteEntry[]): Promise<HomeNote[]> {
       }
     }),
   );
-
   return enriched
-    .filter((note): note is HomeNote => note !== null && note.pinned)
-    .sort((left, right) => right.mtime - left.mtime)
-    .slice(0, PINNED_LIMIT);
+    .filter((note): note is HomeNote => note !== null)
+    .sort((left, right) => right.mtime - left.mtime);
+}
+
+function buildFlagsMap(notes: HomeNote[]): Map<string, { pinned: boolean; starred: boolean }> {
+  const map = new Map<string, { pinned: boolean; starred: boolean }>();
+  for (const note of notes) {
+    map.set(note.path, { pinned: note.pinned, starred: note.starred });
+  }
+  return map;
 }
 
 function firstLine(markdown: string): string {

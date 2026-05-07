@@ -39,6 +39,7 @@ export function HomeView() {
             onOpen={openNote}
             onPinToggle={togglePinAction}
             onChanged={sections.refresh}
+            flagsByPath={sections.flagsByPath}
           />
           {sections.error ? <p className="text-sm text-red-600">Using local vault data: {sections.error}</p> : null}
         </div>
