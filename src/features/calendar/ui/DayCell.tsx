@@ -1,4 +1,5 @@
 import { cn } from "@/shared/utils/cn";
+import { dateToISO } from "../services/calendarService";
 import type { NoteSummary } from "../services/calendarService";
 
 type DayCellProps = {
@@ -12,11 +13,13 @@ type DayCellProps = {
 
 export function DayCell({ date, isToday, isCurrentMonth, isSelected, notes, onClick }: DayCellProps) {
   const hasNotes = notes.length > 0;
+  const iso = dateToISO(date);
 
   return (
     <button
       type="button"
-      aria-label={`${date.toDateString()}${hasNotes ? `, ${notes.length} note${notes.length > 1 ? "s" : ""}` : ""}`}
+      data-date={iso}
+      aria-label={`${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${hasNotes ? `, ${notes.length} note${notes.length > 1 ? "s" : ""}` : ""}`}
       aria-pressed={isSelected}
       onClick={onClick}
       className={cn(
