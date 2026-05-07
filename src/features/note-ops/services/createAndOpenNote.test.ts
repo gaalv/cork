@@ -44,9 +44,9 @@ describe("defaultNewNoteFolder", () => {
 
 describe("createAndOpenNote", () => {
   it("creates a note in Inbox by default", async () => {
-    clientMock.notes.create.mockResolvedValue({ path: "/vault/Inbox/Note.md" });
+    clientMock.notes.create.mockResolvedValue({ path: "/vault/Note.md" });
     await createAndOpenNote();
-    expect(clientMock.notes.create).toHaveBeenCalledWith({ folder: "Inbox", title: undefined });
+    expect(clientMock.notes.create).toHaveBeenCalledWith({ folder: "", title: undefined });
   });
 
   it("uses the selected folder when one is set", async () => {

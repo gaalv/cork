@@ -1,8 +1,8 @@
 import { useMemo } from "react";
+import { Tray } from "@phosphor-icons/react";
 
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
 import { useFolderTree } from "@/features/drawers/hooks/useFolderTree";
-import { DEFAULT_INBOX_FOLDER } from "@/features/note-ops/services/createAndOpenNote";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { cn } from "@/shared/utils/cn";
 
@@ -14,16 +14,11 @@ type FoldersDrawerProps = {
 
 export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
   const notes = useVaultStore((state) => state.notes);
-  const fullTree = useFolderTree();
+  const tree = useFolderTree();
   const selectedFolder = useDrawersStore((state) => state.selectedFolder);
   const selectFolder = useDrawersStore((state) => state.selectFolder);
   const rootNotes = useMemo(() => notes.filter((note) => !note.folder).sort((a, b) => a.title.localeCompare(b.title)), [notes]);
-  const tree = useMemo(() => fullTree.filter((node) => node.path !== DEFAULT_INBOX_FOLDER), [fullTree]);
-  const inboxNotes = useMemo(
-    () => notes.filter((note) => note.folder === DEFAULT_INBOX_FOLDER).sort((a, b) => a.title.localeCompare(b.title)),
-    [notes],
-  );
-  const inboxSelected = selectedFolder === DEFAULT_INBOX_FOLDER;
+  const inboxSelected = selectedFolder === null;
 
   if (notes.length === 0) {
     return <p className="text-sm text-[var(--color-noxe-muted)]">No notes in this vault yet.</p>;
@@ -41,21 +36,10 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
         }
       }}
     >
-      <button
-        type="button"
-        onClick={() => selectFolder(null)}
-        className={cn(
-          "inline-flex items-center rounded-full border border-[var(--color-noxe-border)] px-3 py-1 text-xs text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)]",
-          selectedFolder === null && "bg-[var(--color-noxe-panel-2)] text-[var(--color-noxe-ink)] ring-1 ring-[var(--color-noxe-ring)]",
-        )}
-        aria-pressed={selectedFolder === null}
-      >
-        Root {selectedFolder === null ? "(default for new notes)" : ""}
-      </button>
       <div>
         <button
           type="button"
-          onClick={() => selectFolder(inboxSelected ? null : DEFAULT_INBOX_FOLDER)}
+          onClick={() => selectFolder(null)}
           aria-pressed={inboxSelected}
           aria-label="Inbox"
           className={cn(
@@ -63,12 +47,14 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
             inboxSelected && "ring-1 ring-[var(--color-noxe-ring)]",
           )}
         >
-          <span className="font-medium">Inbox</span>
-          <span className="text-[11px] text-[var(--color-noxe-muted)]">{inboxNotes.length}</span>
+          <span className="flex items-center gap-2 font-medium">
+            <Tray size={14} weight="duotone" /> Inbox
+          </span>
+          <span className="text-[11px] text-[var(--color-noxe-muted)]">{rootNotes.length}</span>
         </button>
-        {inboxSelected && inboxNotes.length > 0 ? (
+        {inboxSelected && rootNotes.length > 0 ? (
           <ul className="mt-1 space-y-0.5" aria-label="Inbox notes">
-            {inboxNotes.map((note) => (
+            {rootNotes.map((note) => (
               <li key={note.id}>
                 <button
                   type="button"
@@ -82,23 +68,6 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
           </ul>
         ) : null}
       </div>
-      {rootNotes.length > 0 ? (
-        <div>
-          <p className="mb-1 text-xs font-medium text-[var(--color-noxe-muted)]">Root</p>
-          <div className="space-y-0.5">
-            {rootNotes.map((note) => (
-              <button
-                key={note.id}
-                type="button"
-                className="block w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-[var(--color-noxe-panel-2)]"
-                onClick={() => onOpenNote?.(note.id)}
-              >
-                {note.title}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
       {tree.length > 0 ? (
         <ul role="tree" aria-label="Folder tree" className="space-y-0.5">
           {tree.map((node) => (

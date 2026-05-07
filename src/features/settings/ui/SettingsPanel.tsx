@@ -204,12 +204,6 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           control={<Toggle checked={settings.editor.lineWrap} label="Line wrap" onChange={(checked) => patchEditor({ lineWrap: checked })} />}
         />
         <SettingRow
-          label="Show line numbers"
-          description="Display a line-number gutter next to the editor."
-          scope="app"
-          control={<Toggle checked={settings.editor.showLineNumbers} label="Show line numbers" onChange={(checked) => patchEditor({ showLineNumbers: checked })} />}
-        />
-        <SettingRow
           label="Font family"
           description="Choose the editor font stack."
           scope="app"

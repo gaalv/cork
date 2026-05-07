@@ -60,7 +60,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     autoSaveDebounceMs: 500,
     previewDefault: true,
     lineWrap: true,
-    showLineNumbers: true,
+    showLineNumbers: false,
     fontFamily: "system-ui",
     fontSize: 14,
     tabSize: 2,

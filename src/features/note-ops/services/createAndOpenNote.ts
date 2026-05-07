@@ -3,7 +3,7 @@ import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
 
-export const DEFAULT_INBOX_FOLDER = "Inbox";
+export const DEFAULT_INBOX_FOLDER = "";
 
 export type CreateAndOpenNoteOptions = {
   folder?: string;

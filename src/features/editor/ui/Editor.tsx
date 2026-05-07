@@ -38,14 +38,14 @@ export function Editor({ className, extraExtensions = [], onReady }: EditorProps
       ...createEditorExtensions({
         extraExtensions: [createEditorDropPasteExtension(), ...extraExtensions],
         lineWrap: editorSettings.lineWrap,
-        showLineNumbers: editorSettings.showLineNumbers,
+        showLineNumbers: false,
         fontFamily: editorSettings.fontFamily,
         fontSize: editorSettings.fontSize,
         tabSize: editorSettings.tabSize,
         liveMode,
       }),
     ],
-    [editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineWrap, editorSettings.showLineNumbers, editorSettings.tabSize, extraExtensions, liveMode, updateBody],
+    [editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineWrap, editorSettings.tabSize, extraExtensions, liveMode, updateBody],
   );
 
   useEffect(() => {

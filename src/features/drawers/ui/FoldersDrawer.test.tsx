@@ -10,6 +10,7 @@ beforeEach(() => {
   useDrawersStore.setState({
     expandedFolders: new Set<string>(),
     expandedTags: new Set<string>(),
+    selectedFolder: null,
     selectedTag: null,
     searchHistory: [],
   });
@@ -51,11 +52,11 @@ describe("FoldersDrawer", () => {
     expect(screen.getByText("No notes in this vault yet.")).toBeInTheDocument();
   });
 
-  it("surfaces Inbox as a virtual section and hides it from the folder tree", () => {
+  it("treats vault root as the Inbox: notes without a folder appear under Inbox", () => {
     useVaultStore.setState({
       path: "/vault",
       notes: [
-        { id: "i1", path: "/vault/Inbox/Quick.md", title: "Quick", folder: "Inbox", size: 1, mtime: 1 },
+        { id: "i1", path: "/vault/Quick.md", title: "Quick", folder: "", size: 1, mtime: 1 },
         { id: "n1", path: "/vault/work/a.md", title: "Alpha", folder: "work", size: 1, mtime: 1 },
       ],
     });
@@ -63,9 +64,8 @@ describe("FoldersDrawer", () => {
     const onOpenNote = vi.fn();
     render(<FoldersDrawer onOpenNote={onOpenNote} />);
 
-    expect(screen.queryByRole("treeitem", { name: /Inbox 1/i })).toBeNull();
     const inboxButton = screen.getByRole("button", { name: "Inbox" });
-    fireEvent.click(inboxButton);
+    expect(inboxButton).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: /Quick/i }));
     expect(onOpenNote).toHaveBeenCalledWith("i1");
   });

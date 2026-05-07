@@ -17,21 +17,19 @@ export const noxeEditorTheme = EditorView.theme({
     padding: "1.75rem 2rem 6rem",
     maxWidth: "780px",
     margin: "0 auto",
+    outline: "none",
   },
   ".cm-line": {
     padding: "0",
   },
+  "&.cm-editor.cm-focused": {
+    outline: "none",
+  },
   ".cm-focused": {
     outline: "none",
   },
-  ".cm-gutters": {
-    backgroundColor: "transparent",
-    border: "none",
-    color: "var(--color-noxe-subtle)",
-    fontSize: "11px",
-  },
   ".cm-activeLine": {
-    backgroundColor: "color-mix(in oklab, var(--color-noxe-accent) 6%, transparent)",
+    backgroundColor: "transparent",
   },
   ".cm-activeLineGutter": {
     backgroundColor: "transparent",
@@ -43,6 +41,12 @@ export const noxeEditorTheme = EditorView.theme({
   ".cm-cursor": {
     borderLeftColor: "var(--color-noxe-accent)",
     borderLeftWidth: "2px",
+  },
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "var(--color-noxe-subtle)",
+    fontSize: "11px",
   },
   ".cm-tooltip": {
     backgroundColor: "var(--color-noxe-panel)",

@@ -3,7 +3,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { markdown } from "@codemirror/lang-markdown";
 import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
-import { EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
+import { EditorView, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
 
 import { calloutHintExtension } from "./calloutHint";
 import { concealedBrackets } from "./concealedBrackets";
@@ -33,12 +33,11 @@ export type EditorExtensionOptions = {
 };
 
 export function createEditorExtensions(options: EditorExtensionOptions = {}): Extension[] {
-  const showLineNumbers = options.showLineNumbers ?? true;
+  const showLineNumbers = options.showLineNumbers ?? false;
   const tabSize = options.tabSize ?? 2;
   return [
     liveModeFacet.of(options.liveMode ?? "live"),
     ...(showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : []),
-    highlightActiveLine(),
     history(),
     bracketMatching(),
     markdown(),
