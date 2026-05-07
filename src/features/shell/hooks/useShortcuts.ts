@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
+import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -9,7 +10,6 @@ import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 export function useShortcuts() {
   const openPalette = useShellStore((state) => state.openPalette);
-  const navigate = useShellStore((state) => state.navigate);
   const back = useShellStore((state) => state.back);
   const forward = useShellStore((state) => state.forward);
   const toggleDrawer = useShellStore((state) => state.toggleDrawer);
@@ -46,7 +46,7 @@ export function useShortcuts() {
           return;
         }
         event.preventDefault();
-        navigate({ kind: "note", id: "new" });
+        void createAndOpenNote();
       },
       "$mod+o": (event) => {
         if (isEditableTarget(event.target)) {
@@ -108,7 +108,7 @@ export function useShortcuts() {
       window.removeEventListener("keydown", onPaletteShortcut);
       window.removeEventListener("keydown", onQuestionMark);
     };
-  }, [back, forward, lastDrawer, navigate, openHelp, openPalette, openSettings, openVault, toggleDrawer]);
+  }, [back, forward, lastDrawer, openHelp, openPalette, openSettings, openVault, toggleDrawer]);
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {

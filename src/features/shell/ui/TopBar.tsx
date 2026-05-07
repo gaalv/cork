@@ -2,6 +2,7 @@ import { ArrowLeft, Command as CommandIcon, Plus, Star } from "@phosphor-icons/r
 import { useState } from "react";
 
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
+import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { VaultSwitcher } from "@/features/vault-switcher/ui/VaultSwitcher";
@@ -71,7 +72,7 @@ export function TopBar() {
 
       <button
         type="button"
-        onClick={() => navigate({ kind: "note", id: "new" })}
+        onClick={() => void createAndOpenNote()}
         className="flex items-center gap-1.5 rounded-full bg-[var(--color-noxe-primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
       >
         <Plus size={12} weight="bold" /> New note

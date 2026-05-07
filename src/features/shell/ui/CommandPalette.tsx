@@ -3,6 +3,7 @@ import { Command } from "cmdk";
 import fuzzysort from "fuzzysort";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
+import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { commandsRegistry } from "@/features/shell/commands/registry";
@@ -250,7 +251,7 @@ function runCommand(
     actions.navigate({ kind: "home" });
   }
   if (id === "new-note") {
-    actions.navigate({ kind: "note", id: "new" });
+    void createAndOpenNote();
   }
   if (id === "open-vault") {
     void actions.openVault();

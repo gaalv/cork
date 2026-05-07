@@ -3,6 +3,7 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
 import { useIndexStore } from "@/features/index/state/indexStore";
+import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -40,7 +41,7 @@ export async function dispatchMenuAction(action: string): Promise<void> {
 
   switch (action) {
     case "new-note":
-      useShellStore.getState().navigate({ kind: "note", id: "new" });
+      await createAndOpenNote();
       return;
     case "open-vault":
       await useVaultStore.getState().openVault();
