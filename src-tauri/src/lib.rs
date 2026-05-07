@@ -17,6 +17,7 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 
 const QUICK_CAPTURE_EVENT: &str = "quick-capture:new";
 const OPEN_TODOS_EVENT: &str = "todos:open";
+const SYNC_NOW_EVENT: &str = "sync:now";
 
 /// Health check for the IPC bridge — used by the smoke test and as a
 /// reference for typed IPC contracts.
@@ -87,6 +88,10 @@ fn trigger_open_todos(app: &AppHandle) {
     let _ = app.emit(OPEN_TODOS_EVENT, ());
 }
 
+fn trigger_sync_now(app: &AppHandle) {
+    let _ = app.emit(SYNC_NOW_EVENT, ());
+}
+
 fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let quick = MenuItemBuilder::with_id("tray:quick-capture", "Quick capture")
         .accelerator("CmdOrCtrl+Shift+I")
@@ -94,11 +99,12 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let todos = MenuItemBuilder::with_id("tray:open-todos", "Open Todos")
         .accelerator("CmdOrCtrl+Shift+T")
         .build(app)?;
+    let sync = MenuItemBuilder::with_id("tray:sync-now", "Sync now").build(app)?;
     let show = MenuItemBuilder::with_id("tray:show", "Show Noxe").build(app)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItemBuilder::with_id("tray:quit", "Quit Noxe").build(app)?;
 
-    let menu = MenuBuilder::new(app).items(&[&quick, &todos, &show, &separator, &quit]).build()?;
+    let menu = MenuBuilder::new(app).items(&[&quick, &todos, &sync, &show, &separator, &quit]).build()?;
 
     let icon = app
         .default_window_icon()
@@ -112,6 +118,7 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
         .on_menu_event(|app, event| match event.id.as_ref() {
             "tray:quick-capture" => trigger_quick_capture(app),
             "tray:open-todos" => trigger_open_todos(app),
+            "tray:sync-now" => trigger_sync_now(app),
             "tray:show" => show_main_window(app),
             "tray:quit" => app.exit(0),
             _ => {}
@@ -169,13 +176,17 @@ pub fn run() {
         .manage(index::IndexState::default())
         .manage(assets::AssetScopeState::default())
         .manage(vcs::VcsState::default())
+        .manage(vcs::remote::RemoteState::default())
         .manage(ai::AiState::default())
         .setup(|app| {
             vault::setup(app)?;
             index::setup(app)?;
             ai::setup(app.handle())?;
-            // Start the VCS debounce worker
-            vcs::start_worker(&app.state::<vcs::VcsState>());
+            // Start the VCS debounce worker (signals RemoteState so commits trigger pushes)
+            let vcs_state = app.state::<vcs::VcsState>();
+            let remote_state = app.state::<vcs::remote::RemoteState>();
+            vcs::start_worker(&vcs_state, &remote_state);
+            vcs::remote::start_workers(&remote_state);
             let menu = menu::build_app_menu(app.handle())?;
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| {
@@ -257,6 +268,9 @@ pub fn run() {
             vcs::vcs_status,
             vcs::vcs_history,
             vcs::vcs_restore,
+            vcs::remote::vcs_remote_enable,
+            vcs::remote::vcs_remote_disable,
+            vcs::remote::vcs_remote_sync_now,
             // === F21 AI Infrastructure ===
             ai::ai_run_skill,
             ai::ai_cache_clear,

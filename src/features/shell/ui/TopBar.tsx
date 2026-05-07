@@ -7,6 +7,7 @@ import { useEditorStore } from "@/features/editor/state/editorStore";
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { SyncIndicator } from "@/features/sync/ui/SyncIndicator";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { VaultSwitcher } from "@/features/vault-switcher/ui/VaultSwitcher";
 import { client } from "@/shared/ipc/client";
@@ -23,11 +24,15 @@ export function TopBar() {
   const notes = useVaultStore((state) => state.notes);
   const loadNotes = useVaultStore((state) => state.loadNotes);
   const activeNote = view.kind === "note" ? notes.find((note) => note.id === view.id) : null;
-  const activeBuffer = useEditorStore((state) => (view.kind === "note" ? state.buffers.get(view.id) ?? null : null));
+  const activeBuffer = useEditorStore((state) =>
+    view.kind === "note" ? (state.buffers.get(view.id) ?? null) : null,
+  );
   const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
   const [busyStar, setBusyStar] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
-  const vaultName = vaultPath ? vaultPath.split(/[\\/]/).filter(Boolean).at(-1) ?? "Vault" : "No vault open";
+  const vaultName = vaultPath
+    ? (vaultPath.split(/[\\/]/).filter(Boolean).at(-1) ?? "Vault")
+    : "No vault open";
 
   const starred = activeBuffer?.frontmatter.starred === true;
 
@@ -45,7 +50,10 @@ export function TopBar() {
         await loadNotes();
       }
     } catch (error) {
-      pushToast({ title: "Failed to toggle star", description: (error as Error).message ?? "Unknown error" });
+      pushToast({
+        title: "Failed to toggle star",
+        description: (error as Error).message ?? "Unknown error",
+      });
     } finally {
       setBusyStar(false);
     }
@@ -63,7 +71,10 @@ export function TopBar() {
       await loadNotes();
       navigate({ kind: "home" });
     } catch (error) {
-      pushToast({ title: "Failed to delete note", description: (error as Error).message ?? "Unknown error" });
+      pushToast({
+        title: "Failed to delete note",
+        description: (error as Error).message ?? "Unknown error",
+      });
     } finally {
       setBusyDelete(false);
     }
@@ -135,10 +146,16 @@ export function TopBar() {
         <CommandIcon size={14} />
         <span>Go to note, command or search…</span>
         <span className="ml-auto flex items-center gap-1" aria-hidden="true">
-          <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">⌘</kbd>
-          <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">K</kbd>
+          <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">
+            ⌘
+          </kbd>
+          <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px] font-medium">
+            K
+          </kbd>
         </span>
       </button>
+
+      <SyncIndicator />
 
       <button
         type="button"
@@ -178,7 +195,10 @@ function Breadcrumb({ vaultName, folder, note, title, onFolderClick }: Breadcrum
   }
 
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 text-[13px] text-[var(--color-noxe-muted)]">
+    <nav
+      aria-label="Breadcrumb"
+      className="flex min-w-0 items-center gap-1 text-[13px] text-[var(--color-noxe-muted)]"
+    >
       <span className="truncate">{vaultName}</span>
       <span aria-hidden="true">/</span>
       <button

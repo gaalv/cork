@@ -10,6 +10,8 @@ use crate::vault::settings::load_vault_settings;
 use crate::vault::VaultState;
 use crate::IpcError;
 
+pub mod remote;
+
 // ── Public types ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize)]
@@ -18,6 +20,8 @@ pub struct VcsStatus {
     pub enabled: bool,
     pub repo_path: Option<PathBuf>,
     pub has_git: bool,
+    pub has_gh: bool,
+    pub remote: Option<remote::RemoteInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -88,7 +92,10 @@ impl VcsState {
     }
 
     /// Spawn a background thread that drains commits older than `debounce_secs`.
-    fn start_background_worker(pending: Arc<Mutex<HashMap<PathBuf, PendingCommit>>>) {
+    fn start_background_worker(
+        pending: Arc<Mutex<HashMap<PathBuf, PendingCommit>>>,
+        remote_inner: Arc<Mutex<remote::RemoteInner>>,
+    ) {
         std::thread::spawn(move || loop {
             std::thread::sleep(Duration::from_secs(1));
             let now = Instant::now();
@@ -106,9 +113,21 @@ impl VcsState {
                     }
                 }
             }
+            let mut any_committed = false;
             for (note_path, vault_root, is_new) in to_commit {
-                if let Err(e) = do_commit(&vault_root, &note_path, is_new) {
-                    eprintln!("noxe vcs: commit failed for {}: {e}", note_path.display());
+                match do_commit(&vault_root, &note_path, is_new) {
+                    Ok(()) => any_committed = true,
+                    Err(e) => {
+                        eprintln!("noxe vcs: commit failed for {}: {e}", note_path.display());
+                    }
+                }
+            }
+            if any_committed {
+                if let Ok(mut g) = remote_inner.lock() {
+                    if g.enabled {
+                        g.push_pending = true;
+                        g.push_queued_at = Some(Instant::now());
+                    }
                 }
             }
         });
@@ -117,9 +136,10 @@ impl VcsState {
 }
 
 /// Spawn the background debounce worker. Call this once during app setup.
-pub fn start_worker(state: &VcsState) {
+pub fn start_worker(state: &VcsState, remote_state: &remote::RemoteState) {
     let pending = Arc::clone(&state.pending);
-    VcsState::start_background_worker(pending);
+    let remote_inner = remote_state.inner_arc();
+    VcsState::start_background_worker(pending, remote_inner);
 }
 
 // ── Git helpers ───────────────────────────────────────────────────────────────
@@ -161,8 +181,11 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     // Write .gitignore
     let gitignore = vault_root.join(".gitignore");
     if !gitignore.exists() {
-        std::fs::write(&gitignore, ".DS_Store\nnode_modules/\ndist/\n.noxe/cache/\n")
-            .map_err(|e| e.to_string())?;
+        std::fs::write(
+            &gitignore,
+            ".DS_Store\nnode_modules/\ndist/\n.noxe/cache/\n.noxe/sync.log\n",
+        )
+        .map_err(|e| e.to_string())?;
     }
 
     // Stage everything and create the initial commit
@@ -232,8 +255,12 @@ fn git_auto_commit_enabled(vault_state: &VaultState) -> bool {
 // ── IPC commands ──────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn vcs_status(state: tauri::State<'_, VaultState>) -> Result<VcsStatus, IpcError> {
+pub fn vcs_status(
+    state: tauri::State<'_, VaultState>,
+    remote_state: tauri::State<'_, remote::RemoteState>,
+) -> Result<VcsStatus, IpcError> {
     let has_git = git_available();
+    let has_gh = remote::gh_available();
     let current = state.current_path();
     let repo_path = current.as_ref().and_then(|p| {
         if p.join(".git").exists() {
@@ -247,11 +274,18 @@ pub fn vcs_status(state: tauri::State<'_, VaultState>) -> Result<VcsStatus, IpcE
         .and_then(|root| load_vault_settings(root).ok())
         .and_then(|s| s.git_auto_commit)
         .unwrap_or(true);
+    let remote_info = if remote_state.is_enabled() {
+        Some(remote_state.snapshot())
+    } else {
+        None
+    };
 
     Ok(VcsStatus {
         enabled,
         repo_path,
         has_git,
+        has_gh,
+        remote: remote_info,
     })
 }
 

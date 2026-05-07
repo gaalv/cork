@@ -25,6 +25,7 @@ import type {
   VaultSettings,
   AppSettings,
   VcsStatus,
+  RemoteInfo,
 } from "./types";
 
 export type TagCount = {
@@ -276,6 +277,18 @@ export type IpcCommandMap = {
   "vcs.restore": {
     args: { notePath: string; sha: string };
     result: void;
+  };
+  "vcs.remoteEnable": {
+    args: { url?: string };
+    result: RemoteInfo;
+  };
+  "vcs.remoteDisable": {
+    args: undefined;
+    result: RemoteInfo;
+  };
+  "vcs.remoteSyncNow": {
+    args: undefined;
+    result: RemoteInfo;
   };
   // === F21 AI Infrastructure ===
   "ai.runSkill": {

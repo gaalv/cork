@@ -15,9 +15,19 @@ pub struct VaultSettings {
     pub auto_rewrite_links_on_rename: Option<bool>,
     /// When `true` (default), save events trigger a local git auto-commit.
     pub git_auto_commit: Option<bool>,
+    /// GitHub remote sync (F26).
+    pub git_remote: Option<GitRemoteSettings>,
     /// User-curated tag library for standalone tag creation. Tags listed here
     /// appear in the Tags drawer even if no note currently uses them.
     pub tag_library: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitRemoteSettings {
+    pub enabled: bool,
+    pub url: Option<String>,
+    pub provider: Option<String>,
 }
 
 pub fn load_vault_settings(vault_root: &Path) -> Result<VaultSettings, IpcError> {
@@ -93,6 +103,7 @@ mod tests {
             offline_mode: None,
             auto_rewrite_links_on_rename: Some(true),
             git_auto_commit: None,
+            git_remote: None,
             tag_library: Some(vec!["draft".to_string(), "review".to_string()]),
         };
 

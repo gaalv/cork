@@ -1,4 +1,16 @@
-export type CommandActionId = "open-vault" | "new-note" | "open-daily" | "open-settings" | "rebuild-index" | "go-home" | "toggle-theme" | "open-graph" | "ai-generate-note" | "open-todos" | "new-todo";
+export type CommandActionId =
+  | "open-vault"
+  | "new-note"
+  | "open-daily"
+  | "open-settings"
+  | "rebuild-index"
+  | "go-home"
+  | "toggle-theme"
+  | "open-graph"
+  | "ai-generate-note"
+  | "open-todos"
+  | "new-todo"
+  | "sync-now";
 
 export type CommandRegistryItem = {
   kind: "command";
@@ -16,7 +28,13 @@ export const commandsRegistry: CommandRegistryItem[] = [
   { kind: "command", id: "new-todo", label: "New todo…", section: "Commands" },
   { kind: "command", id: "ai-generate-note", label: "Generate note with AI…", section: "AI" },
   { kind: "command", id: "open-settings", label: "Open Settings", section: "Commands" },
-  { kind: "command", id: "toggle-theme", label: "Toggle theme (Light · Dark · System)", section: "Commands" },
+  {
+    kind: "command",
+    id: "toggle-theme",
+    label: "Toggle theme (Light · Dark · System)",
+    section: "Commands",
+  },
   { kind: "command", id: "rebuild-index", label: "Rebuild Index", section: "Vault Actions" },
+  { kind: "command", id: "sync-now", label: "Sync now (GitHub)", section: "Vault Actions" },
   { kind: "command", id: "open-vault", label: "Open Vault", section: "Vault Actions" },
 ];

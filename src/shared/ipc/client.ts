@@ -71,6 +71,9 @@ const commandNames: Record<IpcCommandName, string> = {
   "vcs.status": "vcs_status",
   "vcs.history": "vcs_history",
   "vcs.restore": "vcs_restore",
+  "vcs.remoteEnable": "vcs_remote_enable",
+  "vcs.remoteDisable": "vcs_remote_disable",
+  "vcs.remoteSyncNow": "vcs_remote_sync_now",
   // === F21 AI Infrastructure ===
   "ai.runSkill": "ai_run_skill",
   "ai.cacheClear": "ai_cache_clear",
@@ -112,8 +115,12 @@ export const client = {
   },
   assets: {
     setScope: (vaultRoot: string) => invokeCommand("assets.setScope", { vaultRoot }),
-    writeAttachment: (input: { sourcePath?: string; bytes?: number[]; suggestedName: string; vaultRelDir?: string }) =>
-      invokeCommand("assets.writeAttachment", input),
+    writeAttachment: (input: {
+      sourcePath?: string;
+      bytes?: number[];
+      suggestedName: string;
+      vaultRelDir?: string;
+    }) => invokeCommand("assets.writeAttachment", input),
   },
   folders: {
     create: (input: FolderCreateInput) => invokeCommand("folders.create", input),
@@ -129,7 +136,8 @@ export const client = {
     rename: (input: RenameNoteInput) => invokeCommand("notes.rename", input),
     trash: (path: string) => invokeCommand("notes.trash", { path }),
     move: (input: MoveNoteInput) => invokeCommand("notes.move", input),
-    bulkMove: (paths: string[], destFolder: string) => invokeCommand("notes.bulkMove", { paths, destFolder }),
+    bulkMove: (paths: string[], destFolder: string) =>
+      invokeCommand("notes.bulkMove", { paths, destFolder }),
     bulkTrash: (paths: string[]) => invokeCommand("notes.bulkTrash", { paths }),
     bulkSetFrontmatter: (paths: string[], patch: JsonRecord) =>
       invokeCommand("notes.bulkSetFrontmatter", { paths, patch }),
@@ -156,8 +164,12 @@ export const client = {
   },
   vcs: {
     status: () => invokeCommand("vcs.status", undefined),
-    history: (notePath: string, limit?: number) => invokeCommand("vcs.history", { notePath, limit }),
+    history: (notePath: string, limit?: number) =>
+      invokeCommand("vcs.history", { notePath, limit }),
     restore: (notePath: string, sha: string) => invokeCommand("vcs.restore", { notePath, sha }),
+    remoteEnable: (url?: string) => invokeCommand("vcs.remoteEnable", { url }),
+    remoteDisable: () => invokeCommand("vcs.remoteDisable", undefined),
+    remoteSyncNow: () => invokeCommand("vcs.remoteSyncNow", undefined),
   },
   ai: {
     runSkill: (skillId: string, variables: Record<string, string>) =>
@@ -176,11 +188,17 @@ export const client = {
     on: <Name extends IpcEventName>(
       event: Name,
       callback: (payload: IpcEventPayload<Name>) => void,
-    ) => listen<IpcEventPayload<Name>>(event, ({ payload }) => callback(camelize(payload) as IpcEventPayload<Name>)),
+    ) =>
+      listen<IpcEventPayload<Name>>(event, ({ payload }) =>
+        callback(camelize(payload) as IpcEventPayload<Name>),
+      ),
   },
 };
 
-function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommandArgs<Name>): RustArgs {
+function toRustArgs<Name extends IpcCommandName>(
+  command: Name,
+  args: IpcCommandArgs<Name>,
+): RustArgs {
   switch (command) {
     case "health":
     case "vault.current":
@@ -197,6 +215,8 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.rebuild":
     case "notes.starred":
     case "vcs.status":
+    case "vcs.remoteDisable":
+    case "vcs.remoteSyncNow":
     case "folders.list":
     case "links.graph":
     case "ai.skillsReload":
@@ -218,6 +238,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.search":
     case "vcs.history":
     case "vcs.restore":
+    case "vcs.remoteEnable":
       return args as RustArgs;
     case "ai.runSkill": {
       const input = args as { skillId: string; variables: Record<string, string> };
@@ -292,7 +313,9 @@ function camelize(value: unknown): unknown {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype;
+  return (
+    typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype
+  );
 }
 
 function snakeToCamel(value: string): string {

@@ -10,6 +10,7 @@ import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { commandsRegistry } from "@/features/shell/commands/registry";
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { useSyncStore } from "@/features/sync/state/syncStore";
 import { useIndexStore } from "@/features/index/state/indexStore";
 import { useTodosStore } from "@/features/todos/state/todosStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
@@ -19,7 +20,13 @@ import type { TagCount, Todo } from "@/shared/ipc/IpcContract";
 import type { NoteEntry } from "@/shared/ipc/types";
 
 type PaletteItem =
-  | { kind: "note"; id: string; title: string; folder: string; section: "Recents" | "Pinned" | "Notes" }
+  | {
+      kind: "note";
+      id: string;
+      title: string;
+      folder: string;
+      section: "Recents" | "Pinned" | "Notes";
+    }
   | { kind: "tag"; tag: string; count: number; section: "Tags" }
   | { kind: "todo"; id: string; text: string; section: "Todos" }
   | CommandRegistryItem;
@@ -74,7 +81,10 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
   const hasResults = visibleItems.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 pt-[12vh]" onMouseDown={closePalette}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 pt-[12vh]"
+      onMouseDown={closePalette}
+    >
       <Command
         role="dialog"
         aria-modal="true"
@@ -129,7 +139,11 @@ export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
             </Command.Empty>
           )}
           {sections.map(([section, sectionItems]) => (
-            <Command.Group key={section} heading={section} className="p-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]">
+            <Command.Group
+              key={section}
+              heading={section}
+              className="p-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]"
+            >
               {sectionItems.map((item) => (
                 <PaletteRow
                   key={itemKey(item)}
@@ -169,12 +183,28 @@ function PaletteRow({ item, onSelect }: { item: PaletteItem; onSelect: () => voi
   );
 }
 
-function buildPaletteItems(notes: NoteEntry[], recentNotes: NoteEntry[], tags: TagCount[], todos: Todo[]): PaletteItem[] {
-  const recent = (recentNotes.length > 0 ? recentNotes : notes).slice(0, 5).map((note) => toNoteItem(note, "Recents"));
+function buildPaletteItems(
+  notes: NoteEntry[],
+  recentNotes: NoteEntry[],
+  tags: TagCount[],
+  todos: Todo[],
+): PaletteItem[] {
+  const recent = (recentNotes.length > 0 ? recentNotes : notes)
+    .slice(0, 5)
+    .map((note) => toNoteItem(note, "Recents"));
   const pinned = notes.slice(0, 5).map((note) => toNoteItem(note, "Pinned"));
   const allNotes = notes.map((note) => toNoteItem(note, "Notes"));
-  const todoItems: PaletteItem[] = todos.slice(0, 8).map((t) => ({ kind: "todo", id: t.id, text: t.text, section: "Todos" }));
-  return [...todoItems, ...recent, ...pinned, ...commandsRegistry.slice(0, 11), ...tags.slice(0, 5).map(toTagItem), ...allNotes];
+  const todoItems: PaletteItem[] = todos
+    .slice(0, 8)
+    .map((t) => ({ kind: "todo", id: t.id, text: t.text, section: "Todos" }));
+  return [
+    ...todoItems,
+    ...recent,
+    ...pinned,
+    ...commandsRegistry.slice(0, 11),
+    ...tags.slice(0, 5).map(toTagItem),
+    ...allNotes,
+  ];
 }
 
 function filterPaletteItems(items: PaletteItem[], query: string): PaletteItem[] {
@@ -182,7 +212,9 @@ function filterPaletteItems(items: PaletteItem[], query: string): PaletteItem[] 
   if (!trimmed) {
     return dedupeItems(items.filter((item) => item.section !== "Notes"));
   }
-  return fuzzysort.go(trimmed, dedupeItems(items), { key: "search", limit: 30 }).map((result) => result.obj);
+  return fuzzysort
+    .go(trimmed, dedupeItems(items), { key: "search", limit: 30 })
+    .map((result) => result.obj);
 }
 
 function groupItems(items: PaletteItem[], query: string): Array<[string, PaletteItem[]]> {
@@ -190,7 +222,10 @@ function groupItems(items: PaletteItem[], query: string): Array<[string, Palette
     ? ["Todos", "Notes", "Commands", "AI", "Tags", "Vault Actions", "Recents", "Pinned"]
     : ["Todos", "Recents", "Pinned", "Commands", "AI", "Tags", "Vault Actions"];
   return order
-    .map((section) => [section, items.filter((item) => item.section === section)] as [string, PaletteItem[]])
+    .map(
+      (section) =>
+        [section, items.filter((item) => item.section === section)] as [string, PaletteItem[]],
+    )
     .filter(([, sectionItems]) => sectionItems.length > 0);
 }
 
@@ -270,7 +305,9 @@ function runPaletteItem(
   item: PaletteItem,
   actions: {
     closePalette: () => void;
-    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" }) => void;
+    navigate: (
+      view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" },
+    ) => void;
     toggleDrawer: (drawer: "search" | "folders" | "recent" | "starred" | "tags") => void;
     openVault: () => Promise<void>;
     openSettings: () => void;
@@ -296,7 +333,9 @@ function runPaletteItem(
 function runCommand(
   id: CommandActionId,
   actions: {
-    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" }) => void;
+    navigate: (
+      view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" },
+    ) => void;
     openVault: () => Promise<void>;
     openSettings: () => void;
     rebuild: () => Promise<void>;
@@ -332,5 +371,15 @@ function runCommand(
   }
   if (id === "ai-generate-note") {
     useGenerateNoteStore.getState().openModal();
+  }
+  if (id === "sync-now") {
+    void (async () => {
+      try {
+        await useSyncStore.getState().syncNow();
+        toast.success("Sync started");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Sync failed");
+      }
+    })();
   }
 }

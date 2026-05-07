@@ -279,6 +279,9 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 if let Err(e) = crate::vcs::git_init_if_needed(&path) {
                     eprintln!("noxe vcs: git init skipped: {e}");
                 }
+                let remote = app_handle.state::<crate::vcs::remote::RemoteState>();
+                let settings = crate::vault::settings::load_vault_settings(&path).ok();
+                remote.configure(Some(path.clone()), settings.and_then(|s| s.git_remote));
             }
             state.start_watcher(&app_handle)?;
             if let Some(path) = state.current_path() {
@@ -327,6 +330,9 @@ pub async fn vault_open(
         if let Err(e) = crate::vcs::git_init_if_needed(&path) {
             eprintln!("noxe vcs: git init skipped: {e}");
         }
+        let remote = app.state::<crate::vcs::remote::RemoteState>();
+        let settings = crate::vault::settings::load_vault_settings(&path).ok();
+        remote.configure(Some(path.clone()), settings.and_then(|s| s.git_remote));
     }
     state.start_watcher(&app)?;
     let path = state.current_path().ok_or(IpcError::NotFound)?;

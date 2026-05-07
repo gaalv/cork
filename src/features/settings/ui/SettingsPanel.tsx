@@ -6,8 +6,12 @@ import { useIndexStore } from "@/features/index/state/indexStore";
 import { settingsBridge } from "@/features/settings/services/settingsBridge";
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
-import { resolvedVaultSettings, useVaultSettingsStore } from "@/features/settings/state/vaultSettingsStore";
+import {
+  resolvedVaultSettings,
+  useVaultSettingsStore,
+} from "@/features/settings/state/vaultSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { GitHubSyncSection } from "@/features/sync/ui/GitHubSyncSection";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { AboutDialog } from "./AboutDialog";
 import { AiUsageSection } from "./AiUsageSection";
@@ -17,7 +21,11 @@ import { TemplatesSection } from "./TemplatesSection";
 import { Select } from "@/shared/ui/Select";
 
 import type { ChangeEvent } from "react";
-import type { AppSettings, AppearanceTheme, AiProvider } from "@/features/settings/state/settingsTypes";
+import type {
+  AppSettings,
+  AppearanceTheme,
+  AiProvider,
+} from "@/features/settings/state/settingsTypes";
 import type { SettingsSectionId } from "@/features/settings/state/settingsUiStore";
 
 const sections: Array<{ id: SettingsSectionId; label: string }> = [
@@ -76,7 +84,11 @@ export function SettingsPanel() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4" role="presentation" onMouseDown={closeSettings}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4"
+      role="presentation"
+      onMouseDown={closeSettings}
+    >
       <section
         role="dialog"
         aria-modal="true"
@@ -85,8 +97,13 @@ export function SettingsPanel() {
         onMouseDown={(event) => event.stopPropagation()}
       >
         <aside className="border-b border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] p-3 md:border-r md:border-b-0">
-          <div className="mb-3 px-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]">Settings</div>
-          <nav className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible" aria-label="Settings sections">
+          <div className="mb-3 px-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]">
+            Settings
+          </div>
+          <nav
+            className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible"
+            aria-label="Settings sections"
+          >
             {sections.map((section) => (
               <button
                 key={section.id}
@@ -151,7 +168,19 @@ type SectionContext = {
 };
 
 function renderSection(section: SettingsSectionId, context: SectionContext) {
-  const { settings, updateSettings, patchEditor, vaultSettings, hasVaultSettings, applyVaultSettings, vaultPath, pushToast, rebuildIndex, rebuilding, setRebuilding } = context;
+  const {
+    settings,
+    updateSettings,
+    patchEditor,
+    vaultSettings,
+    hasVaultSettings,
+    applyVaultSettings,
+    vaultPath,
+    pushToast,
+    rebuildIndex,
+    rebuilding,
+    setRebuilding,
+  } = context;
   if (section === "about") {
     return <AboutDialog />;
   }
@@ -160,7 +189,11 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-[var(--color-noxe-muted)]">
-          Speed up your workflow with these keyboard shortcuts. Press <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px]">?</kbd> anywhere to revisit this list.
+          Speed up your workflow with these keyboard shortcuts. Press{" "}
+          <kbd className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-kbd)] px-1 text-[10px]">
+            ?
+          </kbd>{" "}
+          anywhere to revisit this list.
         </p>
         <ShortcutsList />
       </div>
@@ -216,7 +249,13 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           label="Line wrap"
           description="Wrap long lines instead of scrolling horizontally."
           scope="app"
-          control={<Toggle checked={settings.editor.lineWrap} label="Line wrap" onChange={(checked) => patchEditor({ lineWrap: checked })} />}
+          control={
+            <Toggle
+              checked={settings.editor.lineWrap}
+              label="Line wrap"
+              onChange={(checked) => patchEditor({ lineWrap: checked })}
+            />
+          }
         />
         <SettingRow
           label="Font family"
@@ -228,7 +267,10 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
               value={settings.editor.fontFamily}
               options={[
                 { value: "system-ui", label: "System UI" },
-                { value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", label: "Monospace" },
+                {
+                  value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                  label: "Monospace",
+                },
                 { value: "Georgia, Cambria, Times New Roman, Times, serif", label: "Serif" },
               ]}
               onChange={(next) => patchEditor({ fontFamily: next })}
@@ -275,7 +317,13 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           label="Show invisibles"
           description="Reserve a display preference for whitespace markers."
           scope="app"
-          control={<Toggle checked={settings.editor.showInvisibles} label="Show invisibles" onChange={(checked) => patchEditor({ showInvisibles: checked })} />}
+          control={
+            <Toggle
+              checked={settings.editor.showInvisibles}
+              label="Show invisibles"
+              onChange={(checked) => patchEditor({ showInvisibles: checked })}
+            />
+          }
         />
       </div>
     );
@@ -291,19 +339,37 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
           label="Callouts"
           description="Render Obsidian-style callout blocks in preview and indexing."
           scope="app"
-          control={<Toggle checked={settings.markdown.callouts} label="Callouts" onChange={(checked) => patchMarkdown({ callouts: checked })} />}
+          control={
+            <Toggle
+              checked={settings.markdown.callouts}
+              label="Callouts"
+              onChange={(checked) => patchMarkdown({ callouts: checked })}
+            />
+          }
         />
         <SettingRow
           label="Footnotes"
           description="Enable Markdown footnote definitions and references."
           scope="app"
-          control={<Toggle checked={settings.markdown.footnotes} label="Footnotes" onChange={(checked) => patchMarkdown({ footnotes: checked })} />}
+          control={
+            <Toggle
+              checked={settings.markdown.footnotes}
+              label="Footnotes"
+              onChange={(checked) => patchMarkdown({ footnotes: checked })}
+            />
+          }
         />
         <SettingRow
           label="Highlights"
           description="Render ==highlight== spans in Markdown preview."
           scope="app"
-          control={<Toggle checked={settings.markdown.highlight} label="Highlights" onChange={(checked) => patchMarkdown({ highlight: checked })} />}
+          control={
+            <Toggle
+              checked={settings.markdown.highlight}
+              label="Highlights"
+              onChange={(checked) => patchMarkdown({ highlight: checked })}
+            />
+          }
         />
       </div>
     );
@@ -313,13 +379,19 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
     const resolved = resolvedVaultSettings(vaultSettings);
     const revealVault = async () => {
       if (!vaultPath) {
-        pushToast({ title: "No vault open", description: "Open a vault before revealing it in the OS." });
+        pushToast({
+          title: "No vault open",
+          description: "Open a vault before revealing it in the OS.",
+        });
         return;
       }
       try {
         await openPath(vaultPath);
       } catch (error) {
-        pushToast({ title: "Could not reveal vault", description: error instanceof Error ? error.message : "Unknown error" });
+        pushToast({
+          title: "Could not reveal vault",
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
       }
     };
 
@@ -327,7 +399,11 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
       <div className="space-y-3">
         <SettingRow
           label="Attachments folder"
-          description={hasVaultSettings ? "Store pasted and dropped files relative to the current vault." : "Open a vault to edit this per-vault setting."}
+          description={
+            hasVaultSettings
+              ? "Store pasted and dropped files relative to the current vault."
+              : "Open a vault to edit this per-vault setting."
+          }
           scope="vault"
           control={
             <input
@@ -379,7 +455,11 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
         />
         <SettingRow
           label="Enable local version history"
-          description={hasVaultSettings ? "Auto-commit note saves to a local git repository inside the vault." : "Open a vault to edit this per-vault setting."}
+          description={
+            hasVaultSettings
+              ? "Auto-commit note saves to a local git repository inside the vault."
+              : "Open a vault to edit this per-vault setting."
+          }
           scope="vault"
           control={
             <input
@@ -394,6 +474,7 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
             />
           }
         />
+        <GitHubSyncSection />
       </div>
     );
   }
@@ -404,9 +485,15 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
       setRebuilding(true);
       try {
         await rebuildIndex();
-        pushToast({ title: "Index rebuild started", description: "Noxe is rebuilding the current vault index." });
+        pushToast({
+          title: "Index rebuild started",
+          description: "Noxe is rebuilding the current vault index.",
+        });
       } catch (error) {
-        pushToast({ title: "Index rebuild failed", description: error instanceof Error ? error.message : "Unknown error" });
+        pushToast({
+          title: "Index rebuild failed",
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
         console.error(error);
       } finally {
         setRebuilding(false);
@@ -436,9 +523,20 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
         />
         <SettingRow
           label="Offline mode"
-          description={hasVaultSettings ? "Prefer locally cached assets for this vault." : "Open a vault to edit this per-vault setting."}
+          description={
+            hasVaultSettings
+              ? "Prefer locally cached assets for this vault."
+              : "Open a vault to edit this per-vault setting."
+          }
           scope="vault"
-          control={<Toggle checked={resolved.offlineMode} label="Offline mode" onChange={setOfflineMode} disabled={!hasVaultSettings} />}
+          control={
+            <Toggle
+              checked={resolved.offlineMode}
+              label="Offline mode"
+              onChange={setOfflineMode}
+              disabled={!hasVaultSettings}
+            />
+          }
         />
       </div>
     );
@@ -448,7 +546,10 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
     const resolved = resolvedVaultSettings(vaultSettings);
     const setDailySetting = (patch: { dailyPathPattern?: string; dailyTemplatePath?: string }) => {
       applyVaultSettings({ ...vaultSettings, ...patch });
-      const [key, value] = patch.dailyPathPattern !== undefined ? ["daily.pathPattern", patch.dailyPathPattern] : ["daily.templatePath", patch.dailyTemplatePath ?? ""];
+      const [key, value] =
+        patch.dailyPathPattern !== undefined
+          ? ["daily.pathPattern", patch.dailyPathPattern]
+          : ["daily.templatePath", patch.dailyTemplatePath ?? ""];
       void settingsBridge.set(key as "daily.pathPattern" | "daily.templatePath", value, "vault");
     };
 
@@ -456,7 +557,11 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
       <div className="space-y-3">
         <SettingRow
           label="Daily note path pattern"
-          description={hasVaultSettings ? "Use date tokens such as YYYY, MM, DD to place daily notes." : "Open a vault to edit this per-vault setting."}
+          description={
+            hasVaultSettings
+              ? "Use date tokens such as YYYY, MM, DD to place daily notes."
+              : "Open a vault to edit this per-vault setting."
+          }
           scope="vault"
           control={
             <input
@@ -472,7 +577,11 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
         />
         <SettingRow
           label="Daily note template"
-          description={hasVaultSettings ? "Optional vault-relative template used when creating a daily note." : "Open a vault to edit this per-vault setting."}
+          description={
+            hasVaultSettings
+              ? "Optional vault-relative template used when creating a daily note."
+              : "Open a vault to edit this per-vault setting."
+          }
           scope="vault"
           control={
             <input
@@ -482,7 +591,9 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
               value={resolved.dailyTemplatePath}
               disabled={!hasVaultSettings}
               placeholder="Templates/Daily.md"
-              onChange={(event) => setDailySetting({ dailyTemplatePath: event.currentTarget.value })}
+              onChange={(event) =>
+                setDailySetting({ dailyTemplatePath: event.currentTarget.value })
+              }
             />
           }
         />
@@ -510,9 +621,7 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
                 { value: "claude", label: "Claude (claude CLI)" },
                 { value: "copilot", label: "Copilot (copilot CLI)" },
               ]}
-              onChange={(next) =>
-                void updateSettings({ ai: { ...settings.ai, provider: next } })
-              }
+              onChange={(next) => void updateSettings({ ai: { ...settings.ai, provider: next } })}
             />
           }
         />
@@ -524,8 +633,26 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
   return <Placeholder title={sections.find((item) => item.id === section)?.label ?? "Settings"} />;
 }
 
-function Toggle({ checked, disabled = false, label, onChange }: { checked: boolean; disabled?: boolean; label: string; onChange: (checked: boolean) => void }) {
-  return <input type="checkbox" aria-label={label} checked={checked} disabled={disabled} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.checked)} />;
+function Toggle({
+  checked,
+  disabled = false,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <input
+      type="checkbox"
+      aria-label={label}
+      checked={checked}
+      disabled={disabled}
+      onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.checked)}
+    />
+  );
 }
 
 function Placeholder({ title }: { title: string }) {

@@ -174,10 +174,23 @@ export type CommitEntry = {
   isoDate: string;
 };
 
+export type SyncStatus = "idle" | "syncing" | "error";
+
+export type RemoteInfo = {
+  enabled: boolean;
+  url: string | null;
+  syncStatus: SyncStatus;
+  lastPush: string | null;
+  lastPull: string | null;
+  lastError: string | null;
+};
+
 export type VcsStatus = {
   enabled: boolean;
   repoPath: string | null;
   hasGit: boolean;
+  hasGh: boolean;
+  remote: RemoteInfo | null;
 };
 
 export type AiProvider = "disabled" | "claude" | "copilot";
