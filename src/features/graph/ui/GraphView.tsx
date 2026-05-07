@@ -201,26 +201,25 @@ export function GraphView() {
                 const dim = filterTrim !== "" && !matches(node);
                 const radius = NODE_RADIUS + Math.min(8, Math.sqrt(node.linkCount));
                 return (
-                  <g
-                    key={node.id}
-                    transform={`translate(${node.x}, ${node.y})`}
-                    style={{ cursor: "pointer", opacity: dim ? 0.2 : 1 }}
-                    onMouseEnter={() => setHovered(node.id)}
-                    onMouseLeave={() => setHovered((current) => (current === node.id ? null : current))}
-                    onClick={() => navigate({ kind: "note", id: node.id })}
-                  >
+                  <g key={node.id} style={{ cursor: "pointer", opacity: dim ? 0.2 : 1 }}>
                     <circle
+                      cx={node.x}
+                      cy={node.y}
                       r={radius}
                       fill="currentColor"
                       className={isHovered ? "text-[var(--color-noxe-primary)]" : "text-[var(--color-noxe-ink)]"}
+                      onMouseEnter={() => setHovered(node.id)}
+                      onMouseLeave={() => setHovered((current) => (current === node.id ? null : current))}
+                      onClick={() => navigate({ kind: "note", id: node.id })}
                     />
                     {isHovered || (filterTrim !== "" && matches(node)) ? (
                       <text
-                        x={radius + 4}
-                        y={4}
+                        x={node.x + radius + 4}
+                        y={node.y + 4}
                         fontSize={12}
                         fill="currentColor"
                         className="text-[var(--color-noxe-ink)]"
+                        pointerEvents="none"
                       >
                         {node.title}
                       </text>
