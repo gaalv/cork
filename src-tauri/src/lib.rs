@@ -91,7 +91,9 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let quick = MenuItemBuilder::with_id("tray:quick-capture", "Quick capture")
         .accelerator("CmdOrCtrl+Shift+I")
         .build(app)?;
-    let todos = MenuItemBuilder::with_id("tray:open-todos", "Open Todos").build(app)?;
+    let todos = MenuItemBuilder::with_id("tray:open-todos", "Open Todos")
+        .accelerator("CmdOrCtrl+Shift+T")
+        .build(app)?;
     let show = MenuItemBuilder::with_id("tray:show", "Show Noxe").build(app)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItemBuilder::with_id("tray:quit", "Quit Noxe").build(app)?;
@@ -142,6 +144,19 @@ fn register_quick_capture_shortcut(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+fn register_open_todos_shortcut(app: &AppHandle) -> Result<(), String> {
+    let shortcut = Shortcut::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyT);
+    let app_for_handler = app.clone();
+    app.global_shortcut()
+        .on_shortcut(shortcut, move |_, _, event| {
+            if event.state == ShortcutState::Pressed {
+                trigger_open_todos(&app_for_handler);
+            }
+        })
+        .map_err(|err| err.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -181,6 +196,9 @@ pub fn run() {
             build_tray(app.handle())?;
             if let Err(err) = register_quick_capture_shortcut(app.handle()) {
                 eprintln!("noxe: failed to register global shortcut: {err}");
+            }
+            if let Err(err) = register_open_todos_shortcut(app.handle()) {
+                eprintln!("noxe: failed to register open-todos shortcut: {err}");
             }
             Ok(())
         })
