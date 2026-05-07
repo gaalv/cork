@@ -6,6 +6,7 @@ import { useFolderTree } from "@/features/drawers/hooks/useFolderTree";
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
+import { Select } from "@/shared/ui/Select";
 
 import type { FolderTreeNode } from "@/features/drawers/hooks/useFolderTree";
 
@@ -31,7 +32,13 @@ function GenerateNoteModalInner() {
   const provider = useAppSettingsStore((s) => s.settings.ai?.provider ?? "disabled");
   const openSettings = useSettingsUiStore((s) => s.openSettings);
   const tree = useFolderTree();
-  const folderOptions = useMemo(() => ["", ...flatten(tree)].sort(), [tree]);
+  const folderOptions = useMemo(
+    () =>
+      ["", ...flatten(tree)]
+        .sort()
+        .map((path) => ({ value: path, label: path === "" ? "Inbox (root)" : path })),
+    [tree],
+  );
   const defaultFolder = useDrawersStore.getState().selectedFolder ?? "";
 
   const [topic, setTopic] = useState("");
@@ -132,18 +139,16 @@ function GenerateNoteModalInner() {
                 <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-noxe-muted)]">
                   Folder
                 </span>
-                <select
-                  value={folder}
-                  onChange={(event) => setFolder(event.currentTarget.value)}
-                  className="mt-1 w-full rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)] px-2 py-1.5 text-sm outline-none"
-                  disabled={status === "loading"}
-                >
-                  {folderOptions.map((path) => (
-                    <option key={path || "/"} value={path}>
-                      {path === "" ? "Inbox (root)" : path}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <Select<string>
+                    ariaLabel="Folder"
+                    value={folder}
+                    options={folderOptions}
+                    onChange={(next) => setFolder(next)}
+                    disabled={status === "loading"}
+                    className="w-full"
+                  />
+                </div>
               </label>
 
               {error ? (

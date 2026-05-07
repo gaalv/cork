@@ -74,7 +74,7 @@ describe("generateNoteStore", () => {
     useGenerateNoteStore.setState({ open: true });
     await useGenerateNoteStore.getState().generate({ topic: "Hi", folder: "Inbox" });
 
-    expect(skillsClientMock.runSkill).toHaveBeenCalledWith("generate-note", { topic: "Hi" });
+    expect(skillsClientMock.runSkill).toHaveBeenCalledWith("generate-note", { topic: "Hi", context: "" });
     expect(ipcClientMock.client.notes.create).toHaveBeenCalledWith({ folder: "Inbox", title: "Hi" });
     expect(ipcClientMock.client.notes.save).toHaveBeenCalledWith({
       path: "Inbox/Hi.md",

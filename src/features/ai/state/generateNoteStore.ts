@@ -49,7 +49,7 @@ export const useGenerateNoteStore = create<GenerateNoteState>((set, get) => ({
 
     set({ status: "loading", error: null });
     try {
-      const result = await runSkill("generate-note", { topic: trimmedTopic });
+      const result = await runSkill("generate-note", { topic: trimmedTopic, context: "" });
       const created = await client.notes.create({ folder, title: trimmedTopic });
       await client.notes.save({
         path: created.path,

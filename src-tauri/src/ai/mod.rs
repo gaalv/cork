@@ -159,7 +159,7 @@ fn current_provider(app: &AppHandle) -> String {
 
 /// Run a registered skill end-to-end (cache → spawn → telemetry).
 #[tauri::command]
-pub fn ai_run_skill(
+pub async fn ai_run_skill(
     input: RunSkillInput,
     state: State<'_, AiState>,
     app: AppHandle,
