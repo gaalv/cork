@@ -88,6 +88,14 @@ const commandNames: Record<IpcCommandName, string> = {
 
 type RustArgs = Record<string, unknown> | undefined;
 
+function ipcErrorKind(err: unknown): string | undefined {
+  if (err && typeof err === "object") {
+    const obj = err as { kind?: unknown };
+    if (typeof obj.kind === "string") return obj.kind;
+  }
+  return undefined;
+}
+
 function ipcErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
@@ -112,7 +120,12 @@ export async function invokeCommand<Name extends IpcCommandName>(
     return await invoke<IpcCommandResult<Name>>(commandNames[command], toRustArgs(command, args));
   } catch (err) {
     const message = ipcErrorMessage(err);
-    emitIpcError({ topic: command, message });
+    const kind = ipcErrorKind(err);
+    // NotFound is a control-flow signal (missing note, no recent files,
+    // no starred, etc.). Callers handle it explicitly — do not toast.
+    if (kind !== "NotFound") {
+      emitIpcError({ topic: command, message });
+    }
     if (err instanceof Error) throw err;
     throw new Error(message);
   }
