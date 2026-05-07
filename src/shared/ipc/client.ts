@@ -88,6 +88,22 @@ const commandNames: Record<IpcCommandName, string> = {
 
 type RustArgs = Record<string, unknown> | undefined;
 
+function ipcErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const obj = err as { message?: unknown; kind?: unknown };
+    if (typeof obj.message === "string") return obj.message;
+    if (typeof obj.kind === "string") return obj.kind;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return String(err);
+    }
+  }
+  return String(err);
+}
+
 export async function invokeCommand<Name extends IpcCommandName>(
   command: Name,
   args: IpcCommandArgs<Name>,
@@ -95,9 +111,10 @@ export async function invokeCommand<Name extends IpcCommandName>(
   try {
     return await invoke<IpcCommandResult<Name>>(commandNames[command], toRustArgs(command, args));
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = ipcErrorMessage(err);
     emitIpcError({ topic: command, message });
-    throw err;
+    if (err instanceof Error) throw err;
+    throw new Error(message);
   }
 }
 
