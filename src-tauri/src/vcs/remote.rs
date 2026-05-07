@@ -610,19 +610,34 @@ fn enable_remote_blocking(
         );
         let _ = run_git(
             &vault_root,
-            &["config", "--local", "--remove-section", "http \"https://github.com/\""],
+            &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
+        );
+        let _ = run_git(
+            &vault_root,
+            &["config", "--local", "--remove-section", "http.https://github.com/"],
         );
 
         if let Some(t) = token {
-            // Disable inherited credential helpers and use an explicit
-            // Authorization header for github.com. This bypasses
-            // osxkeychain / the gh credential helper entirely so the
-            // user-supplied PAT is actually used.
+            // Disable inherited credential helpers — both the URL-less form
+            // and the URL-specific one that `gh auth setup-git` writes
+            // (otherwise gh's helper still answers for github.com URLs and
+            // overrides our token with the active gh account, which on this
+            // machine is the enterprise one and produces 403s).
             let _ = run_git(
                 &vault_root,
                 &["config", "--local", "credential.helper", ""],
             );
-            let header = format!("AUTHORIZATION: Bearer {t}");
+            let _ = run_git(
+                &vault_root,
+                &["config", "--local", "credential.https://github.com.helper", ""],
+            );
+            // GitHub's git HTTPS endpoint expects HTTP Basic auth with
+            // `x-access-token:<PAT>` base64-encoded. This is the exact
+            // format actions/checkout uses.
+            use base64::Engine as _;
+            let basic = base64::engine::general_purpose::STANDARD
+                .encode(format!("x-access-token:{t}"));
+            let header = format!("AUTHORIZATION: basic {basic}");
             run_git_check(
                 &vault_root,
                 &[
@@ -652,7 +667,11 @@ fn enable_remote_blocking(
         );
         let _ = run_git(
             &vault_root,
-            &["config", "--local", "--remove-section", "http \"https://github.com/\""],
+            &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
+        );
+        let _ = run_git(
+            &vault_root,
+            &["config", "--local", "--remove-section", "http.https://github.com/"],
         );
         let auth = Command::new("gh")
             .args(["auth", "status"])
@@ -709,7 +728,11 @@ pub async fn vcs_remote_disable(
         );
         let _ = run_git(
             &vault_root_for_blocking,
-            &["config", "--local", "--remove-section", "http \"https://github.com/\""],
+            &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
+        );
+        let _ = run_git(
+            &vault_root_for_blocking,
+            &["config", "--local", "--remove-section", "http.https://github.com/"],
         );
     })
     .await
