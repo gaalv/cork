@@ -9,7 +9,6 @@ import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNot
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { resolveNoteIcon } from "@/shared/ui/noteIcons";
-import { cn } from "@/shared/utils/cn";
 
 import { FolderNode } from "./FolderNode";
 
@@ -83,14 +82,10 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
           onClick={() => selectFolder(null)}
           aria-pressed={inboxSelected}
           aria-label="Inbox"
-          className={cn(
-            "group flex w-full items-center gap-1 rounded-md py-1 pr-1 pl-1 text-left text-sm hover:bg-[var(--color-noxe-panel-2)]",
-            inboxSelected && "bg-[var(--color-noxe-panel-2)] ring-1 ring-[var(--color-noxe-ring)]",
-          )}
+          className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)]"
         >
-          <span className="grid h-5 w-4 shrink-0 place-items-center" aria-hidden />
-          <Tray size={14} weight="duotone" className="shrink-0 text-[var(--color-noxe-muted)]" />
-          <span className="min-w-0 flex-1 truncate text-[var(--color-noxe-ink)]">Inbox</span>
+          <Tray size={15} weight="duotone" className="shrink-0 text-[var(--color-noxe-muted)]" />
+          <span className="min-w-0 flex-1 truncate font-medium">Inbox</span>
           <span className="ml-1 text-[11px] text-[var(--color-noxe-muted)]">{rootNotes.length}</span>
         </button>
         {inboxSelected && rootNotes.length > 0 ? (

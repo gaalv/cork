@@ -42,10 +42,7 @@ export function FolderNode({ node, depth = 0, onOpenNote }: FolderNodeProps) {
   return (
     <li role="treeitem" aria-expanded={hasChildren || hasNotes ? expanded : undefined} aria-level={depth + 1} aria-selected={selected}>
       <div
-        className={cn(
-          "group relative flex w-full items-center gap-1 rounded-md py-1 pr-1 text-left text-sm hover:bg-[var(--color-noxe-panel-2)]",
-          selected && "bg-[var(--color-noxe-panel-2)] ring-1 ring-[var(--color-noxe-ring)]",
-        )}
+        className="group relative flex w-full items-center gap-1 rounded-md py-1 pr-1 text-left text-sm hover:bg-[var(--color-noxe-panel-2)]"
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
       >
         <button
