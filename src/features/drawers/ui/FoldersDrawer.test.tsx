@@ -6,7 +6,30 @@ import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import { FoldersDrawer } from "./FoldersDrawer";
 
+const { clientMock } = vi.hoisted(() => ({
+  clientMock: {
+    folders: {
+      list: vi.fn(),
+      create: vi.fn(),
+      rename: vi.fn(),
+      move: vi.fn(),
+      trash: vi.fn(),
+    },
+    notes: {
+      create: vi.fn(),
+      bulkMove: vi.fn(),
+      bulkTrash: vi.fn(),
+      bulkSetFrontmatter: vi.fn(),
+    },
+    events: { on: vi.fn() },
+  },
+}));
+
+vi.mock("@/shared/ipc/client", () => ({ client: clientMock }));
+
 beforeEach(() => {
+  clientMock.folders.list.mockReset().mockResolvedValue([]);
+  clientMock.events.on.mockReset().mockResolvedValue(vi.fn());
   useDrawersStore.setState({
     expandedFolders: new Set<string>(),
     expandedTags: new Set<string>(),

@@ -60,7 +60,7 @@ export function FolderNode({ node, depth = 0, onOpenNote }: FolderNodeProps) {
           <CaretRight size={12} weight="bold" className={cn("transition-transform", expanded && "rotate-90")} />
         </button>
         {isOpen ? (
-          <FolderOpen size={14} weight="duotone" className="shrink-0 text-[var(--color-noxe-accent)]" />
+          <FolderOpen size={14} weight="duotone" className="shrink-0 text-[var(--color-noxe-muted)]" />
         ) : (
           <Folder size={14} weight="duotone" className="shrink-0 text-[var(--color-noxe-muted)]" />
         )}

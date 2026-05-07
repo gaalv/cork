@@ -92,7 +92,7 @@ export function TopBar() {
       {view.kind === "note" && (
         <Breadcrumb
           vaultName={vaultName}
-          folder={activeNote?.folder ?? "Vault"}
+          folder={activeNote?.folder ? activeNote.folder : "Inbox"}
           note={activeNote ?? null}
           title={activeNote?.title ?? "Untitled"}
           onFolderClick={() => toggleDrawer("folders")}
@@ -205,7 +205,7 @@ function Breadcrumb({ vaultName, folder, note, title, onFolderClick }: Breadcrum
         onClick={onFolderClick}
         className="truncate rounded px-1 py-0.5 hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
       >
-        {folder || "Vault"}
+        {folder || "Inbox"}
       </button>
       <span aria-hidden="true">/</span>
       {editing ? (

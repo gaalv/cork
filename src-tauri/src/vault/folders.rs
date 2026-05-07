@@ -27,6 +27,48 @@ pub enum FolderChangeKind {
 }
 
 #[tauri::command]
+pub fn folders_list(state: tauri::State<'_, VaultState>) -> Result<Vec<String>, IpcError> {
+    let root = state.current_path().ok_or(IpcError::NotFound)?;
+    let root = root.canonicalize()?;
+    let mut folders: Vec<String> = Vec::new();
+    for entry in walkdir::WalkDir::new(&root)
+        .follow_links(false)
+        .min_depth(1)
+        .into_iter()
+        .filter_entry(|entry| {
+            let name = entry.file_name().to_str().unwrap_or("");
+            !name.starts_with('.')
+        })
+    {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(err) => return Err(IpcError::Io(err.to_string())),
+        };
+        if !entry.file_type().is_dir() {
+            continue;
+        }
+        let rel = match entry.path().strip_prefix(&root) {
+            Ok(rel) => rel,
+            Err(_) => continue,
+        };
+        let slash: String = rel
+            .components()
+            .filter_map(|c| match c {
+                std::path::Component::Normal(name) => name.to_str().map(|s| s.to_string()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("/");
+        if !slash.is_empty() {
+            folders.push(slash);
+        }
+    }
+    folders.sort();
+    folders.dedup();
+    Ok(folders)
+}
+
+#[tauri::command]
 pub fn folders_create(
     app: AppHandle,
     state: tauri::State<'_, VaultState>,

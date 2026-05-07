@@ -149,6 +149,10 @@ export type IpcCommandMap = {
     args: { path: string };
     result: void;
   };
+  "folders.list": {
+    args: undefined;
+    result: string[];
+  };
   "notes.read": {
     args: { path: string };
     result: NoteFile;

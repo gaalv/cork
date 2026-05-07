@@ -194,6 +194,7 @@ pub fn run() {
             assets::assets_set_scope,
             assets::assets_write_attachment,
             // === F12 Folder Ops ===
+            vault::folders::folders_list,
             vault::folders::folders_create,
             vault::folders::folders_rename,
             vault::folders::folders_move,

@@ -58,7 +58,7 @@ export function FoldersDrawer({ onOpenNote }: FoldersDrawerProps) {
     }
   }
 
-  if (notes.length === 0) {
+  if (notes.length === 0 && tree.length === 0) {
     return (
       <section className="space-y-3">
         <DrawerToolbar busy={busy} onNewFolder={() => void createRootFolder()} onNewNote={() => void newInboxNote()} />

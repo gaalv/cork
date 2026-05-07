@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { client } from "@/shared/ipc/client";
 
 import type { NoteEntry } from "@/shared/ipc/types";
+
+const HIDDEN_FOLDERS = new Set(["Templates"]);
 
 export type FolderTreeNode = {
   id: string;
@@ -19,15 +22,78 @@ type MutableFolderTreeNode = FolderTreeNode & {
 
 export function useFolderTree(): FolderTreeNode[] {
   const notes = useVaultStore((state) => state.notes);
-  return useMemo(() => buildFolderTree(notes), [notes]);
+  const [folders, setFolders] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const result = await client.folders.list();
+        if (!cancelled) {
+          setFolders(result);
+        }
+      } catch {
+        if (!cancelled) {
+          setFolders([]);
+        }
+      }
+    };
+    void load();
+
+    let unlistenFn: (() => void) | undefined;
+    void client.events.on("vault:folderChanged", () => {
+      void load();
+    }).then((fn) => {
+      if (cancelled) {
+        fn();
+      } else {
+        unlistenFn = fn;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unlistenFn?.();
+    };
+  }, []);
+
+  return useMemo(() => buildFolderTree(notes, folders), [notes, folders]);
 }
 
-export function buildFolderTree(notes: NoteEntry[]): FolderTreeNode[] {
+export function buildFolderTree(notes: NoteEntry[], extraFolders: string[] = []): FolderTreeNode[] {
   const roots = new Map<string, MutableFolderTreeNode>();
+
+  function ensurePath(folderPath: string): MutableFolderTreeNode | null {
+    const segments = folderPath.split("/").filter(Boolean);
+    if (segments.length === 0) return null;
+    if (HIDDEN_FOLDERS.has(segments[0])) return null;
+    let siblings = roots;
+    let current: MutableFolderTreeNode | null = null;
+    let currentPath = "";
+    for (const segment of segments) {
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+      const existing = siblings.get(segment);
+      if (existing) {
+        current = existing;
+      } else {
+        current = createNode(segment, currentPath);
+        siblings.set(segment, current);
+      }
+      siblings = current.childrenByName;
+    }
+    return current;
+  }
+
+  for (const folder of extraFolders) {
+    ensurePath(folder);
+  }
 
   for (const note of notes) {
     const segments = note.folder.split("/").filter(Boolean);
     if (segments.length === 0) {
+      continue;
+    }
+    if (HIDDEN_FOLDERS.has(segments[0])) {
       continue;
     }
     let siblings = roots;

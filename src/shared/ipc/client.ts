@@ -43,6 +43,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "folders.rename": "folders_rename",
   "folders.move": "folders_move",
   "folders.trash": "folders_trash",
+  "folders.list": "folders_list",
   "notes.read": "notes_read",
   "notes.save": "notes_save",
   "notes.create": "notes_create",
@@ -111,6 +112,7 @@ export const client = {
     rename: (input: FolderRenameInput) => invokeCommand("folders.rename", input),
     move: (input: FolderMoveInput) => invokeCommand("folders.move", input),
     trash: (path: string) => invokeCommand("folders.trash", { path }),
+    list: () => invokeCommand("folders.list", undefined),
   },
   notes: {
     read: (path: string) => invokeCommand("notes.read", { path }),
@@ -177,6 +179,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "index.rebuild":
     case "notes.starred":
     case "vcs.status":
+    case "folders.list":
       return undefined;
     case "vault.open":
     case "vault.removeRecent":

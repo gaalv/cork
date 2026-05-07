@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X } from "@phosphor-icons/react";
+import { Plus } from "@phosphor-icons/react";
 
 import { useTagTree } from "@/features/drawers/hooks/useTagTree";
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
@@ -20,7 +20,6 @@ export function TagsDrawer({ onOpenNote }: TagsDrawerProps) {
   const selectTag = useDrawersStore((state) => state.selectTag);
   const libraryTags = useVaultSettingsStore((state) => state.settings.tagLibrary);
   const addLibraryTag = useVaultSettingsStore((state) => state.addLibraryTag);
-  const removeLibraryTag = useVaultSettingsStore((state) => state.removeLibraryTag);
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [draftTag, setDraftTag] = useState("");
   const [creating, setCreating] = useState(false);
@@ -100,37 +99,6 @@ export function TagsDrawer({ onOpenNote }: TagsDrawerProps) {
         </button>
       </form>
       {createError ? <p className="text-[11px] text-red-600">{createError}</p> : null}
-
-      {libraryTags && libraryTags.length > 0 && (
-        <div>
-          <h3 className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-noxe-muted)]">Library</h3>
-          <ul className="flex flex-wrap gap-1">
-            {libraryTags.map((tag) => (
-              <li
-                key={`lib-${tag}`}
-                className="group inline-flex items-center gap-1 rounded-full border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] px-2 py-0.5 text-[11px] text-[var(--color-noxe-muted)]"
-              >
-                <button
-                  type="button"
-                  onClick={() => selectTag(tag)}
-                  className="hover:text-[var(--color-noxe-ink)] focus-visible:outline-none"
-                >
-                  #{tag}
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Remove ${tag} from library`}
-                  title="Remove from library"
-                  onClick={() => void removeLibraryTag(tag)}
-                  className="rounded-full p-0.5 opacity-0 transition-opacity hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 group-hover:opacity-100"
-                >
-                  <X size={10} weight="bold" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {tree.length === 0 ? (
         <p className="text-sm text-[var(--color-noxe-muted)]">

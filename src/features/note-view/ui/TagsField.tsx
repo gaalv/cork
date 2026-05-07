@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { Plus, X } from "@phosphor-icons/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CaretDown, Check, Plus, X } from "@phosphor-icons/react";
 
 import { useEditorStore } from "@/features/editor/state/editorStore";
+import { useTagTree } from "@/features/drawers/hooks/useTagTree";
+import { useVaultSettingsStore, normalizeTagName } from "@/features/settings/state/vaultSettingsStore";
 
 type TagsFieldProps = {
   noteId: string | null;
@@ -33,42 +35,76 @@ function normalize(raw: string): string | null {
   return trimmed;
 }
 
+function flattenTree(nodes: ReturnType<typeof useTagTree>["tree"]): string[] {
+  const result: string[] = [];
+  function walk(list: typeof nodes) {
+    for (const node of list) {
+      result.push(node.tag);
+      if (node.children.length > 0) walk(node.children);
+    }
+  }
+  walk(nodes);
+  return result;
+}
+
 export function TagsField({ noteId }: TagsFieldProps) {
   const buffer = useEditorStore((state) => (noteId ? state.buffers.get(noteId) ?? null : null));
   const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
-  const [draft, setDraft] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const { tree } = useTagTree();
+  const addLibraryTag = useVaultSettingsStore((state) => state.addLibraryTag);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const tags = readTags(buffer?.frontmatter.tags);
+  const allTags = useMemo(() => Array.from(new Set(flattenTree(tree))).sort(), [tree]);
+  const tagSet = useMemo(() => new Set(tags), [tags]);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allTags;
+    return allTags.filter((t) => t.toLowerCase().includes(q));
+  }, [allTags, search]);
+  const normalizedSearch = normalizeTagName(search);
+  const canCreate = Boolean(normalizedSearch) && !allTags.includes(normalizedSearch);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
 
   if (!noteId || !buffer) {
     return null;
   }
 
-  const tags = readTags(buffer.frontmatter.tags);
-
-  function commit(raw: string) {
-    if (!noteId) {
-      return;
-    }
-    const value = normalize(raw);
-    if (!value) {
-      setError("Tags can't contain spaces.");
-      return;
-    }
-    if (tags.includes(value)) {
-      setError("Tag already added.");
-      return;
-    }
-    setError(null);
-    updateFrontmatter(noteId, { tags: [...tags, value] });
-    setDraft("");
+  function toggle(tag: string) {
+    if (!noteId) return;
+    const next = tagSet.has(tag) ? tags.filter((t) => t !== tag) : [...tags, tag];
+    updateFrontmatter(noteId, { tags: next });
   }
 
   function remove(tag: string) {
-    if (!noteId) {
-      return;
+    if (!noteId) return;
+    updateFrontmatter(noteId, { tags: tags.filter((t) => t !== tag) });
+  }
+
+  async function createAndApply() {
+    if (!normalizedSearch || !noteId) return;
+    try {
+      await addLibraryTag(normalizedSearch);
+    } catch {
+      // ignore — still apply
     }
-    const next = tags.filter((entry) => entry !== tag);
-    updateFrontmatter(noteId, { tags: next });
+    if (!tagSet.has(normalizedSearch)) {
+      updateFrontmatter(noteId, { tags: [...tags, normalizedSearch] });
+    }
+    setSearch("");
   }
 
   return (
@@ -92,35 +128,64 @@ export function TagsField({ noteId }: TagsFieldProps) {
           </span>
         ))}
       </div>
-      <form
-        className="flex items-center gap-1"
-        onSubmit={(event) => {
-          event.preventDefault();
-          commit(draft);
-        }}
-      >
-        <input
-          type="text"
-          aria-label="New tag"
-          placeholder="Add tag…"
-          value={draft}
-          onChange={(event) => {
-            setDraft(event.currentTarget.value);
-            if (error) {
-              setError(null);
-            }
-          }}
-          className="flex-1 rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] px-2 py-1 text-xs text-[var(--color-noxe-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)]"
-        />
+      <div ref={containerRef} className="relative">
         <button
-          type="submit"
-          aria-label="Add tag"
-          className="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] p-1 text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)]"
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] px-2 py-1 text-xs text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
         >
-          <Plus size={12} weight="bold" />
+          <span>Add tag…</span>
+          <CaretDown size={12} weight="bold" />
         </button>
-      </form>
-      {error ? <p className="text-[11px] text-red-500">{error}</p> : null}
+        {open ? (
+          <div className="absolute z-20 mt-1 w-full rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] shadow-lg">
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.currentTarget.value)}
+              placeholder="Search or create…"
+              aria-label="Search tags"
+              className="w-full border-b border-[var(--color-noxe-border)] bg-transparent px-2 py-1 text-xs text-[var(--color-noxe-ink)] outline-none placeholder:text-[var(--color-noxe-muted)]"
+            />
+            <ul role="listbox" className="max-h-48 overflow-y-auto py-1">
+              {filtered.length === 0 && !canCreate ? (
+                <li className="px-2 py-1 text-[11px] text-[var(--color-noxe-muted)]">No tags found.</li>
+              ) : null}
+              {filtered.map((tag) => {
+                const checked = tagSet.has(tag);
+                return (
+                  <li key={tag}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={checked}
+                      onClick={() => toggle(tag)}
+                      className="flex w-full items-center justify-between gap-2 px-2 py-1 text-left text-xs text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)]"
+                    >
+                      <span className="truncate">#{tag}</span>
+                      {checked ? <Check size={12} weight="bold" className="text-[var(--color-noxe-accent)]" /> : null}
+                    </button>
+                  </li>
+                );
+              })}
+              {canCreate ? (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => void createAndApply()}
+                    className="flex w-full items-center gap-2 border-t border-[var(--color-noxe-border)] px-2 py-1 text-left text-xs text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)]"
+                  >
+                    <Plus size={12} weight="bold" />
+                    Create &amp; add &quot;#{normalizedSearch}&quot;
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
