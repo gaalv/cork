@@ -53,7 +53,7 @@ export function SyncIndicator() {
       type="button"
       title={label}
       aria-label={label}
-      onClick={() => openSettings("files")}
+      onClick={() => openSettings("sync")}
       className={`rounded-full p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none ${className}`}
     >
       <Icon size={16} weight={weight} />

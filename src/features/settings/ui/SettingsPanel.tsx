@@ -36,6 +36,7 @@ const sections: Array<{ id: SettingsSectionId; label: string }> = [
   { id: "daily", label: "Daily Notes" },
   { id: "templates", label: "Templates" },
   { id: "ai", label: "AI" },
+  { id: "sync", label: "Sync" },
   { id: "advanced", label: "Advanced" },
   { id: "shortcuts", label: "Shortcuts" },
   { id: "about", label: "About" },
@@ -474,6 +475,13 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
             />
           }
         />
+      </div>
+    );
+  }
+
+  if (section === "sync") {
+    return (
+      <div className="space-y-3">
         <GitHubSyncSection />
       </div>
     );
