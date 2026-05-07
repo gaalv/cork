@@ -22,7 +22,7 @@ export function HomeView() {
   const isEmpty = !sections.isLoading && sections.allPage.length === 0 && sections.recents.length === 0;
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 lg:p-10" data-testid="home-view">
+    <main className="h-full min-h-0 flex-1 overflow-y-auto p-6 lg:p-10" data-testid="home-view">
       {sections.isLoading && sections.allPage.length === 0 ? (
         <HomeSkeletons />
       ) : (
