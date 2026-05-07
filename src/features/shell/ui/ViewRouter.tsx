@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { CalendarView } from "@/features/calendar/ui/CalendarView";
+import { GraphView } from "@/features/graph/ui/GraphView";
 import { HomeView } from "@/features/home/ui/HomeView";
 import { NoteView } from "@/features/note-view/ui/NoteView";
 
@@ -42,6 +43,10 @@ export function ViewRouter() {
 
   if (view.kind === "calendar") {
     return <CalendarView />;
+  }
+
+  if (view.kind === "graph") {
+    return <GraphView />;
   }
 
   return <HomeView />;

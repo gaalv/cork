@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ShellView = { kind: "home" } | { kind: "note"; id: string } | { kind: "calendar" };
+export type ShellView = { kind: "home" } | { kind: "note"; id: string } | { kind: "calendar" } | { kind: "graph" };
 export type DrawerId = "search" | "folders" | "recent" | "starred" | "tags";
 export type ToastMessage = {
   id: string;
@@ -191,7 +191,7 @@ function isShellView(value: unknown): value is ShellView {
   if (typeof value !== "object" || value === null || !("kind" in value)) {
     return false;
   }
-  if (value.kind === "home" || value.kind === "calendar") {
+  if (value.kind === "home" || value.kind === "calendar" || value.kind === "graph") {
     return true;
   }
   return value.kind === "note" && "id" in value && typeof value.id === "string";

@@ -1,4 +1,4 @@
-import { CalendarBlank, ClockCounterClockwise, FolderSimple, GearSix, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
+import { CalendarBlank, ClockCounterClockwise, FolderSimple, GearSix, GraphIcon, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
 
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -12,11 +12,11 @@ type RailProps = {
 };
 
 const drawerButtons: Array<{ id: DrawerId; label: string; icon: ReactNode }> = [
-  { id: "search", label: "Search", icon: <MagnifyingGlass size={18} /> },
   { id: "folders", label: "Folders", icon: <FolderSimple size={18} /> },
-  { id: "recent", label: "Recent", icon: <ClockCounterClockwise size={18} /> },
+  { id: "search", label: "Search", icon: <MagnifyingGlass size={18} /> },
   { id: "starred", label: "Starred", icon: <Star size={18} /> },
   { id: "tags", label: "Tags", icon: <Hash size={18} /> },
+  { id: "recent", label: "Recent", icon: <ClockCounterClockwise size={18} /> },
 ];
 
 export function Rail({ className }: RailProps) {
@@ -41,12 +41,6 @@ export function Rail({ className }: RailProps) {
           active={view.kind === "home" && drawer === null}
           onClick={() => navigate({ kind: "home" })}
         />
-        <RailButton
-          icon={<CalendarBlank size={18} />}
-          label="Calendar"
-          active={view.kind === "calendar" && drawer === null}
-          onClick={() => navigate({ kind: "calendar" })}
-        />
         {drawerButtons.map((button) => (
           <RailButton
             key={button.id}
@@ -56,6 +50,18 @@ export function Rail({ className }: RailProps) {
             onClick={() => toggleDrawer(button.id)}
           />
         ))}
+        <RailButton
+          icon={<GraphIcon size={18} />}
+          label="Graph"
+          active={view.kind === "graph" && drawer === null}
+          onClick={() => navigate({ kind: "graph" })}
+        />
+        <RailButton
+          icon={<CalendarBlank size={18} />}
+          label="Calendar"
+          active={view.kind === "calendar" && drawer === null}
+          onClick={() => navigate({ kind: "calendar" })}
+        />
       </div>
       <div className="flex flex-col items-center gap-2">
         <RailButton icon={<GearSix size={18} />} label="Settings" active={false} onClick={() => openSettings()} />

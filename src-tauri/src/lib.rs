@@ -220,6 +220,7 @@ pub fn run() {
             index::tags_list,
             index::links_outgoing,
             index::links_incoming,
+            index::links_graph,
             index::index_search,
             index::index_status,
             index::index_rebuild,

@@ -63,6 +63,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "tags.list": "tags_list",
   "links.outgoing": "links_outgoing",
   "links.incoming": "links_incoming",
+  "links.graph": "links_graph",
   "index.search": "index_search",
   "index.status": "index_status",
   "index.rebuild": "index_rebuild",
@@ -139,6 +140,7 @@ export const client = {
   links: {
     outgoing: (noteId: string) => invokeCommand("links.outgoing", { noteId }),
     incoming: (noteId: string) => invokeCommand("links.incoming", { noteId }),
+    graph: () => invokeCommand("links.graph", undefined),
   },
   index: {
     search: (query: string, limit?: number) => invokeCommand("index.search", { query, limit }),
@@ -180,6 +182,7 @@ function toRustArgs<Name extends IpcCommandName>(command: Name, args: IpcCommand
     case "notes.starred":
     case "vcs.status":
     case "folders.list":
+    case "links.graph":
       return undefined;
     case "vault.open":
     case "vault.removeRecent":

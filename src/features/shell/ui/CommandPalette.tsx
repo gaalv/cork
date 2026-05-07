@@ -219,7 +219,7 @@ function runPaletteItem(
   item: PaletteItem,
   actions: {
     closePalette: () => void;
-    navigate: (view: { kind: "home" } | { kind: "note"; id: string }) => void;
+    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" }) => void;
     toggleDrawer: (drawer: "search" | "folders" | "recent" | "starred" | "tags") => void;
     openVault: () => Promise<void>;
     openSettings: () => void;
@@ -240,7 +240,7 @@ function runPaletteItem(
 function runCommand(
   id: CommandActionId,
   actions: {
-    navigate: (view: { kind: "home" } | { kind: "note"; id: string }) => void;
+    navigate: (view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" }) => void;
     openVault: () => Promise<void>;
     openSettings: () => void;
     rebuild: () => Promise<void>;
@@ -249,6 +249,9 @@ function runCommand(
 ) {
   if (id === "go-home") {
     actions.navigate({ kind: "home" });
+  }
+  if (id === "open-graph") {
+    actions.navigate({ kind: "graph" });
   }
   if (id === "new-note") {
     void createAndOpenNote();

@@ -16,7 +16,7 @@ use tauri::{AppHandle, Emitter, Listener, Manager};
 
 use crate::index::migrate::open_index_at;
 use crate::index::paths::index_db_path;
-use crate::index::query::{LinkRow, TagCount};
+use crate::index::query::{GraphData, LinkRow, TagCount};
 use crate::index::search::SearchResult;
 use crate::index::worker::IndexJob;
 use crate::vault::watcher::{FileChangeKind, VaultFileChangedEvent};
@@ -316,6 +316,15 @@ pub fn links_incoming(
     note_id: String,
 ) -> Result<Vec<LinkRow>, IpcError> {
     state.with_conn(&app, &vault, |conn| query::links_incoming(conn, &note_id))
+}
+
+#[tauri::command]
+pub fn links_graph(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+) -> Result<GraphData, IpcError> {
+    state.with_conn(&app, &vault, query::graph)
 }
 
 #[tauri::command]

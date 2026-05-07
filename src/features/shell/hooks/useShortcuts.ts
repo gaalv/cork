@@ -17,6 +17,7 @@ export function useShortcuts() {
   const openHelp = useShellStore((state) => state.openHelp);
   const openSettings = useSettingsUiStore((state) => state.openSettings);
   const openVault = useVaultStore((state) => state.openVault);
+  const navigate = useShellStore((state) => state.navigate);
 
   useEffect(() => {
     const onPaletteShortcut = (event: KeyboardEvent) => {
@@ -94,6 +95,13 @@ export function useShortcuts() {
         event.preventDefault();
         forward();
       },
+      "$mod+Shift+g": (event) => {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+        navigate({ kind: "graph" });
+      },
       "(\\?)": (event) => {
         if (isEditableTarget(event.target)) {
           return;
@@ -108,7 +116,7 @@ export function useShortcuts() {
       window.removeEventListener("keydown", onPaletteShortcut);
       window.removeEventListener("keydown", onQuestionMark);
     };
-  }, [back, forward, lastDrawer, openHelp, openPalette, openSettings, openVault, toggleDrawer]);
+  }, [back, forward, lastDrawer, navigate, openHelp, openPalette, openSettings, openVault, toggleDrawer]);
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {

@@ -42,6 +42,23 @@ export type LinkRow = {
   ambiguous: boolean;
 };
 
+export type GraphNode = {
+  id: string;
+  title: string;
+  folder: string;
+  linkCount: number;
+};
+
+export type GraphEdge = {
+  source: string;
+  target: string;
+};
+
+export type GraphData = {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+};
+
 export type SearchResult = NoteEntry & {
   snippet: string;
   rank: number;
@@ -231,6 +248,10 @@ export type IpcCommandMap = {
   "links.incoming": {
     args: { noteId: string };
     result: LinkRow[];
+  };
+  "links.graph": {
+    args: undefined;
+    result: GraphData;
   };
   "index.search": {
     args: { query: string; limit?: number };

@@ -5,7 +5,7 @@ import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 
 const shortcutGroups = [
-  { title: "Navigation", shortcuts: [["⌘K", "Open command palette"], ["⌘[", "Back"], ["⌘]", "Forward"]] },
+  { title: "Navigation", shortcuts: [["⌘K", "Open command palette"], ["⌘[", "Back"], ["⌘]", "Forward"], ["⌘⇧G", "Open Graph view"]] },
   { title: "Vault", shortcuts: [["⌘O", "Open vault"], ["⌘N", "New note"]] },
   { title: "Shell", shortcuts: [["⌘\\", "Toggle last drawer"], ["?", "Show shortcuts"]] },
 ];

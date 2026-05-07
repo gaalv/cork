@@ -169,6 +169,70 @@ pub fn links_incoming(conn: &Connection, note_id: &str) -> Result<Vec<LinkRow>, 
     )
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphNode {
+    pub id: String,
+    pub title: String,
+    pub folder: String,
+    pub link_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphEdge {
+    pub source: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphData {
+    pub nodes: Vec<GraphNode>,
+    pub edges: Vec<GraphEdge>,
+}
+
+pub fn graph(conn: &Connection) -> Result<GraphData, IpcError> {
+    let mut edge_stmt = conn
+        .prepare(
+            "SELECT src_note_id, target_id
+             FROM links
+             WHERE target_id IS NOT NULL AND src_note_id <> target_id",
+        )
+        .map_err(sql_error)?;
+    let edge_rows = edge_stmt
+        .query_map([], |row| {
+            Ok(GraphEdge {
+                source: row.get(0)?,
+                target: row.get(1)?,
+            })
+        })
+        .map_err(sql_error)?;
+    let edges: Vec<GraphEdge> = edge_rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)?;
+
+    let mut node_stmt = conn
+        .prepare(
+            "SELECT n.id, n.title, n.folder,
+                    (SELECT COUNT(*) FROM links l
+                     WHERE l.src_note_id = n.id OR l.target_id = n.id) AS link_count
+             FROM notes n",
+        )
+        .map_err(sql_error)?;
+    let node_rows = node_stmt
+        .query_map([], |row| {
+            Ok(GraphNode {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                folder: row.get(2)?,
+                link_count: row.get(3)?,
+            })
+        })
+        .map_err(sql_error)?;
+    let nodes = node_rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)?;
+
+    Ok(GraphData { nodes, edges })
+}
+
 pub fn search(
     conn: &Connection,
     query: &str,

@@ -1,5 +1,5 @@
 const shortcutGroups = [
-  { title: "Navigation", shortcuts: [["⌘K / Ctrl+K", "Open command palette"], ["⌘[ / Ctrl+BracketLeft", "Back"], ["⌘] / Ctrl+BracketRight", "Forward"]] },
+  { title: "Navigation", shortcuts: [["⌘K / Ctrl+K", "Open command palette"], ["⌘[ / Ctrl+BracketLeft", "Back"], ["⌘] / Ctrl+BracketRight", "Forward"], ["⌘⇧G / Ctrl+Shift+G", "Open Graph view"]] },
   { title: "Vault", shortcuts: [["⌘O / Ctrl+O", "Open vault"], ["⌘N / Ctrl+N", "New note"], ["⌘D / Ctrl+D", "Open today's daily note"]] },
   { title: "Editor", shortcuts: [["⌘F / Ctrl+F", "Find in note"], ["⌘⇧F / Ctrl+Shift+F", "Find and replace"]] },
   { title: "Shell", shortcuts: [["⌘, / Ctrl+,", "Open settings"], ["⌘\\ / Ctrl+\\", "Toggle drawer"], ["?", "Show shortcuts"]] },
