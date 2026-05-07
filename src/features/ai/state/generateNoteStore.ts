@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 
 import { runSkill } from "@/features/ai/services/skillsClient";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -26,6 +27,20 @@ function describeError(err: unknown): string {
   return String(err);
 }
 
+async function runGeneration(trimmedTopic: string, folder: string): Promise<{ noteId: string }> {
+  const result = await runSkill("generate-note", { topic: trimmedTopic, context: "" });
+  const created = await client.notes.create({ folder, title: trimmedTopic });
+  await client.notes.save({
+    path: created.path,
+    frontmatter: { generated_by: "ai", topic: trimmedTopic },
+    body: result.output.trim() + "\n",
+  });
+  await useVaultStore.getState().loadNotes();
+  const note = useVaultStore.getState().notes.find((entry) => entry.path === created.path);
+  if (!note) throw new Error("Generated note not found after reload");
+  return { noteId: note.id };
+}
+
 export const useGenerateNoteStore = create<GenerateNoteState>((set, get) => ({
   open: false,
   status: "idle",
@@ -36,7 +51,6 @@ export const useGenerateNoteStore = create<GenerateNoteState>((set, get) => ({
   },
 
   closeModal() {
-    if (get().status === "loading") return;
     set({ open: false, status: "idle", error: null });
   },
 
@@ -46,24 +60,34 @@ export const useGenerateNoteStore = create<GenerateNoteState>((set, get) => ({
       set({ error: "Topic is required" });
       return;
     }
+    if (get().status === "loading") return;
 
-    set({ status: "loading", error: null });
+    set({ open: false, status: "loading", error: null });
+    const toastId = toast.loading(`Generating "${trimmedTopic}"…`, {
+      description: "AI is writing your note. Feel free to keep working.",
+      duration: Infinity,
+    });
+
     try {
-      const result = await runSkill("generate-note", { topic: trimmedTopic, context: "" });
-      const created = await client.notes.create({ folder, title: trimmedTopic });
-      await client.notes.save({
-        path: created.path,
-        frontmatter: { generated_by: "ai", topic: trimmedTopic },
-        body: result.output.trim() + "\n",
+      const { noteId } = await runGeneration(trimmedTopic, folder);
+      toast.success("Note ready", {
+        id: toastId,
+        description: `"${trimmedTopic}" is ready to read.`,
+        duration: 8000,
+        action: {
+          label: "Open",
+          onClick: () => useShellStore.getState().navigate({ kind: "note", id: noteId }),
+        },
       });
-      await useVaultStore.getState().loadNotes();
-      const note = useVaultStore.getState().notes.find((entry) => entry.path === created.path);
-      if (note) {
-        useShellStore.getState().navigate({ kind: "note", id: note.id });
-      }
-      set({ open: false, status: "idle", error: null });
+      set({ status: "idle", error: null });
     } catch (err) {
-      set({ status: "error", error: describeError(err) });
+      const message = describeError(err);
+      toast.error("Failed to generate note", {
+        id: toastId,
+        description: message,
+        duration: 10_000,
+      });
+      set({ status: "error", error: message });
     }
   },
 }));

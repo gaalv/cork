@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Sparkle, Spinner, X } from "@phosphor-icons/react";
+import { Sparkle, X } from "@phosphor-icons/react";
 
 import { useGenerateNoteStore } from "@/features/ai/state/generateNoteStore";
 import { useFolderTree } from "@/features/drawers/hooks/useFolderTree";
@@ -25,7 +25,6 @@ export function GenerateNoteModal() {
 }
 
 function GenerateNoteModalInner() {
-  const status = useGenerateNoteStore((s) => s.status);
   const error = useGenerateNoteStore((s) => s.error);
   const closeModal = useGenerateNoteStore((s) => s.closeModal);
   const generate = useGenerateNoteStore((s) => s.generate);
@@ -66,14 +65,14 @@ function GenerateNoteModalInner() {
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (disabled || status === "loading") return;
+    if (disabled) return;
     void generate({ topic, folder });
   }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-[12vh]"
-      onMouseDown={() => (status === "loading" ? null : closeModal())}
+      onMouseDown={() => closeModal()}
     >
       <form
         role="dialog"
@@ -94,8 +93,7 @@ function GenerateNoteModalInner() {
             type="button"
             aria-label="Close"
             onClick={() => closeModal()}
-            disabled={status === "loading"}
-            className="rounded-full p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-hover)] hover:text-[var(--color-noxe-ink)] disabled:opacity-50"
+            className="rounded-full p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-hover)] hover:text-[var(--color-noxe-ink)]"
           >
             <X size={14} />
           </button>
@@ -131,7 +129,6 @@ function GenerateNoteModalInner() {
                   onChange={(event) => setTopic(event.currentTarget.value)}
                   placeholder="E.g. SQLite WAL mode pros and cons"
                   className="mt-1 w-full rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)] px-2 py-1.5 text-sm outline-none focus:border-[var(--color-noxe-border-strong)]"
-                  disabled={status === "loading"}
                 />
               </label>
 
@@ -145,11 +142,14 @@ function GenerateNoteModalInner() {
                     value={folder}
                     options={folderOptions}
                     onChange={(next) => setFolder(next)}
-                    disabled={status === "loading"}
                     className="w-full"
                   />
                 </div>
               </label>
+
+              <p className="text-[11px] text-[var(--color-noxe-muted)]">
+                The note will be generated in the background. You'll get a notification when it's ready.
+              </p>
 
               {error ? (
                 <p className="text-xs text-[var(--color-noxe-danger,#dc2626)]" role="alert">
@@ -165,18 +165,17 @@ function GenerateNoteModalInner() {
             <button
               type="button"
               onClick={() => closeModal()}
-              disabled={status === "loading"}
-              className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1 text-xs hover:bg-[var(--color-noxe-hover)] disabled:opacity-50"
+              className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1 text-xs hover:bg-[var(--color-noxe-hover)]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={status === "loading" || !topic.trim()}
+              disabled={!topic.trim()}
               className="flex items-center gap-1.5 rounded-md border border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-ink)] px-3 py-1 text-xs text-[var(--color-noxe-bg)] hover:opacity-90 disabled:opacity-50"
             >
-              {status === "loading" ? <Spinner size={12} className="animate-spin" /> : <Sparkle size={12} weight="fill" />}
-              {status === "loading" ? "Generating…" : "Generate"}
+              <Sparkle size={12} weight="fill" />
+              Generate
             </button>
           </footer>
         ) : null}

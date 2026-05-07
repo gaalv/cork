@@ -4,6 +4,7 @@ name: Expand selection
 model_tier: small
 max_tokens_in: 4000
 max_tokens_out: 1200
+timeout_secs: 90
 cache: false
 output_schema: text
 triggers: [slash.expand]

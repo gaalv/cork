@@ -117,6 +117,7 @@ mod tests {
             cache: true,
             output_schema: "text".into(),
             triggers: vec![],
+            timeout_secs: 60,
             system_prompt: template.into(),
             source: SkillSource::Bundled,
         }

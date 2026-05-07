@@ -98,14 +98,13 @@ async function resolveRelatedNotes(
   searchFn: (q: string, limit?: number) => Promise<Array<{ id: string; title: string; path: string; rank: number }>>,
   limit = 5,
 ): Promise<RelatedNote[]> {
+  const top = keywords.slice(0, 8);
+  const results = await Promise.all(
+    top.map((keyword) => searchFn(keyword, 5).catch(() => [] as Array<{ id: string; title: string; path: string; rank: number }>)),
+  );
   const byId = new Map<string, { entry: RelatedNote; rank: number; reasons: Set<string> }>();
-  for (const keyword of keywords.slice(0, 8)) {
-    let hits;
-    try {
-      hits = await searchFn(keyword, 5);
-    } catch {
-      continue;
-    }
+  results.forEach((hits, idx) => {
+    const keyword = top[idx];
     for (const hit of hits) {
       if (hit.id === selfNoteId) continue;
       const existing = byId.get(hit.id);
@@ -120,7 +119,7 @@ async function resolveRelatedNotes(
         });
       }
     }
-  }
+  });
   return [...byId.values()]
     .sort((a, b) => {
       if (b.reasons.size !== a.reasons.size) return b.reasons.size - a.reasons.size;

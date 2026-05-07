@@ -4,6 +4,7 @@ name: Continue writing
 model_tier: small
 max_tokens_in: 4000
 max_tokens_out: 800
+timeout_secs: 90
 cache: false
 output_schema: text
 triggers: [slash.continue]

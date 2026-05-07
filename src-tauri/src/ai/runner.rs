@@ -15,8 +15,6 @@ use crate::ai::telemetry;
 use crate::ai::tiers;
 use crate::ai::{binary_available, binary_for_provider, AiError};
 
-const TIMEOUT_SECS: u64 = 60;
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AiSkillResult {
@@ -37,7 +35,7 @@ fn approx_tokens(s: &str) -> u32 {
 pub trait Spawner: Send + Sync {
     /// Verify that the underlying binary is reachable. Real impl uses `which`.
     fn check(&self, provider: &str) -> Result<(), AiError>;
-    fn spawn(&self, binary: &str, args: &[String], stdin_data: &str) -> Result<String, AiError>;
+    fn spawn(&self, binary: &str, args: &[String], stdin_data: &str, timeout_secs: u64) -> Result<String, AiError>;
 }
 
 pub struct ProcessSpawner;
@@ -54,7 +52,7 @@ impl Spawner for ProcessSpawner {
         Ok(())
     }
 
-    fn spawn(&self, binary: &str, args: &[String], stdin_data: &str) -> Result<String, AiError> {
+    fn spawn(&self, binary: &str, args: &[String], stdin_data: &str, timeout_secs: u64) -> Result<String, AiError> {
         let mut cmd = Command::new(binary);
         for a in args {
             cmd.arg(a);
@@ -75,8 +73,8 @@ impl Spawner for ProcessSpawner {
             let _ = tx.send(child.wait_with_output());
         });
         let output = rx
-            .recv_timeout(Duration::from_secs(TIMEOUT_SECS))
-            .map_err(|_| AiError::timeout(format!("AI request timed out after {TIMEOUT_SECS}s")))?
+            .recv_timeout(Duration::from_secs(timeout_secs))
+            .map_err(|_| AiError::timeout(format!("AI request timed out after {timeout_secs}s")))?
             .map_err(|e| AiError::subprocess_failed(format!("subprocess: {e}")))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -165,7 +163,7 @@ pub fn run<S: Spawner>(
     }
 
     let args = tiers::args_for(provider, &skill.model_tier);
-    let result = spawner.spawn(binary, &args, &prompt_text);
+    let result = spawner.spawn(binary, &args, &prompt_text, skill.timeout_secs.max(1));
 
     let latency = started.elapsed().as_millis() as u32;
     let tokens_in = approx_tokens(&prompt_text);
@@ -258,6 +256,7 @@ mod tests {
             _binary: &str,
             _args: &[String],
             _stdin: &str,
+            _timeout_secs: u64,
         ) -> Result<String, AiError> {
             *self.calls.lock().unwrap() += 1;
             self.responses
@@ -278,6 +277,7 @@ mod tests {
             cache: cache_on,
             output_schema: "text".into(),
             triggers: vec![],
+            timeout_secs: 60,
             system_prompt: "Summarise: {{body}}".into(),
             source: SkillSource::Bundled,
         }

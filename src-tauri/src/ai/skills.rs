@@ -36,6 +36,8 @@ pub struct SkillFrontmatter {
     pub output_schema: String,
     #[serde(default)]
     pub triggers: Vec<String>,
+    #[serde(default = "default_timeout")]
+    pub timeout_secs: u64,
 }
 
 fn default_max_in() -> u32 {
@@ -50,6 +52,9 @@ fn default_cache() -> bool {
 fn default_schema() -> String {
     "text".to_string()
 }
+fn default_timeout() -> u64 {
+    60
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -62,6 +67,7 @@ pub struct Skill {
     pub cache: bool,
     pub output_schema: String,
     pub triggers: Vec<String>,
+    pub timeout_secs: u64,
     pub system_prompt: String,
     pub source: SkillSource,
 }
@@ -129,6 +135,7 @@ pub fn parse_skill(raw: &str, source: SkillSource) -> Option<Skill> {
         cache: fm.cache,
         output_schema: fm.output_schema,
         triggers: fm.triggers,
+        timeout_secs: fm.timeout_secs,
         system_prompt: body,
         source,
     })

@@ -4,6 +4,7 @@ name: Generate note from topic
 model_tier: standard
 max_tokens_in: 2000
 max_tokens_out: 6000
+timeout_secs: 240
 cache: false
 output_schema: text
 triggers: [generate.note]
