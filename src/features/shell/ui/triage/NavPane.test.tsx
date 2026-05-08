@@ -21,6 +21,14 @@ vi.mock("@/features/drawers/hooks/useTagTree", () => ({
   }),
 }));
 
+vi.mock("@/features/sync/ui/SyncIndicator", () => ({
+  SyncIndicator: () => null,
+}));
+
+vi.mock("@/features/note-ops/services/createAndOpenNote", () => ({
+  createAndOpenNote: vi.fn(),
+}));
+
 import { NavPane } from "./NavPane";
 
 beforeEach(() => {
