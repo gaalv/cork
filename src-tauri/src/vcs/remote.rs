@@ -356,6 +356,37 @@ fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Like [`run_git`] but completely isolates git from the user's global
+/// gitconfig (`~/.gitconfig`, `~/.config/git/config`) and the system
+/// gitconfig. Only the per-repo `.git/config` is honored. Use this for
+/// PAT-authenticated push so no inherited credential helper, alias, or
+/// http directive can interfere.
+fn run_git_isolated(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
+    use std::time::SystemTime;
+
+    let stamp = SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let isolated_home = std::env::temp_dir().join(format!("noxe-git-iso-{stamp}"));
+    let _ = std::fs::create_dir_all(&isolated_home);
+
+    let result = Command::new("git")
+        .current_dir(vault_root)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("HOME", &isolated_home)
+        .env("XDG_CONFIG_HOME", &isolated_home)
+        .args(args)
+        .output()
+        .map_err(|e| e.to_string());
+
+    let _ = std::fs::remove_dir_all(&isolated_home);
+    result
+}
+
 fn run_git_check(vault_root: &Path, args: &[&str]) -> Result<String, String> {
     let out = run_git(vault_root, args)?;
     if !out.status.success() {
@@ -373,17 +404,57 @@ fn run_git_check(vault_root: &Path, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&out.stdout).to_string())
 }
 
+/// True when the per-repo .git/config has an extraheader override for
+/// github.com — i.e. the repo was set up with a PAT and should be run
+/// in an isolated $HOME so nothing from the user's global config can
+/// override the inline auth.
+fn repo_uses_pat_auth(vault_root: &Path) -> bool {
+    run_git(
+        vault_root,
+        &[
+            "config",
+            "--local",
+            "--get",
+            "http.https://github.com/.extraheader",
+        ],
+    )
+    .map(|o| o.status.success() && !o.stdout.is_empty())
+    .unwrap_or(false)
+}
+
+fn run_git_auto(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
+    if repo_uses_pat_auth(vault_root) {
+        run_git_isolated(vault_root, args)
+    } else {
+        run_git(vault_root, args)
+    }
+}
+
 fn git_push(vault_root: &Path) -> Result<(), String> {
     let _ = append_log(vault_root, "[push] start");
-    let out = run_git_check(vault_root, &["push", "origin", "HEAD"]);
+    let out = run_git_auto(vault_root, &["push", "origin", "HEAD"]);
     let _ = append_log(
         vault_root,
         &match &out {
-            Ok(stdout) => format!("[push] ok\n{stdout}"),
+            Ok(o) if o.status.success() => format!(
+                "[push] ok\n{}",
+                String::from_utf8_lossy(&o.stdout)
+            ),
+            Ok(o) => format!(
+                "[push] error: {}",
+                String::from_utf8_lossy(&o.stderr).trim()
+            ),
             Err(err) => format!("[push] error: {err}"),
         },
     );
-    out.map(|_| ())
+    match out {
+        Ok(o) if o.status.success() => Ok(()),
+        Ok(o) => Err(format!(
+            "git push failed: {}",
+            String::from_utf8_lossy(&o.stderr).trim()
+        )),
+        Err(e) => Err(e),
+    }
 }
 
 #[derive(Debug)]
@@ -398,7 +469,10 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
         return Ok(PullOutcome::NotConfigured);
     }
     let _ = append_log(vault_root, "[pull] fetch");
-    run_git_check(vault_root, &["fetch", "origin"]).map_err(|e| e)?;
+    let fetch_out = run_git_auto(vault_root, &["fetch", "origin"])?;
+    if !fetch_out.status.success() {
+        return Err(String::from_utf8_lossy(&fetch_out.stderr).trim().to_string());
+    }
 
     // Determine upstream branch ref. If none, abort gracefully.
     let upstream = run_git_check(
@@ -678,8 +752,23 @@ fn enable_remote_blocking(
             );
         }
 
-        let push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
-            .map_err(IpcError::Other)?;
+        let push_out = if input
+            .token
+            .as_deref()
+            .map(str::trim)
+            .map(|s| !s.is_empty())
+            .unwrap_or(false)
+        {
+            // With a PAT we run git in an isolated $HOME so the user's
+            // global gitconfig (and any inherited credential helper /
+            // includeIf / extra http config) cannot influence auth — only
+            // the per-vault .git/config we just wrote.
+            run_git_isolated(&vault_root, &["push", "-u", "origin", "HEAD"])
+                .map_err(IpcError::Other)?
+        } else {
+            run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
+                .map_err(IpcError::Other)?
+        };
         if !push_out.status.success() {
             let stderr = String::from_utf8_lossy(&push_out.stderr)
                 .trim()
