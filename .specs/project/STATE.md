@@ -71,6 +71,7 @@
 ### AD-010: Source structure — feature folders + shared core (2026-05-06)
 
 **Decision:**
+
 ```
 src/
   app/                   # App shell, routing, providers
@@ -97,6 +98,7 @@ src-tauri/
     watcher/             # `notify` integration
     main.rs
 ```
+
 **Reason:** Co-locate UI + hooks + services per feature; shared primitives factored separately. Mirrors how multiple agents can own one feature folder each.
 **Impact:** All Fxx tasks reference paths under this structure.
 
@@ -105,7 +107,6 @@ src-tauri/
 **Decision:** Tauri commands declared in `src-tauri/src/ipc/`. Frontend wrappers in `src/shared/ipc/` import a single `IpcContract.ts` listing every command's input/output. Rust side uses `serde` types matching the contract.
 **Reason:** Multi-agent safety — if a Rust agent adds a command, the TS agent reads the contract file, not source-spelunks.
 **Impact:** F02 introduces `IpcContract.ts`; every later IPC change updates it in the same commit as the Rust handler.
-
 
 ### AD-012: Real AI deferred — only UI stub on note-view (2026-05-06)
 
@@ -127,14 +128,12 @@ src-tauri/
 **Trade-off:** The E2E validates UI wiring/listing with a fixture-shaped payload; Rust IPC/file walking remain covered by cargo tests.
 **Impact:** Production desktop builds do not expose the hook unless served on localhost for tests.
 
-
 ### AD-024: Index bench split between Rust correctness and CI summary (2026-05-06)
 
 **Decision:** F03 keeps the authoritative SQLite/indexer performance checks in Rust worker tests, while `scripts/bench-index.mjs` provides a deterministic non-blocking CI summary without launching the desktop IPC runtime.
 **Reason:** The GitHub Actions browser/Node environment cannot reliably drive Tauri desktop IPC headlessly, but the Rust tests exercise the real parser, WAL database, FTS tables, and incremental worker path.
 **Trade-off:** The CI summary numbers are synthetic JS-side timings; use Rust test timings for release gating.
 **Impact:** Future desktop IPC benchmarks can replace the JS harness when Tauri E2E automation is available.
-
 
 ### AD-025: F04 shell persists UI route/drawer state in web-safe localStorage (2026-05-06)
 
@@ -156,7 +155,6 @@ src-tauri/
 **Reason:** Drawers must run in Vite preview/Playwright without Tauri store APIs, and frontmatter keeps starred state portable in the pure Markdown vault.
 **Trade-off:** Search history is WebView-local until F13 settings/store migration; starred toggles require the note to be reindexed after save.
 **Impact:** F07 `notes.starred` reads the SQLite `frontmatter` table and `starService` writes `frontmatter.starred`.
-
 
 ### AD-028: F05 preview uses split-pane rendering with heavy renderers lazy-loaded (2026-05-06)
 
@@ -250,30 +248,30 @@ _None._
 
 ## Quick Tasks Completed
 
-| #   | Description                              | Date       | Commit | Status   |
-| --- | ---------------------------------------- | ---------- | ------ | -------- |
-| 001 | Initialize project (.specs/project)      | 2026-05-06 | —      | ✅ Done  |
-| 002 | Build layout playground (3 layouts)      | 2026-05-06 | —      | ✅ Done  |
-| 003 | Refine Layout C (drawers + home)         | 2026-05-06 | —      | ✅ Done  |
-| 004 | Lock Layout C and write multi-agent plan | 2026-05-06 | —      | ✅ Done  |
-| 005 | Author specs/design/tasks for F01–F10    | 2026-05-06 | —      | ✅ Done  |
-| 006 | Author AGENTS.md (multi-agent contract)  | 2026-05-06 | —      | ✅ Done  |
-| 007 | Reflect 123 atomic tasks into SQL todos with deps | 2026-05-06 | — | ✅ Done |
-| 008 | Author F11–F14 (assets, folder ops, settings, markdown ext.) + mini-tasks F05-T18 / F04-T14 | 2026-05-06 | — | ✅ Done |
-| 009 | Implement F01 Foundation (Tauri + React + tooling + CI + legacy migration); typecheck/lint/test/build/cargo test/e2e all green | 2026-05-06 | — | ✅ Done |
-| 010 | Implement F02 Vault FS (typed IPC, Rust vault IO/list/watch, vault store, legacy UI bridge, E2E fixture flow) | 2026-05-06 | f68ef01 | ✅ Done |
-| 011 | Implement F03 Index (SQLite schema/migrations, Rust+TS markdown parser parity, worker, IPC, store/UI integration, crash safety) | 2026-05-06 | de3de18 | ✅ Done |
-| 012 | Implement F04 Shell (Zustand shell store, rail/topbar/drawers, cmdk palette, shortcuts/help/toasts, empty state, router, window-state, E2E) | 2026-05-06 | multiple | ✅ Done |
+| #   | Description                                                                                                                                                   | Date       | Commit   | Status     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------- | ---------- |
+| 001 | Initialize project (.specs/project)                                                                                                                           | 2026-05-06 | —        | ✅ Done    |
+| 002 | Build layout playground (3 layouts)                                                                                                                           | 2026-05-06 | —        | ✅ Done    |
+| 003 | Refine Layout C (drawers + home)                                                                                                                              | 2026-05-06 | —        | ✅ Done    |
+| 004 | Lock Layout C and write multi-agent plan                                                                                                                      | 2026-05-06 | —        | ✅ Done    |
+| 005 | Author specs/design/tasks for F01–F10                                                                                                                         | 2026-05-06 | —        | ✅ Done    |
+| 006 | Author AGENTS.md (multi-agent contract)                                                                                                                       | 2026-05-06 | —        | ✅ Done    |
+| 007 | Reflect 123 atomic tasks into SQL todos with deps                                                                                                             | 2026-05-06 | —        | ✅ Done    |
+| 008 | Author F11–F14 (assets, folder ops, settings, markdown ext.) + mini-tasks F05-T18 / F04-T14                                                                   | 2026-05-06 | —        | ✅ Done    |
+| 009 | Implement F01 Foundation (Tauri + React + tooling + CI + legacy migration); typecheck/lint/test/build/cargo test/e2e all green                                | 2026-05-06 | —        | ✅ Done    |
+| 010 | Implement F02 Vault FS (typed IPC, Rust vault IO/list/watch, vault store, legacy UI bridge, E2E fixture flow)                                                 | 2026-05-06 | f68ef01  | ✅ Done    |
+| 011 | Implement F03 Index (SQLite schema/migrations, Rust+TS markdown parser parity, worker, IPC, store/UI integration, crash safety)                               | 2026-05-06 | de3de18  | ✅ Done    |
+| 012 | Implement F04 Shell (Zustand shell store, rail/topbar/drawers, cmdk palette, shortcuts/help/toasts, empty state, router, window-state, E2E)                   | 2026-05-06 | multiple | ✅ Done    |
 | 013 | Partially land F12 Folder Ops & Bulk Operations (folder/bulk IPC, legacy folder UI, drag/drop, bulk selection, auto-close, E2E); T10 deferred pending F09-T03 | 2026-05-06 | multiple | ✅ Partial |
 | 014 | Partially implement F11 Asset Pipeline (asset DB/walker, scoped protocol, attachment IPC, resolver/url/open helpers); T07/T09/T10/T11/T12 deferred to F05/F10 | 2026-05-06 | multiple | ✅ Partial |
-| 015 | Implement F07 Drawers (FTS search, folders, recent, starred, tags, a11y, E2E) | 2026-05-06 | multiple | ✅ Done |
-| 016 | Implement F05 Editor (CM6, autosave/conflicts, Markdown preview, Shiki/KaTeX/Mermaid, completions, split view, search, chaos E2E) | 2026-05-06 | multiple | ✅ Done |
-| 017 | Implement F06 Home Dashboard (query-backed hero, pinned/recents/tags/all notes, pin flow E2E) | 2026-05-06 | multiple | ✅ Done |
-| 018 | Implement F08 Note View + Meta Panel (store, outline/backlinks/hooks, responsive meta panel, NoteView composition) | 2026-05-06 | multiple | ✅ Done |
-| 017 | Complete F11 remaining asset pipeline tasks (preview image rendering, CM6 image drop/paste, drop-render E2E); T11 deferred pending F10-T11 | 2026-05-06 | multiple | ✅ Partial |
-| 019 | Complete F10 vault management (close/recent, switcher, per-vault config, switch chaos E2E) plus unblock F11 attachments config and F12 topbar rename | 2026-05-06 | multiple | ✅ Done |
-| 020 | Implement F14 Markdown Extensions (callouts, footnotes, highlights, semantic parser parity, CM6 decorations) | 2026-05-06 | multiple | ✅ Done |
-| 021 | Implement F13 Settings + Search + App Menu (settings panel rows, in-note search, native menu, window recovery, about/diagnostics/shortcuts) | 2026-05-06 | multiple | ✅ Done |
+| 015 | Implement F07 Drawers (FTS search, folders, recent, starred, tags, a11y, E2E)                                                                                 | 2026-05-06 | multiple | ✅ Done    |
+| 016 | Implement F05 Editor (CM6, autosave/conflicts, Markdown preview, Shiki/KaTeX/Mermaid, completions, split view, search, chaos E2E)                             | 2026-05-06 | multiple | ✅ Done    |
+| 017 | Implement F06 Home Dashboard (query-backed hero, pinned/recents/tags/all notes, pin flow E2E)                                                                 | 2026-05-06 | multiple | ✅ Done    |
+| 018 | Implement F08 Note View + Meta Panel (store, outline/backlinks/hooks, responsive meta panel, NoteView composition)                                            | 2026-05-06 | multiple | ✅ Done    |
+| 017 | Complete F11 remaining asset pipeline tasks (preview image rendering, CM6 image drop/paste, drop-render E2E); T11 deferred pending F10-T11                    | 2026-05-06 | multiple | ✅ Partial |
+| 019 | Complete F10 vault management (close/recent, switcher, per-vault config, switch chaos E2E) plus unblock F11 attachments config and F12 topbar rename          | 2026-05-06 | multiple | ✅ Done    |
+| 020 | Implement F14 Markdown Extensions (callouts, footnotes, highlights, semantic parser parity, CM6 decorations)                                                  | 2026-05-06 | multiple | ✅ Done    |
+| 021 | Implement F13 Settings + Search + App Menu (settings panel rows, in-note search, native menu, window recovery, about/diagnostics/shortcuts)                   | 2026-05-06 | multiple | ✅ Done    |
 
 ---
 
@@ -303,6 +301,7 @@ _None._
 - **AD-019**: Folder operations live in a dedicated `folders.*` IPC namespace (`create/rename/move/trash`); deletes go to OS trash via the same path as `notes.trash`. Bulk note operations (`notes.bulkMove/bulkTrash/bulkSetFrontmatter`) report `{ ok[], failed[] }` so partial failures don't abort the batch. Drag-and-drop powered by `@dnd-kit/core` with keyboard-accessible "Move to…" fallback. (F12)
 - **AD-020**: Settings is implemented as a modal panel (not a separate route) with sections General/Editor/Files & Vaults/Markdown/Daily Notes/Advanced. Per-vault overrides written to `<vault>/.noxe/config.json`; global settings via `tauri-plugin-store`. `settingsBridge` resolves per-vault → global → default. In-note find/replace via `@codemirror/search`. Native menus via Tauri 2 menu API; `tauri-plugin-window-state` for window persistence. (F13)
 - **AD-021**: Markdown extensions (callouts, footnotes, highlight) shipped as opt-in flags consumed by both the unified pipeline (custom remark plugins) and pulldown-cmark (event-stream adapters). Parity gate (F08) extended with new fixtures; both pipelines must produce byte-identical (after whitespace normalization) HTML. Definition lists, math, mermaid deferred to v2. (F14)
+- **AD-022**: F26 GitHub sync — PAT-via-extraHeader path is functional for plain environments but **does not work reliably on macOS** when the user has Apple Command Line Tools git + osxkeychain + gh credential helpers installed (libcurl appears to short-circuit auth via Keychain at a layer below `GIT_CONFIG_NOSYSTEM`/isolated `$HOME`). Symptom: PAT shows as "never used" on GitHub, push fails with `RPC failed; HTTP 403 ... send-pack: unexpected disconnect`. Hotfix attempts exhausted. Decision: keep PAT path as best-effort + ship an alternative auth mechanism in a follow-up feature. Recommended: GitHub Contents API (REST) with OAuth Device Flow, since auth is then in our HTTP client and bypasses git transport entirely. SSH Deploy Key is a viable fallback. Track as F27 in roadmap.
 
 ---
 
