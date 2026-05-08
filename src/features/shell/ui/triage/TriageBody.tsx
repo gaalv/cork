@@ -16,6 +16,7 @@ import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 import { ListPane } from "./ListPane";
 import { NavPane } from "./NavPane";
+import { TriageNoteToolbar } from "./TriageNoteToolbar";
 
 export function TriageBody() {
   const navWidth = useAppSettingsStore((state) => state.settings.layout.triageNavWidth);
@@ -49,7 +50,14 @@ function TriageMain() {
 
   if (view.kind === "note") {
     const note = notes.find((candidate) => candidate.id === view.id);
-    return <NoteView title={note?.title ?? "Untitled"} noteId={view.id} />;
+    return (
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <TriageNoteToolbar noteId={view.id} />
+        <div className="min-h-0 flex-1">
+          <NoteView title={note?.title ?? "Untitled"} noteId={view.id} />
+        </div>
+      </div>
+    );
   }
 
   return <NotePlaceholder />;

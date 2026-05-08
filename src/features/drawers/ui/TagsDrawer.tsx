@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus } from "@phosphor-icons/react";
+import { Plus, Tag } from "@phosphor-icons/react";
 
 import { useTagTree } from "@/features/drawers/hooks/useTagTree";
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
-import { useVaultSettingsStore, normalizeTagName } from "@/features/settings/state/vaultSettingsStore";
+import {
+  useVaultSettingsStore,
+  normalizeTagName,
+} from "@/features/settings/state/vaultSettingsStore";
 import { client } from "@/shared/ipc/client";
 
 import { TagNode } from "./TagNode";
@@ -76,7 +79,9 @@ export function TagsDrawer({ onOpenNote }: TagsDrawerProps) {
         onSubmit={(event) => void submitNewTag(event)}
         className="flex items-center gap-2 rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1.5"
       >
-        <span className="text-[var(--color-noxe-muted)]" aria-hidden="true">#</span>
+        <span className="text-[var(--color-noxe-muted)]" aria-hidden="true">
+          #
+        </span>
         <input
           aria-label="New tag name"
           value={draftTag}
@@ -114,12 +119,16 @@ export function TagsDrawer({ onOpenNote }: TagsDrawerProps) {
       {selectedTag ? (
         <div className="space-y-1 border-t border-[var(--color-noxe-border)] pt-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium text-[var(--color-noxe-muted)]">#{selectedTag}</h3>
+            <h3 className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-noxe-muted)]">
+              <Tag size={11} weight="fill" /> {selectedTag}
+            </h3>
             {librarySet.has(selectedTag) ? (
               <span className="text-[10px] text-[var(--color-noxe-muted)]">in library</span>
             ) : null}
           </div>
-          {notes.length === 0 ? <p className="text-xs text-[var(--color-noxe-muted)]">No notes for this tag.</p> : null}
+          {notes.length === 0 ? (
+            <p className="text-xs text-[var(--color-noxe-muted)]">No notes for this tag.</p>
+          ) : null}
           {notes.map((note) => (
             <button
               key={note.id}

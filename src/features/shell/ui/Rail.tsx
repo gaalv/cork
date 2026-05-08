@@ -5,10 +5,10 @@ import {
   FolderSimple,
   GearSix,
   GraphIcon,
-  Hash,
   House,
   MagnifyingGlass,
   Star,
+  Tag,
 } from "@phosphor-icons/react";
 
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
@@ -30,7 +30,7 @@ const drawerButtons: Array<{ id: DrawerId; label: string; icon: ReactNode }> = [
   { id: "folders", label: "Folders", icon: <FolderSimple size={18} /> },
   { id: "search", label: "Search", icon: <MagnifyingGlass size={18} /> },
   { id: "starred", label: "Starred", icon: <Star size={18} /> },
-  { id: "tags", label: "Tags", icon: <Hash size={18} /> },
+  { id: "tags", label: "Tags", icon: <Tag size={18} /> },
   { id: "recent", label: "Recent", icon: <ClockCounterClockwise size={18} /> },
 ];
 

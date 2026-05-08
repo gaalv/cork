@@ -163,7 +163,7 @@ export function Splitter({
     <div ref={containerRef} className={className} style={style} data-testid="splitter">
       {panels.flatMap((panel, idx) => {
         const node = (
-          <div key={panel.id} style={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
+          <div key={panel.id} className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
             {children[idx]}
           </div>
         );

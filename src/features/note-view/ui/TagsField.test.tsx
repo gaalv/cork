@@ -18,15 +18,21 @@ const { clientMock, settingsMock } = vi.hoisted(() => ({
 
 vi.mock("@/shared/ipc/client", () => ({ client: clientMock }));
 vi.mock("@/features/settings/state/vaultSettingsStore", async () => {
-  const actual = await vi.importActual<typeof import("@/features/settings/state/vaultSettingsStore")>(
-    "@/features/settings/state/vaultSettingsStore",
-  );
+  const actual = await vi.importActual<
+    typeof import("@/features/settings/state/vaultSettingsStore")
+  >("@/features/settings/state/vaultSettingsStore");
   return {
     ...actual,
     useVaultSettingsStore: Object.assign(
-      (selector: (state: { settings: { tagLibrary: string[] } } & typeof settingsMock) => unknown) =>
-        selector({ settings: { tagLibrary: [] }, addLibraryTag: settingsMock.addLibraryTag }),
-      { getState: () => ({ settings: { tagLibrary: [] }, addLibraryTag: settingsMock.addLibraryTag }) },
+      (
+        selector: (state: { settings: { tagLibrary: string[] } } & typeof settingsMock) => unknown,
+      ) => selector({ settings: { tagLibrary: [] }, addLibraryTag: settingsMock.addLibraryTag }),
+      {
+        getState: () => ({
+          settings: { tagLibrary: [] },
+          addLibraryTag: settingsMock.addLibraryTag,
+        }),
+      },
     ),
   };
 });
@@ -46,7 +52,10 @@ const baseBuffer = {
 };
 
 beforeEach(() => {
-  clientMock.tags.list.mockReset().mockResolvedValue([{ tag: "existing", count: 1 }, { tag: "rust", count: 0 }]);
+  clientMock.tags.list.mockReset().mockResolvedValue([
+    { tag: "existing", count: 1 },
+    { tag: "rust", count: 0 },
+  ]);
   clientMock.notes.byTag.mockReset().mockResolvedValue([]);
   clientMock.events.on.mockReset().mockResolvedValue(vi.fn());
   settingsMock.addLibraryTag.mockReset().mockResolvedValue(undefined);
@@ -59,13 +68,13 @@ beforeEach(() => {
 describe("TagsField", () => {
   it("renders existing tags", () => {
     render(<TagsField noteId="n1" />);
-    expect(screen.getByText("#existing")).toBeInTheDocument();
+    expect(screen.getByText("existing")).toBeInTheDocument();
   });
 
   it("adds an existing tag from the dropdown", async () => {
     render(<TagsField noteId="n1" />);
     fireEvent.click(screen.getByRole("button", { name: /add tag/i }));
-    const option = await screen.findByRole("option", { name: /#rust/i });
+    const option = await screen.findByRole("option", { name: /rust/i });
     fireEvent.click(option);
     const buffer = useEditorStore.getState().buffers.get("n1")!;
     expect(buffer.frontmatter.tags).toEqual(["existing", "rust"]);

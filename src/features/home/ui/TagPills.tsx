@@ -1,3 +1,5 @@
+import { Tag } from "@phosphor-icons/react";
+
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 
@@ -34,9 +36,10 @@ export function TagPills({ tags }: TagPillsProps) {
               selectTag(tag.tag);
               toggleDrawer("tags");
             }}
-            className="rounded-full border border-[var(--color-noxe-border)] px-3 py-1.5 text-sm hover:border-[var(--color-noxe-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none aria-pressed:bg-[var(--color-noxe-accent-soft)]"
+            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-noxe-border)] px-3 py-1.5 text-sm hover:border-[var(--color-noxe-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none aria-pressed:bg-[var(--color-noxe-accent-soft)]"
           >
-            #{tag.tag} <span className="text-[var(--color-noxe-muted)]">{tag.count}</span>
+            <Tag size={11} weight="fill" />
+            {tag.tag} <span className="text-[var(--color-noxe-muted)]">{tag.count}</span>
           </button>
         ))}
       </div>

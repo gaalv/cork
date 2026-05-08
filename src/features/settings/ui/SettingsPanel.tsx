@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { X } from "@phosphor-icons/react";
 
+import { useTagTree } from "@/features/drawers/hooks/useTagTree";
 import { useIndexStore } from "@/features/index/state/indexStore";
 import { settingsBridge } from "@/features/settings/services/settingsBridge";
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
@@ -419,6 +420,7 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
 
     return (
       <div className="space-y-3">
+        <VaultStatsRow vaultPath={vaultPath} />
         <SettingRow
           label="Attachments folder"
           description={
@@ -688,6 +690,53 @@ function Placeholder({ title }: { title: string }) {
   return (
     <div className="rounded-xl border border-dashed border-[var(--color-noxe-border)] p-6 text-sm text-[var(--color-noxe-muted)]">
       {title} settings will appear here.
+    </div>
+  );
+}
+
+function VaultStatsRow({ vaultPath }: { vaultPath: string | null }) {
+  const notes = useVaultStore((state) => state.notes);
+  const { tree } = useTagTree();
+  const folderCount = new Set(
+    notes.map((note) => note.folder).filter((folder): folder is string => Boolean(folder)),
+  ).size;
+  const tagCount = countTags(tree);
+
+  return (
+    <SettingRow
+      label="Vault stats"
+      description={vaultPath ?? "No vault open."}
+      scope="vault"
+      control={
+        <div className="grid grid-cols-3 gap-2 text-[12px] text-[var(--color-noxe-ink)]">
+          <Stat label="Notes" value={notes.length} />
+          <Stat label="Folders" value={folderCount} />
+          <Stat label="Tags" value={tagCount} />
+        </div>
+      }
+    />
+  );
+}
+
+function countTags(nodes: ReturnType<typeof useTagTree>["tree"]): number {
+  let total = 0;
+  const walk = (list: typeof nodes) => {
+    for (const node of list) {
+      total += 1;
+      walk(node.children);
+    }
+  };
+  walk(nodes);
+  return total;
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1.5">
+      <div className="text-[10px] uppercase tracking-wider text-[var(--color-noxe-muted)]">
+        {label}
+      </div>
+      <div className="text-sm font-semibold tabular-nums text-[var(--color-noxe-ink)]">{value}</div>
     </div>
   );
 }

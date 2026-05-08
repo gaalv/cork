@@ -1,4 +1,4 @@
-import { CaretRight, Hash } from "@phosphor-icons/react";
+import { CaretRight, Tag } from "@phosphor-icons/react";
 
 import { useDrawersStore } from "@/features/drawers/state/drawersStore";
 import { cn } from "@/shared/utils/cn";
@@ -19,7 +19,12 @@ export function TagNode({ node, depth = 0, onSelectTag }: TagNodeProps) {
   const hasChildren = node.children.length > 0;
 
   return (
-    <li role="treeitem" aria-expanded={hasChildren ? expanded : undefined} aria-selected={selectedTag === node.tag} aria-level={depth + 1}>
+    <li
+      role="treeitem"
+      aria-expanded={hasChildren ? expanded : undefined}
+      aria-selected={selectedTag === node.tag}
+      aria-level={depth + 1}
+    >
       <button
         type="button"
         className={cn(
@@ -45,7 +50,14 @@ export function TagNode({ node, depth = 0, onSelectTag }: TagNodeProps) {
           }
         }}
       >
-        {hasChildren ? <CaretRight size={13} className={cn("shrink-0 transition-transform", expanded && "rotate-90")} /> : <Hash size={13} />}
+        {hasChildren ? (
+          <CaretRight
+            size={13}
+            className={cn("shrink-0 transition-transform", expanded && "rotate-90")}
+          />
+        ) : (
+          <Tag size={13} />
+        )}
         <span className="min-w-0 flex-1 truncate">{node.name}</span>
         <span className="text-[11px] text-[var(--color-noxe-muted)]">{node.count}</span>
       </button>

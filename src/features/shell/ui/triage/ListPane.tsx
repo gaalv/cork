@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlass, Tag } from "@phosphor-icons/react";
 
 import { enrichNotes, type EnrichedNote } from "@/features/notes/services/enrichNotes";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -143,9 +143,10 @@ export function ListPane() {
                       {note.tags.slice(0, 3).map((t) => (
                         <span
                           key={t}
-                          className="rounded bg-[var(--color-noxe-tag-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-noxe-tag)]"
+                          className="inline-flex items-center gap-0.5 rounded bg-[var(--color-noxe-tag-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-noxe-tag)]"
                         >
-                          #{t}
+                          <Tag size={9} weight="fill" />
+                          {t}
                         </span>
                       ))}
                     </div>

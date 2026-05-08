@@ -15,7 +15,7 @@ describe("TagPills", () => {
   it("opens the tags drawer and selects a tag", () => {
     render(<TagPills tags={[{ tag: "dev", count: 3 }]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /#dev/ }));
+    fireEvent.click(screen.getByRole("button", { name: /dev/ }));
 
     expect(useDrawersStore.getState().selectedTag).toBe("dev");
     expect(useShellStore.getState().drawer).toBe("tags");

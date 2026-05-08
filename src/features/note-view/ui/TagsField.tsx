@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CaretDown, Check, Plus, X } from "@phosphor-icons/react";
+import { CaretDown, Check, Plus, Tag, X } from "@phosphor-icons/react";
 
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { useTagTree } from "@/features/drawers/hooks/useTagTree";
@@ -119,7 +119,8 @@ export function TagsField({ noteId }: TagsFieldProps) {
             key={tag}
             className="inline-flex items-center gap-1 rounded-full bg-[var(--color-noxe-tag-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-noxe-tag)]"
           >
-            #{tag}
+            <Tag size={10} weight="fill" />
+            {tag}
             <button
               type="button"
               aria-label={`Remove tag ${tag}`}
@@ -169,7 +170,9 @@ export function TagsField({ noteId }: TagsFieldProps) {
                       onClick={() => toggle(tag)}
                       className="flex w-full items-center justify-between gap-2 px-2 py-1 text-left text-xs text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)]"
                     >
-                      <span className="truncate">#{tag}</span>
+                      <span className="inline-flex items-center gap-1 truncate">
+                        <Tag size={10} weight="fill" /> {tag}
+                      </span>
                       {checked ? (
                         <Check
                           size={12}

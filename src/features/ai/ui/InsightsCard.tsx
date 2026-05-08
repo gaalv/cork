@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ArrowClockwise, Sparkle, Spinner } from "@phosphor-icons/react";
+import { ArrowClockwise, Sparkle, Spinner, Tag } from "@phosphor-icons/react";
 
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { useInsightsStore } from "@/features/ai/state/insightsStore";
@@ -48,7 +48,8 @@ export function InsightsCard({ noteId, body, title }: InsightsCardProps) {
           </h2>
         </div>
         <p className="mt-2 text-xs text-[var(--color-noxe-muted)]">
-          Enable an AI provider to generate summary, tag suggestions, and related notes for this note.
+          Enable an AI provider to generate summary, tag suggestions, and related notes for this
+          note.
         </p>
         <button
           type="button"
@@ -68,7 +69,15 @@ export function InsightsCard({ noteId, body, title }: InsightsCardProps) {
   return <ActiveInsightsCard noteId={noteId} body={body} title={title} />;
 }
 
-function ActiveInsightsCard({ noteId, body, title }: { noteId: string; body: string; title: string }) {
+function ActiveInsightsCard({
+  noteId,
+  body,
+  title,
+}: {
+  noteId: string;
+  body: string;
+  title: string;
+}) {
   const buffer = useEditorStore((state) => state.buffers.get(noteId) ?? null);
   const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
   const insights = useInsightsStore((state) => state.byNote[noteId]);
@@ -144,14 +153,15 @@ function ActiveInsightsCard({ noteId, body, title }: { noteId: string; body: str
                   type="button"
                   onClick={() => addTag(tag)}
                   disabled={applied}
-                  className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
                     applied
                       ? "border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)] text-[var(--color-noxe-muted)]"
                       : "border-[var(--color-noxe-border)] hover:bg-[var(--color-noxe-hover)]"
                   }`}
                   aria-label={applied ? `Tag ${tag} already applied` : `Add tag ${tag}`}
                 >
-                  #{tag}
+                  <Tag size={10} weight="fill" />
+                  {tag}
                   {applied ? " ✓" : ""}
                 </button>
               );
@@ -205,7 +215,14 @@ type InsightSectionProps = {
   children?: React.ReactNode;
 };
 
-function InsightSection({ label, slot, emptyHint, onGenerate, onRegenerate, children }: InsightSectionProps) {
+function InsightSection({
+  label,
+  slot,
+  emptyHint,
+  onGenerate,
+  onRegenerate,
+  children,
+}: InsightSectionProps) {
   return (
     <div className="mt-4 first:mt-3">
       <div className="flex items-center justify-between">
@@ -247,7 +264,9 @@ function InsightSection({ label, slot, emptyHint, onGenerate, onRegenerate, chil
 
       {slot.status === "error" ? (
         <div className="mt-1.5 space-y-1">
-          <p className="text-[11px] text-[var(--color-noxe-danger,#dc2626)]">{slot.error ?? "Failed."}</p>
+          <p className="text-[11px] text-[var(--color-noxe-danger,#dc2626)]">
+            {slot.error ?? "Failed."}
+          </p>
           <button
             type="button"
             onClick={onGenerate}

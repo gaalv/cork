@@ -1,4 +1,4 @@
-import { Star } from "@phosphor-icons/react";
+import { Star, Tag } from "@phosphor-icons/react";
 
 import { NoteCardMenu } from "./NoteCardMenu";
 
@@ -34,7 +34,9 @@ export function NoteCard({
   const starred = flags?.starred ?? homeNote?.starred ?? false;
   const iconKey =
     flags?.icon ??
-    (homeNote && typeof homeNote.frontmatter.icon === "string" ? (homeNote.frontmatter.icon as string) : undefined);
+    (homeNote && typeof homeNote.frontmatter.icon === "string"
+      ? (homeNote.frontmatter.icon as string)
+      : undefined);
   const Icon = resolveNoteIcon(iconKey);
   const snippet = homeNote?.snippet ?? (note.folder || "No preview available");
   const tags = extractTags(homeNote);
@@ -54,9 +56,15 @@ export function NoteCard({
           }}
           className="flex min-w-0 flex-1 items-start gap-2 text-left focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
         >
-          <Icon size={14} weight="duotone" className="mt-0.5 shrink-0 text-[var(--color-noxe-muted)]" />
+          <Icon
+            size={14}
+            weight="duotone"
+            className="mt-0.5 shrink-0 text-[var(--color-noxe-muted)]"
+          />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-semibold text-[var(--color-noxe-ink)]">{note.title}</span>
+            <span className="block truncate text-[14px] font-semibold text-[var(--color-noxe-ink)]">
+              {note.title}
+            </span>
             <span
               className={`mt-1 block text-[12px] leading-relaxed text-[var(--color-noxe-muted)] ${compact ? "line-clamp-2" : "line-clamp-3"}`}
             >
@@ -66,22 +74,33 @@ export function NoteCard({
         </button>
         <div className="flex items-start gap-1">
           {starred ? <Star size={12} weight="fill" className="mt-1 text-amber-500" /> : null}
-          <NoteCardMenu note={note} pinned={pinned} starred={starred} onOpen={onOpen} onPinToggle={onPinToggle} onChanged={onChanged} />
+          <NoteCardMenu
+            note={note}
+            pinned={pinned}
+            starred={starred}
+            onOpen={onOpen}
+            onPinToggle={onPinToggle}
+            onChanged={onChanged}
+          />
         </div>
       </div>
       <div className="mt-auto flex items-center gap-1.5 pt-1">
         {tags.slice(0, 2).map((tag) => (
           <span
             key={tag}
-            className="rounded-full bg-[var(--color-noxe-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-noxe-accent)]"
+            className="inline-flex items-center gap-0.5 rounded-full bg-[var(--color-noxe-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-noxe-accent)]"
           >
-            #{tag}
+            <Tag size={9} weight="fill" />
+            {tag}
           </span>
         ))}
         {note.folder ? (
           <span className="truncate text-[10px] text-[var(--color-noxe-muted)]">{note.folder}</span>
         ) : null}
-        <time className="ml-auto text-[10px] text-[var(--color-noxe-muted)]" dateTime={new Date(note.mtime).toISOString()}>
+        <time
+          className="ml-auto text-[10px] text-[var(--color-noxe-muted)]"
+          dateTime={new Date(note.mtime).toISOString()}
+        >
           {formatDate(note.mtime)}
         </time>
       </div>
@@ -106,5 +125,7 @@ function extractTags(note: HomeNote | null): string[] {
 }
 
 function formatDate(mtime: number): string {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(mtime));
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(
+    new Date(mtime),
+  );
 }

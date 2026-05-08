@@ -84,7 +84,7 @@ describe("ListPane", () => {
     useTriageStore.getState().setSelection({ kind: "tag", tag: "meetings" });
     render(<ListPane />);
     await waitFor(() => expect(byTagMock).toHaveBeenCalledWith("meetings"));
-    await waitFor(() => expect(screen.getByText("#meetings")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("meetings")).toBeTruthy());
   });
 
   it("filters by folder prefix for folder selections", async () => {
