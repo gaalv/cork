@@ -47,7 +47,7 @@ export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, 
           No notes have been indexed yet.
         </p>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {notes.map((note) => (
             <NoteCard
               key={note.id}
@@ -58,6 +58,7 @@ export function AllNotesGrid({ notes, hasMore, onLoadMore, onOpen, onPinToggle, 
               selected={bulkSelection.isSelected(note.path)}
               onSelectClick={(event, selectedNote) => bulkSelection.handleClick(event.nativeEvent, selectedNote.path)}
               flags={flagsByPath?.get(note.path)}
+              compact
             />
           ))}
         </div>

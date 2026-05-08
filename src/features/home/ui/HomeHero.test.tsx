@@ -29,8 +29,13 @@ describe("HomeHero", () => {
     });
 
     render(<HomeHero />);
-    expect(screen.getByText(/in your Inbox/i)).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText(/in Inbox/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 notes in your vault/i)).toBeInTheDocument();
+  });
+
+  it("renders the open today's note CTA", () => {
+    render(<HomeHero />);
+    expect(screen.getByTestId("home-open-today")).toBeInTheDocument();
   });
 
   it("varies greeting by day part", () => {
