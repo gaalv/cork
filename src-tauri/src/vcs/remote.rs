@@ -586,18 +586,44 @@ fn is_ssh_url(url: &str) -> bool {
 /// key for this vault. We force-disable the ssh-agent (which on macOS
 /// often has the user's enterprise key) and ignore `~/.ssh/config`
 /// entirely.
-fn build_ssh_command(vault_root: &Path) -> String {
+///
+/// When `port_443` is true, the command also rewrites the hostname to
+/// `ssh.github.com:443` — GitHub's officially supported SSH-over-HTTPS
+/// endpoint, used when corporate firewalls block port 22.
+fn build_ssh_command(vault_root: &Path, port_443: bool) -> String {
     let priv_path = deploy_key_priv_path(vault_root);
     let known_hosts = deploy_known_hosts_path(vault_root);
     // Quote each path with single quotes so spaces in the vault path
     // don't break the command. macOS git invokes this through /bin/sh.
-    format!(
+    let base = format!(
         "ssh -i '{key}' -o IdentitiesOnly=yes -o IdentityAgent=none \
          -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile='{known}' \
          -F /dev/null",
         key = priv_path.display(),
         known = known_hosts.display(),
-    )
+    );
+    if port_443 {
+        // -o Hostname rewrites the target host of every connection made
+        // by this ssh invocation, and -p forces the port. Together they
+        // route github.com traffic through ssh.github.com:443.
+        format!("{base} -o Hostname=ssh.github.com -p 443")
+    } else {
+        base
+    }
+}
+
+/// True if the stderr from a failed `git push` over SSH looks like a
+/// port-22 / outbound-network problem (firewall, proxy, sandbox) and
+/// therefore retrying via `ssh.github.com:443` might help.
+fn looks_like_port_22_block(stderr: &str) -> bool {
+    let s = stderr.to_lowercase();
+    s.contains("port 22")
+        || s.contains("bad file descriptor")
+        || s.contains("connection timed out")
+        || s.contains("connection refused")
+        || s.contains("network is unreachable")
+        || s.contains("operation timed out")
+        || s.contains("no route to host")
 }
 
 fn git_push(vault_root: &Path) -> Result<(), String> {
@@ -854,10 +880,13 @@ fn enable_remote_blocking(
             );
 
             // Pin core.sshCommand so git uses ONLY our deploy key.
-            let ssh_cmd = build_ssh_command(&vault_root);
+            // Start with port 22; if push fails with a network-block
+            // signature, we retry with ssh.github.com:443 and persist
+            // that command for future operations.
+            let ssh_cmd_22 = build_ssh_command(&vault_root, false);
             run_git_check(
                 &vault_root,
-                &["config", "--local", "core.sshCommand", &ssh_cmd],
+                &["config", "--local", "core.sshCommand", &ssh_cmd_22],
             )
             .map_err(IpcError::Other)?;
 
@@ -879,12 +908,45 @@ fn enable_remote_blocking(
                 );
             }
 
-            let push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
+            let mut push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
                 .map_err(IpcError::Other)?;
+            let mut tried_443 = false;
+            if !push_out.status.success() {
+                let stderr = String::from_utf8_lossy(&push_out.stderr).to_string();
+                if looks_like_port_22_block(&stderr) {
+                    // Retry over ssh.github.com:443 — GitHub's officially
+                    // supported SSH-over-HTTPS endpoint for firewalled
+                    // networks. If it works, persist this command so all
+                    // subsequent fetch/push use it too.
+                    tried_443 = true;
+                    let ssh_cmd_443 = build_ssh_command(&vault_root, true);
+                    run_git_check(
+                        &vault_root,
+                        &["config", "--local", "core.sshCommand", &ssh_cmd_443],
+                    )
+                    .map_err(IpcError::Other)?;
+                    push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
+                        .map_err(IpcError::Other)?;
+                    if !push_out.status.success() {
+                        // Both attempts failed — restore the simpler
+                        // command (less surprising in .git/config) before
+                        // surfacing the error.
+                        let _ = run_git(
+                            &vault_root,
+                            &["config", "--local", "core.sshCommand", &ssh_cmd_22],
+                        );
+                    }
+                }
+            }
             if !push_out.status.success() {
                 let stderr = String::from_utf8_lossy(&push_out.stderr).trim().to_string();
                 let stdout = String::from_utf8_lossy(&push_out.stdout).trim().to_string();
-                let mut msg = "git push (ssh) failed".to_string();
+                let mut msg = if tried_443 {
+                    "git push (ssh) failed on both port 22 and port 443"
+                } else {
+                    "git push (ssh) failed"
+                }
+                .to_string();
                 if !stderr.is_empty() {
                     msg.push_str(": ");
                     msg.push_str(&stderr);
@@ -906,6 +968,13 @@ fn enable_remote_blocking(
                     msg.push_str(
                         "\nHint: the SSH URL is wrong. Use \
                          git@github.com:owner/repo.git (no https://).",
+                    );
+                } else if looks_like_port_22_block(&lower) {
+                    msg.push_str(
+                        "\nHint: outbound SSH appears to be blocked from this \
+                         machine (corporate firewall or VPN). We tried both port \
+                         22 and ssh.github.com:443 and neither connected. Try \
+                         disconnecting the VPN, or fall back to HTTPS + PAT.",
                     );
                 }
                 return Err(IpcError::Other(msg));
@@ -1317,6 +1386,50 @@ mod tests {
             strip_userinfo("git@github.com:me/vault.git"),
             "git@github.com:me/vault.git"
         );
+    }
+
+    #[test]
+    fn is_ssh_url_detects_common_forms() {
+        assert!(is_ssh_url("git@github.com:me/vault.git"));
+        assert!(is_ssh_url("ssh://git@github.com/me/vault.git"));
+        assert!(!is_ssh_url("https://github.com/me/vault.git"));
+        assert!(!is_ssh_url("http://example.com/repo.git"));
+    }
+
+    #[test]
+    fn looks_like_port_22_block_recognizes_known_signatures() {
+        assert!(looks_like_port_22_block(
+            "ssh: connect to host github.com port 22: Bad file descriptor"
+        ));
+        assert!(looks_like_port_22_block(
+            "ssh: connect to host github.com port 22: Connection timed out"
+        ));
+        assert!(looks_like_port_22_block(
+            "ssh: connect to host github.com port 22: Operation timed out"
+        ));
+        assert!(looks_like_port_22_block("Network is unreachable"));
+        assert!(!looks_like_port_22_block(
+            "Permission denied (publickey)."
+        ));
+        assert!(!looks_like_port_22_block(
+            "ERROR: Repository not found."
+        ));
+    }
+
+    #[test]
+    fn build_ssh_command_toggles_port_443() {
+        let v = PathBuf::from("/tmp/v");
+        let c22 = build_ssh_command(&v, false);
+        assert!(c22.contains("-i '/tmp/v/.noxe/sync-key'"));
+        assert!(c22.contains("IdentitiesOnly=yes"));
+        assert!(c22.contains("IdentityAgent=none"));
+        assert!(c22.contains("-F /dev/null"));
+        assert!(!c22.contains("ssh.github.com"));
+        assert!(!c22.contains("-p 443"));
+
+        let c443 = build_ssh_command(&v, true);
+        assert!(c443.contains("Hostname=ssh.github.com"));
+        assert!(c443.contains("-p 443"));
     }
 
     #[test]
