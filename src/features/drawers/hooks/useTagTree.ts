@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { client } from "@/shared/ipc/client";
+import { useEditorStore } from "@/features/editor/state/editorStore";
 import { useVaultSettingsStore } from "@/features/settings/state/vaultSettingsStore";
 
 import type { TagCount } from "@/shared/ipc/IpcContract";
@@ -18,11 +19,45 @@ type MutableTagTreeNode = TagTreeNode & {
   ownCount: number;
 };
 
+function readTagsFromValue(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
 export function useTagTree() {
   const [tags, setTags] = useState<TagCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const libraryTags = useVaultSettingsStore((state) => state.settings.tagLibrary);
+  const lastSavedTimestamps = useEditorStore((state) => {
+    let max = 0;
+    for (const buffer of state.buffers.values()) {
+      if (buffer.lastSavedAt && buffer.lastSavedAt > max) max = buffer.lastSavedAt;
+    }
+    return max;
+  });
+  const bufferTagsKey = useEditorStore((state) => {
+    const set = new Set<string>();
+    for (const buffer of state.buffers.values()) {
+      for (const tag of readTagsFromValue(buffer.frontmatter.tags)) {
+        const normalized = tag.replace(/^#+/, "").trim();
+        if (normalized) set.add(normalized);
+      }
+    }
+    return Array.from(set).sort().join("|");
+  });
+  const bufferTags = useMemo(
+    () => (bufferTagsKey ? bufferTagsKey.split("|") : []),
+    [bufferTagsKey],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +84,8 @@ export function useTagTree() {
     };
 
     void load();
+    const onFocus = () => void load();
+    window.addEventListener("focus", onFocus);
     void client.events
       .on("vault:fileChanged", () => void load())
       .then((un) => {
@@ -65,12 +102,23 @@ export function useTagTree() {
       .catch(() => undefined);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", onFocus);
       unlistenChanged?.();
       unlistenIndexed?.();
     };
-  }, []);
+  }, [lastSavedTimestamps]);
 
-  const tree = useMemo(() => buildTagTree(tags, libraryTags ?? []), [tags, libraryTags]);
+  const tree = useMemo(() => {
+    const merged: TagCount[] = [...tags];
+    const seen = new Set(tags.map((entry) => entry.tag));
+    for (const tag of bufferTags) {
+      if (!seen.has(tag)) {
+        merged.push({ tag, count: 1 });
+        seen.add(tag);
+      }
+    }
+    return buildTagTree(merged, libraryTags ?? []);
+  }, [tags, bufferTags, libraryTags]);
   return { tree, isLoading, error };
 }
 
