@@ -74,7 +74,7 @@ export function ListPane() {
   return (
     <section
       data-testid="triage-list-pane"
-      className="flex h-full min-w-0 flex-col border-r border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)]"
+      className="flex h-full min-w-0 flex-col bg-[var(--color-noxe-panel)]"
       aria-label="Triage notes list"
     >
       <header className="flex h-12 items-center gap-2 border-b border-[var(--color-noxe-border)] px-3">

@@ -91,17 +91,11 @@ export function Splitter({
         const next = [...startSizes];
         if (left.size !== "fill") {
           const proposed = startSizes[handleIndex] + delta;
-          const clamped = Math.min(
-            Math.max(proposed, left.min ?? 0),
-            left.max ?? Infinity,
-          );
+          const clamped = Math.min(Math.max(proposed, left.min ?? 0), left.max ?? Infinity);
           next[handleIndex] = clamped;
         } else if (right.size !== "fill") {
           const proposed = startSizes[handleIndex + 1] - delta;
-          const clamped = Math.min(
-            Math.max(proposed, right.min ?? 0),
-            right.max ?? Infinity,
-          );
+          const clamped = Math.min(Math.max(proposed, right.min ?? 0), right.max ?? Infinity);
           next[handleIndex + 1] = clamped;
         }
         setSizes(next);
@@ -139,7 +133,11 @@ export function Splitter({
 
   // Sync sizes if panels.size changes externally (e.g. settings restore).
   useEffect(() => {
-    setSizes(panels.map((panel, idx) => (panel.size === "fill" ? sizesRef.current[idx] ?? 0 : panel.size)));
+    setSizes(
+      panels.map((panel, idx) =>
+        panel.size === "fill" ? (sizesRef.current[idx] ?? 0) : panel.size,
+      ),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panels.map((p) => `${p.id}:${p.size}`).join("|")]);
 
@@ -150,7 +148,7 @@ export function Splitter({
     })
     .reduce((acc, value, idx) => {
       if (idx === 0) return value;
-      return `${acc} 6px ${value}`;
+      return `${acc} 1px ${value}`;
     }, "");
 
   const style: CSSProperties = {
@@ -182,10 +180,10 @@ export function Splitter({
             onKeyDown={onKeyDown(idx)}
             className={
               handleClassName ??
-              "group cursor-col-resize bg-transparent transition-colors hover:bg-[var(--color-noxe-border)] focus-visible:bg-[var(--color-noxe-ring)] focus-visible:outline-none"
+              "relative cursor-col-resize bg-[var(--color-noxe-border)] transition-colors hover:bg-[var(--color-noxe-accent)] focus-visible:bg-[var(--color-noxe-ring)] focus-visible:outline-none after:absolute after:inset-y-0 after:-left-1 after:-right-1 after:content-['']"
             }
             data-testid={`splitter-handle-${idx}`}
-            style={{ width: 6 }}
+            style={{ width: 1 }}
           />,
         ];
       })}

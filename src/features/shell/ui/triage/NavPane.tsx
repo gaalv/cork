@@ -32,7 +32,7 @@ export function NavPane() {
   return (
     <nav
       data-testid="triage-nav-pane"
-      className="flex h-full flex-col overflow-hidden border-r border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] text-sm"
+      className="flex h-full flex-col overflow-hidden bg-[var(--color-noxe-panel)] text-sm"
       aria-label="Triage navigation"
     >
       <header className="flex h-12 items-center justify-between gap-2 px-4">
