@@ -631,6 +631,14 @@ fn enable_remote_blocking(
                 &vault_root,
                 &["config", "--local", "credential.https://github.com.helper", ""],
             );
+            // Force HTTP/1.1 — HTTP/2 multiplexing on GitHub occasionally
+            // produces "RPC failed; HTTP 403 ... send-pack: unexpected
+            // disconnect" when the auth header isn't reapplied across the
+            // multiplexed streams.
+            let _ = run_git(
+                &vault_root,
+                &["config", "--local", "http.version", "HTTP/1.1"],
+            );
             // GitHub's git HTTPS endpoint expects HTTP Basic auth with
             // `x-access-token:<PAT>` base64-encoded. This is the exact
             // format actions/checkout uses.
@@ -706,6 +714,41 @@ fn enable_remote_blocking(
                     "\nHint: the repository URL is wrong, the repo doesn't exist, \
                      or the PAT cannot see it (Repository access selection in the PAT).",
                 );
+            }
+            // Append a sanitized snapshot of the credential / http config
+            // that's actually visible to git from this repo. Helps
+            // pinpoint when an inherited helper or an extraHeader is
+            // missing / overriding what we set.
+            if let Ok(out) = run_git(
+                &vault_root,
+                &["config", "--show-origin", "--list"],
+            ) {
+                if out.status.success() {
+                    let listing = String::from_utf8_lossy(&out.stdout);
+                    let mut diag = String::from("\nConfig snapshot (credential/http/remote):");
+                    let mut any = false;
+                    for line in listing.lines() {
+                        let lower_line = line.to_lowercase();
+                        if lower_line.contains("credential.")
+                            || lower_line.contains("http.")
+                            || lower_line.contains("remote.")
+                        {
+                            any = true;
+                            diag.push('\n');
+                            // Redact the actual extraheader value but keep
+                            // its presence visible so we know it's set.
+                            if let Some(idx) = line.to_lowercase().find("extraheader=") {
+                                diag.push_str(&line[..idx]);
+                                diag.push_str("extraheader=<redacted>");
+                            } else {
+                                diag.push_str(line);
+                            }
+                        }
+                    }
+                    if any {
+                        msg.push_str(&diag);
+                    }
+                }
             }
             return Err(IpcError::Other(msg));
         }
