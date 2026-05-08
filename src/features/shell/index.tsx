@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { useIndexStore } from "@/features/index/state/indexStore";
 import { useShortcuts } from "@/features/shell/hooks/useShortcuts";
@@ -16,6 +17,7 @@ import { TopBar } from "@/features/shell/ui/TopBar";
 import { ViewRouter } from "@/features/shell/ui/ViewRouter";
 import { SettingsPanel } from "@/features/settings/ui/SettingsPanel";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { client } from "@/shared/ipc/client";
 
 export function Shell() {
   useShortcuts();
@@ -35,6 +37,16 @@ export function Shell() {
 
   useEffect(() => {
     void loadNotes()
+      .then(async () => {
+        const state = useVaultStore.getState();
+        if (state.path && state.notes.length === 0) {
+          const result = await client.vault.scaffoldIfNeeded();
+          if (result.created) {
+            toast.success("Welcome to Noxe — example notes added");
+            await loadNotes();
+          }
+        }
+      })
       .then(() => (useVaultStore.getState().path ? loadVaultSettings() : undefined))
       .then(() => Promise.all([startWatcherIntegration(), startIndexIntegration()]))
       .catch(() => undefined);

@@ -9,6 +9,7 @@ use crate::vault::VaultState;
 use crate::IpcError;
 
 const SCAFFOLD_VERSION: u8 = 1;
+const MARKER_IGNORE_ENTRY: &str = ".noxe/scaffold.json";
 const SEED_TODOS: [&str; 3] = [
     "Read the Welcome note",
     "Try the command palette (⌘K)",
@@ -220,6 +221,7 @@ pub(crate) fn scaffold_if_needed_at(
     }
 
     seed_todos_if_empty(vault_root, created_at)?;
+    ensure_marker_gitignored(vault_root)?;
     write_marker(&marker, created_at)?;
 
     Ok(ScaffoldResult {
@@ -265,6 +267,30 @@ fn seed_todos_if_empty(vault_root: &Path, created_at: &str) -> Result<(), IpcErr
     save_todos(vault_root, &list)
 }
 
+fn ensure_marker_gitignored(vault_root: &Path) -> Result<(), IpcError> {
+    let path = vault_root.join(".gitignore");
+    let existing = if path.exists() {
+        fs::read_to_string(&path)?
+    } else {
+        String::new()
+    };
+    if existing
+        .lines()
+        .any(|line| line.trim() == MARKER_IGNORE_ENTRY)
+    {
+        return Ok(());
+    }
+
+    let mut next = existing;
+    if !next.is_empty() && !next.ends_with('\n') {
+        next.push('\n');
+    }
+    next.push_str(MARKER_IGNORE_ENTRY);
+    next.push('\n');
+    fs::write(path, next)?;
+    Ok(())
+}
+
 fn write_marker(marker: &Path, created_at: &str) -> Result<(), IpcError> {
     if let Some(parent) = marker.parent() {
         fs::create_dir_all(parent)?;
@@ -294,6 +320,9 @@ mod tests {
         assert!(root.join("Welcome.md").exists());
         assert!(root.join("Daily/2026-05-08.md").exists());
         assert!(root.join(".noxe/scaffold.json").exists());
+        assert!(fs::read_to_string(root.join(".gitignore"))
+            .unwrap()
+            .contains(MARKER_IGNORE_ENTRY));
         assert_eq!(load_todos(root).unwrap().todos.len(), 3);
 
         fs::write(root.join("Welcome.md"), "keep me").unwrap();
@@ -301,7 +330,10 @@ mod tests {
 
         assert!(!second.created);
         assert!(second.files.is_empty());
-        assert_eq!(fs::read_to_string(root.join("Welcome.md")).unwrap(), "keep me");
+        assert_eq!(
+            fs::read_to_string(root.join("Welcome.md")).unwrap(),
+            "keep me"
+        );
         assert_eq!(load_todos(root).unwrap().todos.len(), 3);
     }
 }

@@ -32,6 +32,15 @@ describe("ipc client", () => {
     expect(result[0]?.title).toBe("A");
   });
 
+  it("invokes the vault scaffold command", async () => {
+    invokeMock.mockResolvedValue({ created: true, files: ["Welcome.md"] });
+
+    const result = await client.vault.scaffoldIfNeeded();
+
+    expect(invokeMock).toHaveBeenCalledWith("vault_scaffold_if_needed", undefined);
+    expect(result.files).toEqual(["Welcome.md"]);
+  });
+
   it("wraps note save input for rust command arguments", async () => {
     invokeMock.mockResolvedValue({ path: "/v/a.md", mtime: 2 });
 

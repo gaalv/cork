@@ -204,6 +204,7 @@ pub fn run() {
             vault::vault_recent,
             vault::vault_remove_recent,
             vault::vault_settings,
+            vault::scaffold::vault_scaffold_if_needed,
             // === F13 Settings ===
             settings::settings_app_load,
             settings::settings_app_save,

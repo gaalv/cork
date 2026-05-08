@@ -65,6 +65,11 @@ export type SearchResult = NoteEntry & {
   rank: number;
 };
 
+export type ScaffoldResult = {
+  created: boolean;
+  files: string[];
+};
+
 export type IndexStatus = {
   ready: boolean;
   vaultPath: string | null;
@@ -123,6 +128,10 @@ export type IpcCommandMap = {
   "vault.settings": {
     args: undefined;
     result: VaultSettings;
+  };
+  "vault.scaffoldIfNeeded": {
+    args: undefined;
+    result: ScaffoldResult;
   };
   // === F13 Settings ===
   "settings.appLoad": {

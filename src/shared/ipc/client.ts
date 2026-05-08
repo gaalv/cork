@@ -34,6 +34,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "vault.recent": "vault_recent",
   "vault.removeRecent": "vault_remove_recent",
   "vault.settings": "vault_settings",
+  "vault.scaffoldIfNeeded": "vault_scaffold_if_needed",
   "settings.appLoad": "settings_app_load",
   "settings.appSave": "settings_app_save",
   "settings.vaultLoad": "settings_vault_load",
@@ -144,6 +145,7 @@ export const client = {
     recent: () => invokeCommand("vault.recent", undefined),
     removeRecent: (path: string) => invokeCommand("vault.removeRecent", { path }),
     settings: () => invokeCommand("vault.settings", undefined),
+    scaffoldIfNeeded: () => invokeCommand("vault.scaffoldIfNeeded", undefined),
   },
   settings: {
     appLoad: () => invokeCommand("settings.appLoad", undefined),
@@ -248,6 +250,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "vault.close":
     case "vault.recent":
     case "vault.settings":
+    case "vault.scaffoldIfNeeded":
     case "settings.appLoad":
     case "settings.vaultLoad":
     case "tags.list":

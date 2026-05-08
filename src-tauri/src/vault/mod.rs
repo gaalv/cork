@@ -5,6 +5,7 @@ pub mod frontmatter;
 pub mod io;
 pub mod list;
 pub mod rename_propagation;
+pub mod scaffold;
 pub mod settings;
 pub mod watcher;
 
