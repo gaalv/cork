@@ -42,6 +42,12 @@ export const settingsBridge = {
         return vault.gitAutoCommit;
       case "ai.provider":
         return app.ai?.provider ?? "disabled";
+      case "layout.mode":
+        return app.layout.mode;
+      case "layout.triageNavWidth":
+        return app.layout.triageNavWidth;
+      case "layout.triageListWidth":
+        return app.layout.triageListWidth;
     }
   },
 
@@ -100,6 +106,17 @@ async function setGlobalSetting(key: SettingKey, value: SettingValue): Promise<v
       await store.updateSettings({ ai: { provider: aiProvider } });
       return;
     }
+    case "layout.mode": {
+      const mode = value === "triage" ? "triage" : "focus";
+      await store.setLayoutMode(mode);
+      return;
+    }
+    case "layout.triageNavWidth":
+      await store.setTriageWidths({ nav: Number(value) });
+      return;
+    case "layout.triageListWidth":
+      await store.setTriageWidths({ list: Number(value) });
+      return;
     case "vault.attachmentsFolder":
     case "wikilinks.autoRewriteOnRename":
     case "daily.pathPattern":
@@ -140,6 +157,10 @@ async function setVaultSetting(key: SettingKey, value: SettingValue): Promise<vo
     case "markdown.footnotes":
     case "markdown.highlight":
     case "ai.provider":
+      throw new Error(`${key} is a global setting`);
+    case "layout.mode":
+    case "layout.triageNavWidth":
+    case "layout.triageListWidth":
       throw new Error(`${key} is a global setting`);
   }
 }

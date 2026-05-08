@@ -1,6 +1,7 @@
 export type AppearanceDensity = "comfortable" | "compact";
 export type AppearanceTheme = "light" | "dark" | "system";
 export type AiProvider = "disabled" | "claude" | "copilot";
+export type LayoutMode = "focus" | "triage";
 
 export type AppSettings = {
   appearance: {
@@ -31,6 +32,11 @@ export type AppSettings = {
   ai: {
     provider: AiProvider;
   };
+  layout: {
+    mode: LayoutMode;
+    triageNavWidth: number;
+    triageListWidth: number;
+  };
 };
 
 export type VaultScopedSettings = {
@@ -60,7 +66,10 @@ export type SettingKey =
   | "daily.templatePath"
   | "assets.offlineMode"
   | "vcs.gitAutoCommit"
-  | "ai.provider";
+  | "ai.provider"
+  | "layout.mode"
+  | "layout.triageNavWidth"
+  | "layout.triageListWidth";
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   appearance: { density: "comfortable", theme: "system" },
@@ -78,6 +87,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   markdown: { callouts: true, footnotes: true, highlight: true },
   assets: { offlineMode: false },
   ai: { provider: "disabled" },
+  layout: { mode: "focus", triageNavWidth: 240, triageListWidth: 320 },
 };
 
 export const DEFAULT_VAULT_SETTINGS: Required<VaultScopedSettings> = {

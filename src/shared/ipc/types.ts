@@ -49,6 +49,11 @@ export type AppSettings = {
   ai: {
     provider: AiProvider;
   };
+  layout?: {
+    mode: "focus" | "triage";
+    triageNavWidth: number;
+    triageListWidth: number;
+  };
 };
 
 export type VaultSettings = {

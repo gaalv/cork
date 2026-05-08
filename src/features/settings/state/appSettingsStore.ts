@@ -30,6 +30,8 @@ export type AppSettingsStore = {
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
   setAutoRewriteLinksOnRename: (enabled: boolean) => void;
   setOfflineMode: (enabled: boolean) => void;
+  setLayoutMode: (mode: import("./settingsTypes").LayoutMode) => Promise<void>;
+  setTriageWidths: (widths: { nav?: number; list?: number }) => Promise<void>;
   loadVaultSettings: () => Promise<void>;
   applyVaultSettings: (settings: VaultSettings) => void;
   reset: () => void;
@@ -74,6 +76,25 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
     void saveNativeSettings(next);
   },
 
+  async setLayoutMode(mode) {
+    const current = get().settings.layout;
+    if (current.mode === mode) return;
+    await get().updateSettings({ layout: { ...current, mode } });
+  },
+
+  async setTriageWidths({ nav, list }) {
+    const current = get().settings.layout;
+    const next = {
+      ...current,
+      triageNavWidth: nav !== undefined ? clamp(nav, 180, 360) : current.triageNavWidth,
+      triageListWidth: list !== undefined ? clamp(list, 240, 480) : current.triageListWidth,
+    };
+    if (next.triageNavWidth === current.triageNavWidth && next.triageListWidth === current.triageListWidth) {
+      return;
+    }
+    await get().updateSettings({ layout: next });
+  },
+
   async loadVaultSettings() {
     const settingsClient = (client as SettingsClient).settings;
     const settings = settingsClient ? await settingsClient.vaultLoad().catch(() => client.vault.settings()) : await client.vault.settings();
@@ -114,6 +135,7 @@ function mergeAppSettings(current: AppSettings, patch: Partial<AppSettings>): Ap
     markdown: { ...current.markdown, ...patch.markdown },
     assets: { ...current.assets, ...patch.assets },
     ai: { ...current.ai, ...patch.ai },
+    layout: { ...current.layout, ...patch.layout },
   };
 }
 
@@ -191,6 +213,7 @@ export function normalizeAppSettings(value: unknown): AppSettings {
     },
     assets: { offlineMode: booleanOr(assets.offlineMode, DEFAULT_APP_SETTINGS.assets.offlineMode) },
     ai: { provider: normalizeAiProvider(isRecord(value.ai) ? (value.ai as Record<string, unknown>).provider : undefined) },
+    layout: normalizeLayout(isRecord(value.layout) ? value.layout : undefined),
   };
 }
 
@@ -216,4 +239,19 @@ function normalizeTheme(value: unknown): "light" | "dark" | "system" {
 
 function normalizeAiProvider(value: unknown): AiProvider {
   return value === "claude" || value === "copilot" ? value : "disabled";
+}
+
+function normalizeLayout(value: Record<string, unknown> | undefined): AppSettings["layout"] {
+  const fallback = DEFAULT_APP_SETTINGS.layout;
+  if (!value) return fallback;
+  const mode = value.mode === "triage" || value.mode === "focus" ? value.mode : fallback.mode;
+  return {
+    mode,
+    triageNavWidth: clamp(numberOr(value.triageNavWidth, fallback.triageNavWidth), 180, 360),
+    triageListWidth: clamp(numberOr(value.triageListWidth, fallback.triageListWidth), 240, 480),
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
