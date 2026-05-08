@@ -68,14 +68,11 @@ export function Shell() {
   }
 
   return (
-    <div data-testid="shell" className="relative flex h-full overflow-hidden bg-[var(--color-noxe-bg)]">
-      <div className="h-full w-14 shrink-0">
-        <Rail />
-      </div>
-      <div className="relative flex h-full min-w-0 flex-1 flex-col">
-        <TopBar />
-        <ShellBody />
-      </div>
+    <div
+      data-testid="shell"
+      className="relative flex h-full overflow-hidden bg-[var(--color-noxe-bg)]"
+    >
+      <ShellChrome />
       <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
       <CommandPalette />
       <GenerateNoteModal />
@@ -88,23 +85,34 @@ export function Shell() {
 
 const TRIAGE_MIN_WIDTH = 1100;
 
-function ShellBody() {
+function ShellChrome() {
   const layoutMode = useAppSettingsStore((state) => state.settings.layout.mode);
   const width = useViewportWidth();
   const effectiveMode = width < TRIAGE_MIN_WIDTH ? "focus" : layoutMode;
-  return (
-    <div className="relative flex min-h-0 flex-1 overflow-hidden" data-shell-mode={effectiveMode}>
-      {effectiveMode === "triage" ? (
+
+  if (effectiveMode === "triage") {
+    return (
+      <div data-shell-mode="triage" className="relative flex h-full min-w-0 flex-1 overflow-hidden">
         <TriageBody />
-      ) : (
-        <>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="h-full w-14 shrink-0">
+        <Rail />
+      </div>
+      <div className="relative flex h-full min-w-0 flex-1 flex-col">
+        <TopBar />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden" data-shell-mode="focus">
           <DrawerHost />
           <div className="flex min-w-0 flex-1 overflow-hidden">
             <ViewRouter />
           </div>
-        </>
-      )}
-    </div>
+        </div>
+      </div>
+    </>
   );
 }
 
