@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 
+import { enrichNotes, type EnrichedNote } from "@/features/notes/services/enrichNotes";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import {
   triageScopeLabel,
   useTriageStore,
   type TriageSelection,
 } from "@/features/shell/state/triageStore";
+import { useTriageOverlayStore } from "@/features/shell/state/triageOverlayStore";
 import { client } from "@/shared/ipc/client";
 import { cn } from "@/shared/utils/cn";
 
@@ -16,7 +18,9 @@ export function ListPane() {
   const selection = useTriageStore((state) => state.selection);
   const view = useShellStore((state) => state.view);
   const navigate = useShellStore((state) => state.navigate);
-  const [notes, setNotes] = useState<NoteEntry[]>([]);
+  const overlayKind = useTriageOverlayStore((state) => state.kind);
+  const openPalette = useShellStore((state) => state.openPalette);
+  const [notes, setNotes] = useState<EnrichedNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -30,8 +34,9 @@ export function ListPane() {
     let cancelled = false;
     setLoading(true);
     void loadList(selection)
-      .then((next) => {
-        if (!cancelled) setNotes(next);
+      .then(async (list) => {
+        const enriched = await enrichNotes(list);
+        if (!cancelled) setNotes(enriched);
       })
       .catch(() => {
         if (!cancelled) setNotes([]);
@@ -46,45 +51,69 @@ export function ListPane() {
 
   const filtered = useMemo(() => {
     if (!debouncedSearch) return notes;
-    return notes.filter((n) => n.title.toLowerCase().includes(debouncedSearch));
+    return notes.filter(
+      (n) =>
+        n.title.toLowerCase().includes(debouncedSearch) ||
+        n.snippet.toLowerCase().includes(debouncedSearch),
+    );
   }, [notes, debouncedSearch]);
+
+  // Auto-select the first note when nothing is open or current note left the list,
+  // unless an overlay is open (don't steal focus from a tool modal).
+  useEffect(() => {
+    if (loading || overlayKind || filtered.length === 0) return;
+    const activeId = view.kind === "note" ? view.id : null;
+    const stillVisible = activeId ? filtered.some((n) => n.id === activeId) : false;
+    if (!activeId || !stillVisible) {
+      navigate({ kind: "note", id: filtered[0].id });
+    }
+  }, [filtered, loading, navigate, overlayKind, view]);
 
   const activeId = view.kind === "note" ? view.id : null;
 
   return (
     <section
       data-testid="triage-list-pane"
-      className="flex h-full min-w-0 flex-col border-r border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)]"
+      className="flex h-full min-w-0 flex-col border-r border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)]"
       aria-label="Triage notes list"
     >
-      <header className="flex flex-col gap-2 border-b border-[var(--color-noxe-border)] px-3 py-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="truncate text-sm font-semibold text-[var(--color-noxe-ink)]">
-            {triageScopeLabel(selection)}
-          </h2>
-          <span className="text-xs text-[var(--color-noxe-muted)]" data-testid="triage-list-count">
-            {filtered.length} {filtered.length === 1 ? "note" : "notes"}
-          </span>
-        </div>
-        <label className="flex items-center gap-2 rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1">
+      <header className="flex h-12 items-center gap-2 border-b border-[var(--color-noxe-border)] px-3">
+        <label className="flex flex-1 items-center gap-2 rounded-md bg-[var(--color-noxe-panel-2)] px-2.5 py-1.5">
           <MagnifyingGlass size={14} className="text-[var(--color-noxe-muted)]" />
           <input
             data-testid="triage-list-search"
             type="search"
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
-            placeholder="Filter…"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--color-noxe-muted)]"
+            placeholder="Search this view…"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--color-noxe-subtle)]"
           />
+          <button
+            type="button"
+            onClick={() => openPalette()}
+            className="rounded border border-[var(--color-noxe-border)] bg-white px-1 text-[10px] font-medium text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)]"
+            title="Open command palette"
+          >
+            ⌘K
+          </button>
         </label>
       </header>
+
+      <div className="flex items-center justify-between px-4 pb-2 pt-3 text-xs text-[var(--color-noxe-muted)]">
+        <span data-testid="triage-list-count">
+          {triageScopeLabel(selection)} · {filtered.length}{" "}
+          {filtered.length === 1 ? "note" : "notes"}
+        </span>
+        <span>Updated ▾</span>
+      </div>
+
       <div className="min-h-0 flex-1 overflow-y-auto">
         {loading ? (
           <p className="p-4 text-xs text-[var(--color-noxe-muted)]">Loading…</p>
         ) : filtered.length === 0 ? (
           <p className="p-4 text-xs text-[var(--color-noxe-muted)]">No notes here yet.</p>
         ) : (
-          <ul className="divide-y divide-[var(--color-noxe-border)]">
+          <ul className="flex flex-col">
             {filtered.map((note) => (
               <li key={note.id}>
                 <button
@@ -92,19 +121,35 @@ export function ListPane() {
                   data-testid={`triage-list-row-${note.id}`}
                   onClick={() => navigate({ kind: "note", id: note.id })}
                   className={cn(
-                    "block w-full px-3 py-2 text-left transition-colors",
+                    "flex w-full flex-col gap-1 border-l-2 px-4 py-3 text-left transition",
                     activeId === note.id
-                      ? "bg-[var(--color-noxe-accent-soft)]"
-                      : "hover:bg-[var(--color-noxe-panel-2)]",
+                      ? "border-[var(--color-noxe-accent)] bg-[var(--color-noxe-accent-soft)]"
+                      : "border-transparent hover:bg-[var(--color-noxe-panel-2)]",
                   )}
                 >
-                  <p className="truncate text-sm font-medium text-[var(--color-noxe-ink)]">
-                    {note.title || "Untitled"}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium text-[var(--color-noxe-ink)]">
+                      {note.title || "Untitled"}
+                    </span>
+                    <span className="shrink-0 text-[11px] text-[var(--color-noxe-subtle)]">
+                      {formatTime(note.mtime)}
+                    </span>
+                  </div>
+                  <p className="line-clamp-2 text-[13px] text-[var(--color-noxe-muted)]">
+                    {note.snippet}
                   </p>
-                  <p className="mt-0.5 flex items-center justify-between gap-2 text-[11px] text-[var(--color-noxe-muted)]">
-                    <span className="truncate">{note.folder || "Inbox"}</span>
-                    <span>{relativeTime(note.mtime)}</span>
-                  </p>
+                  {note.tags.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {note.tags.slice(0, 3).map((t) => (
+                        <span
+                          key={t}
+                          className="rounded bg-[var(--color-noxe-tag-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-noxe-tag)]"
+                        >
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </button>
               </li>
             ))}
@@ -133,7 +178,9 @@ async function loadList(selection: TriageSelection): Promise<NoteEntry[]> {
       const all = await client.notes.allPaged(0, 1000);
       const prefix = selection.path ? selection.path + "/" : "";
       return all
-        .filter((n) => (selection.path ? n.folder === selection.path || n.folder.startsWith(prefix) : !n.folder))
+        .filter((n) =>
+          selection.path ? n.folder === selection.path || n.folder.startsWith(prefix) : !n.folder,
+        )
         .sort((a, b) => b.mtime - a.mtime);
     }
     case "tag":
@@ -145,18 +192,15 @@ async function loadList(selection: TriageSelection): Promise<NoteEntry[]> {
   }
 }
 
-function relativeTime(mtime: number): string {
+function formatTime(mtime: number): string {
+  const d = new Date(mtime);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) {
+    return d.toTimeString().slice(0, 5);
+  }
   const ms = Date.now() - mtime;
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return "now";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  const w = Math.floor(d / 7);
-  if (w < 5) return `${w}w`;
-  const mo = Math.floor(d / 30);
-  return `${mo}mo`;
+  const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+  if (days < 7) return `${days}d`;
+  if (days < 30) return `${Math.floor(days / 7)}w`;
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(d);
 }
