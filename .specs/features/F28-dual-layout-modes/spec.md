@@ -116,7 +116,8 @@ inline filter sources in `triage`).
 
 ### R9 — Accessibility & keyboard
 
-- **R9.1** A new shortcut `Cmd+Shift+L` toggles between `focus` and `triage`.
+- **R9.1** A new shortcut `Cmd+Shift+M` toggles between `focus` and `triage`
+  (M for "mode"; `Cmd+Shift+L` is already taken by theme cycle).
 - **R9.2** Splitter handles have `role="separator"` and `aria-orientation`,
   and are operable via keyboard arrows when focused (left/right adjusts by
   16px).

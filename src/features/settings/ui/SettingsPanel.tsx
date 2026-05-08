@@ -246,7 +246,7 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
         />
         <SettingRow
           label="Layout mode"
-          description="Focus shows a single editor column. Triage adds a persistent folder tree and notes list (best with a wider window). Toggle anytime with ⌘⇧L."
+          description="Focus shows a single editor column. Triage adds a persistent folder tree and notes list (best with a wider window). Toggle anytime with ⌘⇧M."
           scope="app"
           control={
             <Select<LayoutMode>

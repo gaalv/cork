@@ -3,6 +3,7 @@ import { tinykeys } from "tinykeys";
 
 import { openOrCreateToday } from "@/features/daily/services/dailyService";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
+import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
@@ -101,6 +102,14 @@ export function useShortcuts() {
         }
         event.preventDefault();
         navigate({ kind: "graph" });
+      },
+      "$mod+Shift+m": (event) => {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+        const store = useAppSettingsStore.getState();
+        void store.setLayoutMode(store.settings.layout.mode === "focus" ? "triage" : "focus");
       },
       "(\\?)": (event) => {
         if (isEditableTarget(event.target)) {
