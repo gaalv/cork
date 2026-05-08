@@ -1,7 +1,9 @@
 import { CalendarBlank, CheckSquare, ClockCounterClockwise, FolderSimple, GearSix, GraphIcon, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
 
+import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { useTriageStore, type TriageSelection } from "@/features/shell/state/triageStore";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/utils/cn";
 
@@ -25,6 +27,19 @@ export function Rail({ className }: RailProps) {
   const toggleDrawer = useShellStore((state) => state.toggleDrawer);
   const navigate = useShellStore((state) => state.navigate);
   const openSettings = useSettingsUiStore((state) => state.openSettings);
+  const layoutMode = useAppSettingsStore((state) => state.settings.layout.mode);
+  const setTriageSelection = useTriageStore((state) => state.setSelection);
+
+  const handleDrawerButton = (id: DrawerId) => {
+    if (layoutMode === "triage") {
+      const next = triageSelectionForDrawer(id);
+      if (next) {
+        setTriageSelection(next);
+        return;
+      }
+    }
+    toggleDrawer(id);
+  };
 
   return (
     <aside
@@ -47,7 +62,7 @@ export function Rail({ className }: RailProps) {
             icon={button.icon}
             label={button.label}
             active={drawer === button.id}
-            onClick={() => toggleDrawer(button.id)}
+            onClick={() => handleDrawerButton(button.id)}
           />
         ))}
         <RailButton
@@ -98,4 +113,19 @@ function RailButton({ icon, label, active, onClick }: RailButtonProps) {
       {icon}
     </button>
   );
+}
+
+function triageSelectionForDrawer(id: DrawerId): TriageSelection | null {
+  switch (id) {
+    case "starred":
+      return { kind: "shortcut", id: "pinned" };
+    case "recent":
+      return { kind: "shortcut", id: "recent" };
+    case "folders":
+      return { kind: "shortcut", id: "inbox" };
+    case "tags":
+    case "search":
+    default:
+      return null;
+  }
 }

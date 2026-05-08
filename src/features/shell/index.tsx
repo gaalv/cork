@@ -15,6 +15,8 @@ import { Rail } from "@/features/shell/ui/Rail";
 import { Toaster } from "@/features/shell/ui/Toaster";
 import { TopBar } from "@/features/shell/ui/TopBar";
 import { ViewRouter } from "@/features/shell/ui/ViewRouter";
+import { TriageBody } from "@/features/shell/ui/triage/TriageBody";
+import { useViewportWidth } from "@/features/shell/hooks/useViewportWidth";
 import { SettingsPanel } from "@/features/settings/ui/SettingsPanel";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
@@ -72,12 +74,7 @@ export function Shell() {
       </div>
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
         <TopBar />
-        <div className="relative flex min-h-0 flex-1 overflow-hidden">
-          <DrawerHost />
-          <div className="flex min-w-0 flex-1 overflow-hidden">
-            <ViewRouter />
-          </div>
-        </div>
+        <ShellBody />
       </div>
       <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
       <CommandPalette />
@@ -85,6 +82,28 @@ export function Shell() {
       <HelpModal />
       <SettingsPanel />
       <Toaster />
+    </div>
+  );
+}
+
+const TRIAGE_MIN_WIDTH = 1100;
+
+function ShellBody() {
+  const layoutMode = useAppSettingsStore((state) => state.settings.layout.mode);
+  const width = useViewportWidth();
+  const effectiveMode = width < TRIAGE_MIN_WIDTH ? "focus" : layoutMode;
+  return (
+    <div className="relative flex min-h-0 flex-1 overflow-hidden" data-shell-mode={effectiveMode}>
+      {effectiveMode === "triage" ? (
+        <TriageBody />
+      ) : (
+        <>
+          <DrawerHost />
+          <div className="flex min-w-0 flex-1 overflow-hidden">
+            <ViewRouter />
+          </div>
+        </>
+      )}
     </div>
   );
 }
