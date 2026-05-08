@@ -250,6 +250,7 @@ pub fn run() {
             vcs::remote::vcs_remote_enable,
             vcs::remote::vcs_remote_disable,
             vcs::remote::vcs_remote_sync_now,
+            vcs::remote::vcs_generate_deploy_key,
             // === F21 AI Infrastructure ===
             ai::ai_run_skill,
             ai::ai_cache_clear,

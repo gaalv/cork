@@ -430,6 +430,176 @@ fn run_git_auto(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
     }
 }
 
+// ── SSH deploy key support ───────────────────────────────────────────────────
+
+/// Per-vault SSH key paths. We keep the keypair under `.noxe/` so each
+/// vault has its own isolated identity that never touches `~/.ssh/`.
+fn deploy_key_priv_path(vault_root: &Path) -> PathBuf {
+    vault_root.join(".noxe").join("sync-key")
+}
+
+fn deploy_key_pub_path(vault_root: &Path) -> PathBuf {
+    vault_root.join(".noxe").join("sync-key.pub")
+}
+
+fn deploy_known_hosts_path(vault_root: &Path) -> PathBuf {
+    vault_root.join(".noxe").join("known_hosts")
+}
+
+/// True if a deploy keypair has already been generated for this vault.
+fn has_deploy_key(vault_root: &Path) -> bool {
+    deploy_key_priv_path(vault_root).exists() && deploy_key_pub_path(vault_root).exists()
+}
+
+/// Make sure `.gitignore` excludes the deploy key files. We never want
+/// to push the private key to the remote.
+fn ensure_gitignore_excludes_deploy_key(vault_root: &Path) -> std::io::Result<()> {
+    use std::io::{Read, Write};
+    let path = vault_root.join(".gitignore");
+    let mut existing = String::new();
+    if path.exists() {
+        std::fs::OpenOptions::new()
+            .read(true)
+            .open(&path)?
+            .read_to_string(&mut existing)?;
+    }
+    let needed = [
+        ".noxe/sync-key",
+        ".noxe/sync-key.pub",
+        ".noxe/known_hosts",
+    ];
+    let mut added = false;
+    for line in needed {
+        let present = existing
+            .lines()
+            .any(|l| l.trim() == line);
+        if !present {
+            if !existing.is_empty() && !existing.ends_with('\n') {
+                existing.push('\n');
+            }
+            existing.push_str(line);
+            existing.push('\n');
+            added = true;
+        }
+    }
+    if added {
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&path)?;
+        f.write_all(existing.as_bytes())?;
+    }
+    Ok(())
+}
+
+/// Generate a fresh ed25519 keypair under `.noxe/` if none exists.
+/// Returns the path to the public key file.
+fn ensure_deploy_key(vault_root: &Path) -> Result<(), String> {
+    let priv_path = deploy_key_priv_path(vault_root);
+    let pub_path = deploy_key_pub_path(vault_root);
+    if priv_path.exists() && pub_path.exists() {
+        return Ok(());
+    }
+
+    // Make sure .noxe exists.
+    std::fs::create_dir_all(vault_root.join(".noxe"))
+        .map_err(|e| format!("could not create .noxe/: {e}"))?;
+
+    // Stale half-state: clean up so ssh-keygen doesn't refuse to overwrite.
+    let _ = std::fs::remove_file(&priv_path);
+    let _ = std::fs::remove_file(&pub_path);
+
+    let host = hostname();
+    let comment = format!("noxe-vault@{host}");
+
+    let priv_str = priv_path
+        .to_str()
+        .ok_or_else(|| "deploy key path is not valid UTF-8".to_string())?;
+
+    let out = Command::new("ssh-keygen")
+        .args([
+            "-t", "ed25519",
+            "-f", priv_str,
+            "-N", "", // empty passphrase — we cannot prompt
+            "-C", &comment,
+        ])
+        .output()
+        .map_err(|e| format!("ssh-keygen not available ({e}). Install OpenSSH and try again."))?;
+
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        return Err(format!(
+            "ssh-keygen failed: {}",
+            if stderr.is_empty() { "non-zero exit".into() } else { stderr }
+        ));
+    }
+
+    // Tighten permissions — ssh-keygen usually does this but be explicit.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = std::fs::metadata(&priv_path) {
+            let mut perms = meta.permissions();
+            perms.set_mode(0o600);
+            let _ = std::fs::set_permissions(&priv_path, perms);
+        }
+    }
+
+    let _ = ensure_gitignore_excludes_deploy_key(vault_root);
+    Ok(())
+}
+
+/// Read the public key as a single-line string suitable for pasting
+/// into a GitHub Deploy Key field.
+fn read_deploy_pub_key(vault_root: &Path) -> Result<String, String> {
+    let pub_path = deploy_key_pub_path(vault_root);
+    let content = std::fs::read_to_string(&pub_path)
+        .map_err(|e| format!("could not read deploy public key: {e}"))?;
+    Ok(content.trim().to_string())
+}
+
+/// Compute a short fingerprint for display in the UI.
+fn deploy_key_fingerprint(vault_root: &Path) -> Option<String> {
+    let priv_path = deploy_key_priv_path(vault_root);
+    let priv_str = priv_path.to_str()?;
+    let out = Command::new("ssh-keygen")
+        .args(["-lf", priv_str, "-E", "sha256"])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let line = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    // Output looks like: "256 SHA256:abc... noxe@host (ED25519)"
+    line.split_whitespace().nth(1).map(|s| s.to_string())
+}
+
+/// True if the given URL is an SSH-style git remote (e.g.
+/// `git@github.com:user/repo.git` or `ssh://git@github.com/user/repo.git`).
+fn is_ssh_url(url: &str) -> bool {
+    let u = url.trim();
+    u.starts_with("git@") || u.starts_with("ssh://")
+}
+
+/// Build the value of `core.sshCommand` so that git uses ONLY our deploy
+/// key for this vault. We force-disable the ssh-agent (which on macOS
+/// often has the user's enterprise key) and ignore `~/.ssh/config`
+/// entirely.
+fn build_ssh_command(vault_root: &Path) -> String {
+    let priv_path = deploy_key_priv_path(vault_root);
+    let known_hosts = deploy_known_hosts_path(vault_root);
+    // Quote each path with single quotes so spaces in the vault path
+    // don't break the command. macOS git invokes this through /bin/sh.
+    format!(
+        "ssh -i '{key}' -o IdentitiesOnly=yes -o IdentityAgent=none \
+         -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile='{known}' \
+         -F /dev/null",
+        key = priv_path.display(),
+        known = known_hosts.display(),
+    )
+}
+
 fn git_push(vault_root: &Path) -> Result<(), String> {
     let _ = append_log(vault_root, "[push] start");
     let out = run_git_auto(vault_root, &["push", "origin", "HEAD"]);
@@ -662,6 +832,88 @@ fn enable_remote_blocking(
     let url_set: String;
     if let Some(url) = input.url.clone() {
         let trimmed_url = url.trim().to_string();
+
+        // ── SSH deploy-key path ──────────────────────────────────────
+        if is_ssh_url(&trimmed_url) {
+            if !has_deploy_key(&vault_root) {
+                return Err(IpcError::Other(
+                    "Deploy key not generated yet. Click \"Generate deploy key\" first, \
+                     paste the public key into the repo's Deploy Keys (with write \
+                     access), then Connect."
+                        .into(),
+                ));
+            }
+            let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
+            run_git_check(&vault_root, &["remote", "add", "origin", &trimmed_url])
+                .map_err(IpcError::Other)?;
+
+            // Clear any leftover HTTPS auth state from a prior connection.
+            let _ = run_git(
+                &vault_root,
+                &["config", "--local", "--remove-section", "http.https://github.com/"],
+            );
+
+            // Pin core.sshCommand so git uses ONLY our deploy key.
+            let ssh_cmd = build_ssh_command(&vault_root);
+            run_git_check(
+                &vault_root,
+                &["config", "--local", "core.sshCommand", &ssh_cmd],
+            )
+            .map_err(IpcError::Other)?;
+
+            // Make sure HEAD exists.
+            let has_head = run_git(&vault_root, &["rev-parse", "HEAD"])
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+            if !has_head {
+                let _ = run_git(&vault_root, &["add", "-A"]);
+                let _ = run_git(
+                    &vault_root,
+                    &[
+                        "commit",
+                        "--allow-empty",
+                        "-m",
+                        "Initial commit",
+                        "--author=Noxe <noxe@local>",
+                    ],
+                );
+            }
+
+            let push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
+                .map_err(IpcError::Other)?;
+            if !push_out.status.success() {
+                let stderr = String::from_utf8_lossy(&push_out.stderr).trim().to_string();
+                let stdout = String::from_utf8_lossy(&push_out.stdout).trim().to_string();
+                let mut msg = "git push (ssh) failed".to_string();
+                if !stderr.is_empty() {
+                    msg.push_str(": ");
+                    msg.push_str(&stderr);
+                }
+                if !stdout.is_empty() {
+                    msg.push_str(" | ");
+                    msg.push_str(&stdout);
+                }
+                let lower = format!("{stderr} {stdout}").to_lowercase();
+                if lower.contains("permission denied") || lower.contains("publickey") {
+                    msg.push_str(
+                        "\nHint: the deploy key wasn't accepted. On the repo page → \
+                         Settings → Deploy keys → Add deploy key, paste the PUBLIC \
+                         key shown above and check \"Allow write access\".",
+                    );
+                } else if lower.contains("repository not found")
+                    || lower.contains("does not exist")
+                {
+                    msg.push_str(
+                        "\nHint: the SSH URL is wrong. Use \
+                         git@github.com:owner/repo.git (no https://).",
+                    );
+                }
+                return Err(IpcError::Other(msg));
+            }
+            return Ok(trimmed_url);
+        }
+
+        // ── HTTPS + optional PAT path (legacy) ───────────────────────
         let stored = strip_userinfo(&trimmed_url);
         let token = input
             .token
@@ -903,6 +1155,39 @@ fn enable_remote_blocking(
     Ok(url_set)
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeployKeyInfo {
+    pub public_key: String,
+    pub fingerprint: Option<String>,
+    pub already_existed: bool,
+}
+
+/// Generate (or read) the per-vault SSH deploy key. Returns the public
+/// key string the user must paste into the repo's Deploy Keys settings.
+#[tauri::command]
+pub async fn vcs_generate_deploy_key(
+    vault_state: tauri::State<'_, VaultState>,
+) -> Result<DeployKeyInfo, IpcError> {
+    let vault_root = vault_state.current_path().ok_or(IpcError::NotFound)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<DeployKeyInfo, IpcError> {
+        super::git_init_if_needed(&vault_root).map_err(IpcError::Other)?;
+        let already_existed = has_deploy_key(&vault_root);
+        if !already_existed {
+            ensure_deploy_key(&vault_root).map_err(IpcError::Other)?;
+        }
+        let public_key = read_deploy_pub_key(&vault_root).map_err(IpcError::Other)?;
+        let fingerprint = deploy_key_fingerprint(&vault_root);
+        Ok(DeployKeyInfo {
+            public_key,
+            fingerprint,
+            already_existed,
+        })
+    })
+    .await
+    .map_err(|e| IpcError::Other(format!("background task failed: {e}")))?
+}
+
 #[tauri::command]
 pub async fn vcs_remote_disable(
     vault_state: tauri::State<'_, VaultState>,
@@ -923,6 +1208,10 @@ pub async fn vcs_remote_disable(
         let _ = run_git(
             &vault_root_for_blocking,
             &["config", "--local", "--remove-section", "http.https://github.com/"],
+        );
+        let _ = run_git(
+            &vault_root_for_blocking,
+            &["config", "--local", "--unset", "core.sshcommand"],
         );
     })
     .await

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import { client } from "@/shared/ipc/client";
-import type { RemoteInfo, SyncStatus, VcsStatus } from "@/shared/ipc/types";
+import type { DeployKeyInfo, RemoteInfo, SyncStatus, VcsStatus } from "@/shared/ipc/types";
 
 type SyncState = {
   status: VcsStatus | null;
@@ -11,6 +11,7 @@ type SyncState = {
   enable: (input?: { url?: string; token?: string }) => Promise<RemoteInfo>;
   disable: () => Promise<RemoteInfo>;
   syncNow: () => Promise<RemoteInfo>;
+  generateDeployKey: () => Promise<DeployKeyInfo>;
 };
 
 let pollHandle: ReturnType<typeof setInterval> | null = null;
@@ -57,6 +58,18 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       const remote = await client.vcs.remoteSyncNow();
       await get().refresh();
       return remote;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      set({ error: msg });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
+  generateDeployKey: async () => {
+    set({ loading: true, error: null });
+    try {
+      return await client.vcs.generateDeployKey();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       set({ error: msg });

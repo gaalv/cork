@@ -26,6 +26,7 @@ import type {
   AppSettings,
   VcsStatus,
   RemoteInfo,
+  DeployKeyInfo,
 } from "./types";
 
 export type TagCount = {
@@ -289,6 +290,10 @@ export type IpcCommandMap = {
   "vcs.remoteSyncNow": {
     args: undefined;
     result: RemoteInfo;
+  };
+  "vcs.generateDeployKey": {
+    args: undefined;
+    result: DeployKeyInfo;
   };
   // === F21 AI Infrastructure ===
   "ai.runSkill": {

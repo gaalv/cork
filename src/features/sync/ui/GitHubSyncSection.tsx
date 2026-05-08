@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useSyncStore } from "@/features/sync/state/syncStore";
+import type { DeployKeyInfo } from "@/shared/ipc/types";
 
 function relTime(iso: string | null): string {
   if (!iso) return "never";
@@ -17,17 +18,29 @@ function relTime(iso: string | null): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+type AuthMode = "https" | "ssh";
+
+function httpsToSsh(url: string): string | null {
+  const m = url.trim().match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
+  if (!m) return null;
+  return `git@github.com:${m[1]}/${m[2]}.git`;
+}
+
 export function GitHubSyncSection() {
   const status = useSyncStore((s) => s.status);
   const refresh = useSyncStore((s) => s.refresh);
   const enable = useSyncStore((s) => s.enable);
   const disable = useSyncStore((s) => s.disable);
   const syncNow = useSyncStore((s) => s.syncNow);
+  const generateDeployKey = useSyncStore((s) => s.generateDeployKey);
   const loading = useSyncStore((s) => s.loading);
 
   const [showEnableForm, setShowEnableForm] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("ssh");
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
+  const [sshUrl, setSshUrl] = useState("");
+  const [deployKey, setDeployKey] = useState<DeployKeyInfo | null>(null);
 
   useEffect(() => {
     void refresh();
@@ -40,16 +53,57 @@ export function GitHubSyncSection() {
 
   const onEnable = async (withUrl: boolean) => {
     try {
-      await enable(withUrl ? { url: url.trim(), token: token.trim() || undefined } : undefined);
+      let payload: { url?: string; token?: string } | undefined;
+      if (withUrl) {
+        if (authMode === "ssh") {
+          const finalUrl = sshUrl.trim() || httpsToSsh(url) || "";
+          if (!finalUrl) {
+            toast.error("Enter the SSH URL", {
+              description: "Format: git@github.com:owner/repo.git",
+            });
+            return;
+          }
+          payload = { url: finalUrl };
+        } else {
+          payload = { url: url.trim(), token: token.trim() || undefined };
+        }
+      }
+      await enable(payload);
       setShowEnableForm(false);
       setUrl("");
       setToken("");
+      setSshUrl("");
       toast.success("GitHub sync enabled");
     } catch (err) {
       toast.error("Could not enable sync", {
         description: err instanceof Error ? err.message : String(err),
+        duration: 12000,
+      });
+    }
+  };
+
+  const onGenerateKey = async () => {
+    try {
+      const info = await generateDeployKey();
+      setDeployKey(info);
+      toast.success(info.alreadyExisted ? "Deploy key already exists" : "Deploy key generated", {
+        description: info.fingerprint ? `Fingerprint: ${info.fingerprint}` : undefined,
+      });
+    } catch (err) {
+      toast.error("Could not generate deploy key", {
+        description: err instanceof Error ? err.message : String(err),
         duration: 8000,
       });
+    }
+  };
+
+  const onCopyPubKey = async () => {
+    if (!deployKey) return;
+    try {
+      await navigator.clipboard.writeText(deployKey.publicKey);
+      toast.success("Public key copied");
+    } catch {
+      toast.error("Copy failed — select the text and copy manually");
     }
   };
 
@@ -147,89 +201,232 @@ export function GitHubSyncSection() {
 
       {!enabled && showEnableForm && (
         <div className="space-y-2">
-          <input
-            type="text"
-            placeholder="https://github.com/user/repo.git"
-            value={url}
-            onChange={(e) => setUrl(e.currentTarget.value)}
-            className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm text-[var(--color-noxe-ink)]"
-          />
-          <input
-            type="password"
-            autoComplete="off"
-            placeholder="Personal access token (optional — needed for a different account)"
-            title="Fine-grained PAT scoped to this repo with Contents: Read and write"
-            value={token}
-            onChange={(e) => setToken(e.currentTarget.value)}
-            className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm text-[var(--color-noxe-ink)]"
-          />
-          <details className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
-            <summary className="cursor-pointer text-[var(--color-noxe-ink)]">
-              How to create the repo &amp; token
-            </summary>
-            <ol className="mt-2 list-decimal space-y-1 pl-4">
-              <li>
-                On github.com (target account), create a new <strong>private</strong> repo. Leave it
-                empty — no README, no .gitignore, no license.
-              </li>
-              <li>
-                Generate a{" "}
-                <a
-                  className="underline"
-                  href="https://github.com/settings/personal-access-tokens/new"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  fine-grained personal access token
-                </a>{" "}
-                with:
-                <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                  <li>
-                    <strong>Resource owner:</strong> the account that owns the repo
-                  </li>
-                  <li>
-                    <strong>Repository access:</strong> Only select repositories → pick this repo
-                  </li>
-                  <li>
-                    <strong>Repository permissions:</strong> <code>Contents</code> →{" "}
-                    <code>Read and write</code> (also auto-enables <code>Metadata: Read-only</code>)
-                  </li>
-                </ul>
-              </li>
-              <li>Paste the repo URL and the token above, then Connect.</li>
-            </ol>
-            <p className="mt-2">
-              <strong>Org-owned repos:</strong> if the repo lives under a GitHub organization, the
-              org owner must approve the fine-grained token before it can push (it stays in
-              &quot;pending&quot; until then and Connect will fail with 403).
-            </p>
-            <p className="mt-1">
-              The token is stored only in this machine&apos;s <code>.git/config</code> as a base64
-              HTTP Basic auth header (the same scheme <code>actions/checkout</code>
-              uses) and never committed.
-            </p>
-          </details>
-          <div className="flex gap-2">
+          <div className="flex gap-1 rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] p-0.5 text-xs">
             <button
               type="button"
-              disabled={!url.trim() || loading}
-              onClick={() => void onEnable(true)}
-              className="rounded-lg bg-[var(--color-noxe-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => setAuthMode("ssh")}
+              className={`flex-1 rounded px-2 py-1.5 font-medium transition ${
+                authMode === "ssh"
+                  ? "bg-[var(--color-noxe-primary)] text-[var(--color-noxe-primary-foreground)]"
+                  : "text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)]"
+              }`}
             >
-              Connect
+              SSH Deploy Key (recommended)
             </button>
             <button
               type="button"
-              onClick={() => {
-                setShowEnableForm(false);
-                setUrl("");
-                setToken("");
-              }}
-              className="rounded-lg border border-[var(--color-noxe-border)] px-3 py-1.5 text-xs text-[var(--color-noxe-muted)]"
+              onClick={() => setAuthMode("https")}
+              className={`flex-1 rounded px-2 py-1.5 font-medium transition ${
+                authMode === "https"
+                  ? "bg-[var(--color-noxe-primary)] text-[var(--color-noxe-primary-foreground)]"
+                  : "text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)]"
+              }`}
             >
-              Cancel
+              HTTPS + PAT
             </button>
           </div>
+
+          {authMode === "ssh" ? (
+            <div className="space-y-2">
+              <div className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
+                Generates a per-vault ed25519 keypair under <code>.noxe/sync-key</code>. Bypasses
+                the system credential helper and your <code>~/.ssh/</code> entirely — uses{" "}
+                <strong>only</strong> this key. Safe to use on a shared work machine.
+              </div>
+
+              {!deployKey ? (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void onGenerateKey()}
+                  className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-xs font-medium text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Step 1 — Generate deploy key
+                </button>
+              ) : (
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-[var(--color-noxe-ink)]">
+                    Public key{" "}
+                    {deployKey.fingerprint ? (
+                      <span className="text-[var(--color-noxe-muted)]">
+                        ({deployKey.fingerprint})
+                      </span>
+                    ) : null}
+                  </div>
+                  <textarea
+                    readOnly
+                    value={deployKey.publicKey}
+                    rows={3}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="w-full resize-none rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 font-mono text-[10px] text-[var(--color-noxe-ink)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void onCopyPubKey()}
+                    className="rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-1 text-[11px] text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)]"
+                  >
+                    Copy
+                  </button>
+                </div>
+              )}
+
+              <input
+                type="text"
+                placeholder="git@github.com:owner/repo.git"
+                value={sshUrl}
+                onChange={(e) => setSshUrl(e.currentTarget.value)}
+                className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 font-mono text-xs text-[var(--color-noxe-ink)]"
+              />
+
+              <details className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
+                <summary className="cursor-pointer text-[var(--color-noxe-ink)]">
+                  Step-by-step
+                </summary>
+                <ol className="mt-2 list-decimal space-y-1 pl-4">
+                  <li>
+                    On github.com (target account), create the empty private repo if you haven't
+                    already.
+                  </li>
+                  <li>
+                    Click <strong>Generate deploy key</strong> above and <strong>copy</strong> the
+                    public key.
+                  </li>
+                  <li>
+                    On the repo page → <strong>Settings → Deploy keys → Add deploy key</strong>.
+                    Title: <code>noxe-vault-on-this-mac</code>. Paste the key. ⚠{" "}
+                    <strong>Check &quot;Allow write access&quot;</strong>.
+                  </li>
+                  <li>
+                    Paste the SSH URL above (<code>git@github.com:owner/repo.git</code>) and click
+                    Connect.
+                  </li>
+                </ol>
+                <p className="mt-2">
+                  The private key never leaves this device, never gets committed (added to{" "}
+                  <code>.gitignore</code>), and only this vault uses it.
+                </p>
+              </details>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!deployKey || !sshUrl.trim() || loading}
+                  onClick={() => void onEnable(true)}
+                  className="rounded-lg bg-[var(--color-noxe-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Connect
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEnableForm(false);
+                    setUrl("");
+                    setToken("");
+                    setSshUrl("");
+                  }}
+                  className="rounded-lg border border-[var(--color-noxe-border)] px-3 py-1.5 text-xs text-[var(--color-noxe-muted)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="https://github.com/user/repo.git"
+                value={url}
+                onChange={(e) => setUrl(e.currentTarget.value)}
+                className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm text-[var(--color-noxe-ink)]"
+              />
+              <input
+                type="password"
+                autoComplete="off"
+                placeholder="Personal access token (optional — needed for a different account)"
+                title="Fine-grained PAT scoped to this repo with Contents: Read and write"
+                value={token}
+                onChange={(e) => setToken(e.currentTarget.value)}
+                className="w-full rounded-lg border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm text-[var(--color-noxe-ink)]"
+              />
+              <details className="rounded border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-[11px] leading-relaxed text-yellow-700 dark:text-yellow-300">
+                <summary className="cursor-pointer">
+                  ⚠ HTTPS + PAT may not work on macOS with gh / Keychain
+                </summary>
+                <p className="mt-2">
+                  On macOS the system git often routes credentials through the Keychain or an
+                  existing <code>gh</code> credential helper at a layer below our config overrides —
+                  the PAT we set in
+                  <code>.git/config</code> may be silently bypassed and another account&apos;s
+                  credentials used instead, producing 403s. If this fails for you, switch to{" "}
+                  <strong>SSH Deploy Key</strong> above.
+                </p>
+              </details>
+              <details className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-noxe-muted)]">
+                <summary className="cursor-pointer text-[var(--color-noxe-ink)]">
+                  How to create the repo &amp; token
+                </summary>
+                <ol className="mt-2 list-decimal space-y-1 pl-4">
+                  <li>
+                    On github.com (target account), create a new <strong>private</strong> repo.
+                    Leave it empty — no README, no .gitignore, no license.
+                  </li>
+                  <li>
+                    Generate a{" "}
+                    <a
+                      className="underline"
+                      href="https://github.com/settings/personal-access-tokens/new"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      fine-grained personal access token
+                    </a>{" "}
+                    with:
+                    <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                      <li>
+                        <strong>Resource owner:</strong> the account that owns the repo
+                      </li>
+                      <li>
+                        <strong>Repository access:</strong> Only select repositories → pick this
+                        repo
+                      </li>
+                      <li>
+                        <strong>Repository permissions:</strong> <code>Contents</code> →{" "}
+                        <code>Read and write</code> (also auto-enables{" "}
+                        <code>Metadata: Read-only</code>)
+                      </li>
+                    </ul>
+                  </li>
+                  <li>Paste the repo URL and the token above, then Connect.</li>
+                </ol>
+                <p className="mt-2">
+                  <strong>Org-owned repos:</strong> if the repo lives under a GitHub organization,
+                  the org owner must approve the fine-grained token before it can push (it stays in
+                  &quot;pending&quot; until then and Connect will fail with 403).
+                </p>
+              </details>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!url.trim() || loading}
+                  onClick={() => void onEnable(true)}
+                  className="rounded-lg bg-[var(--color-noxe-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Connect
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEnableForm(false);
+                    setUrl("");
+                    setToken("");
+                  }}
+                  className="rounded-lg border border-[var(--color-noxe-border)] px-3 py-1.5 text-xs text-[var(--color-noxe-muted)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

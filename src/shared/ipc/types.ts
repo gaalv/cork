@@ -190,6 +190,12 @@ export type GhAccount = {
   host: string;
 };
 
+export type DeployKeyInfo = {
+  publicKey: string;
+  fingerprint: string | null;
+  alreadyExisted: boolean;
+};
+
 export type VcsStatus = {
   enabled: boolean;
   repoPath: string | null;
