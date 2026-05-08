@@ -25,6 +25,7 @@ import type {
   AppSettings,
   AppearanceTheme,
   AiProvider,
+  LayoutMode,
 } from "@/features/settings/state/settingsTypes";
 import type { SettingsSectionId } from "@/features/settings/state/settingsUiStore";
 
@@ -52,6 +53,7 @@ export function SettingsPanel() {
   const closeSettings = useSettingsUiStore((state) => state.closeSettings);
   const settings = useAppSettingsStore((state) => state.settings);
   const updateSettings = useAppSettingsStore((state) => state.updateSettings);
+  const setLayoutMode = useAppSettingsStore((state) => state.setLayoutMode);
   const vaultSettings = useVaultSettingsStore((state) => state.settings);
   const hasVaultSettings = useVaultSettingsStore((state) => state.hasVault);
   const appVaultSettings = useAppSettingsStore((state) => state.vaultSettings);
@@ -137,6 +139,7 @@ export function SettingsPanel() {
             {renderSection(activeSection, {
               settings,
               updateSettings,
+              setLayoutMode,
               patchEditor,
               vaultSettings: appVaultSettings ?? vaultSettings,
               hasVaultSettings: hasVaultSettings || appVaultSettings !== null,
@@ -157,6 +160,7 @@ export function SettingsPanel() {
 type SectionContext = {
   settings: AppSettings;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
+  setLayoutMode: (mode: LayoutMode) => Promise<void>;
   patchEditor: (patch: Partial<AppSettings["editor"]>) => void;
   vaultSettings: Parameters<typeof resolvedVaultSettings>[0];
   hasVaultSettings: boolean;
@@ -172,6 +176,7 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
   const {
     settings,
     updateSettings,
+    setLayoutMode,
     patchEditor,
     vaultSettings,
     hasVaultSettings,
@@ -236,6 +241,22 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
               disabled
               options={[{ value: "en", label: "English" }]}
               onChange={() => {}}
+            />
+          }
+        />
+        <SettingRow
+          label="Layout mode"
+          description="Focus shows a single editor column. Triage adds a persistent folder tree and notes list (best with a wider window). Toggle anytime with ⌘⇧L."
+          scope="app"
+          control={
+            <Select<LayoutMode>
+              ariaLabel="Layout mode"
+              value={settings.layout.mode}
+              options={[
+                { value: "focus", label: "Focus (single editor)" },
+                { value: "triage", label: "Triage (sidebar + list + editor)" },
+              ]}
+              onChange={(next) => void setLayoutMode(next)}
             />
           }
         />
