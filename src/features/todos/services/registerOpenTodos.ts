@@ -1,6 +1,6 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-import { useShellStore } from "@/features/shell/state/shellStore";
+import { openToolView } from "@/features/shell/services/openToolView";
 
 export const OPEN_TODOS_EVENT = "todos:open";
 
@@ -12,7 +12,7 @@ export async function installOpenTodosRuntime(): Promise<void> {
   }
   try {
     unlisten = await listen(OPEN_TODOS_EVENT, () => {
-      useShellStore.getState().navigate({ kind: "todos" });
+      openToolView("todos");
     });
   } catch {
     unlisten = null;

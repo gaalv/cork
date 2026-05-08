@@ -6,6 +6,7 @@ import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNot
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
+import { openToolView } from "@/features/shell/services/openToolView";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
@@ -101,7 +102,7 @@ export function useShortcuts() {
           return;
         }
         event.preventDefault();
-        navigate({ kind: "graph" });
+        openToolView("graph");
       },
       "$mod+Shift+m": (event) => {
         if (isEditableTarget(event.target)) {
@@ -125,7 +126,17 @@ export function useShortcuts() {
       window.removeEventListener("keydown", onPaletteShortcut);
       window.removeEventListener("keydown", onQuestionMark);
     };
-  }, [back, forward, lastDrawer, navigate, openHelp, openPalette, openSettings, openVault, toggleDrawer]);
+  }, [
+    back,
+    forward,
+    lastDrawer,
+    navigate,
+    openHelp,
+    openPalette,
+    openSettings,
+    openVault,
+    toggleDrawer,
+  ]);
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {

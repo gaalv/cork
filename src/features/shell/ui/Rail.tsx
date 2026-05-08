@@ -1,9 +1,22 @@
-import { CalendarBlank, CheckSquare, ClockCounterClockwise, FolderSimple, GearSix, GraphIcon, Hash, House, MagnifyingGlass, Star } from "@phosphor-icons/react";
+import {
+  CalendarBlank,
+  CheckSquare,
+  ClockCounterClockwise,
+  FolderSimple,
+  GearSix,
+  GraphIcon,
+  Hash,
+  House,
+  MagnifyingGlass,
+  Star,
+} from "@phosphor-icons/react";
 
 import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
+import { openToolView } from "@/features/shell/services/openToolView";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useTriageStore, type TriageSelection } from "@/features/shell/state/triageStore";
+import { useTriageOverlayStore } from "@/features/shell/state/triageOverlayStore";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/utils/cn";
 
@@ -29,6 +42,7 @@ export function Rail({ className }: RailProps) {
   const openSettings = useSettingsUiStore((state) => state.openSettings);
   const layoutMode = useAppSettingsStore((state) => state.settings.layout.mode);
   const setTriageSelection = useTriageStore((state) => state.setSelection);
+  const overlayKind = useTriageOverlayStore((state) => state.kind);
 
   const handleDrawerButton = (id: DrawerId) => {
     if (layoutMode === "triage") {
@@ -40,6 +54,9 @@ export function Rail({ className }: RailProps) {
     }
     toggleDrawer(id);
   };
+
+  const isToolActive = (kind: "graph" | "calendar" | "todos") =>
+    layoutMode === "triage" ? overlayKind === kind : view.kind === kind && drawer === null;
 
   return (
     <aside
@@ -68,24 +85,29 @@ export function Rail({ className }: RailProps) {
         <RailButton
           icon={<GraphIcon size={18} />}
           label="Graph"
-          active={view.kind === "graph" && drawer === null}
-          onClick={() => navigate({ kind: "graph" })}
+          active={isToolActive("graph")}
+          onClick={() => openToolView("graph")}
         />
         <RailButton
           icon={<CalendarBlank size={18} />}
           label="Calendar"
-          active={view.kind === "calendar" && drawer === null}
-          onClick={() => navigate({ kind: "calendar" })}
+          active={isToolActive("calendar")}
+          onClick={() => openToolView("calendar")}
         />
         <RailButton
           icon={<CheckSquare size={18} />}
           label="Todos"
-          active={view.kind === "todos" && drawer === null}
-          onClick={() => navigate({ kind: "todos" })}
+          active={isToolActive("todos")}
+          onClick={() => openToolView("todos")}
         />
       </div>
       <div className="flex flex-col items-center gap-2">
-        <RailButton icon={<GearSix size={18} />} label="Settings" active={false} onClick={() => openSettings()} />
+        <RailButton
+          icon={<GearSix size={18} />}
+          label="Settings"
+          active={false}
+          onClick={() => openSettings()}
+        />
       </div>
     </aside>
   );

@@ -9,6 +9,7 @@ import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNot
 import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { commandsRegistry } from "@/features/shell/commands/registry";
+import { openToolView } from "@/features/shell/services/openToolView";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useSyncStore } from "@/features/sync/state/syncStore";
 import { useIndexStore } from "@/features/index/state/indexStore";
@@ -346,10 +347,10 @@ function runCommand(
     actions.navigate({ kind: "home" });
   }
   if (id === "open-graph") {
-    actions.navigate({ kind: "graph" });
+    openToolView("graph");
   }
   if (id === "open-todos" || id === "new-todo") {
-    actions.navigate({ kind: "todos" });
+    openToolView("todos");
   }
   if (id === "new-note") {
     void createAndOpenNote();
