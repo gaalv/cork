@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
@@ -31,24 +31,18 @@ beforeEach(() => {
 
 describe("NoteMetaPanel", () => {
   it("renders outline, backlinks, and AI stub", async () => {
-    render(
-      <NoteMetaPanel
-        noteId="n1"
-        body={"# Title\nBody"}
-        onOpenNote={vi.fn()}
-      />,
-    );
+    render(<NoteMetaPanel noteId="n1" body={"# Title\nBody"} onOpenNote={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Title" })).toBeInTheDocument());
     expect(screen.getByText("No backlinks yet.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI Insights" })).toBeInTheDocument();
   });
 
-  it("toggles collapsed state", () => {
+  it("toggles collapsed state via store", () => {
     render(<NoteMetaPanel noteId="n1" body="" onOpenNote={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Hide meta" }));
-
+    expect(screen.getByLabelText("Note metadata").getAttribute("data-collapsed")).toBe("false");
+    useNoteViewStore.getState().togglePanelCollapsed();
     expect(useNoteViewStore.getState().panelCollapsed).toBe(true);
   });
 });

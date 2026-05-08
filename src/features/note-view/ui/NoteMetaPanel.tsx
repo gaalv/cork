@@ -24,7 +24,6 @@ type NoteMetaPanelProps = {
 
 export function NoteMetaPanel({ noteId, body, onOpenNote, onSelectHeading }: NoteMetaPanelProps) {
   const collapsed = useNoteViewStore((state) => state.panelCollapsed);
-  const toggleCollapsed = useNoteViewStore((state) => state.togglePanelCollapsed);
   const activeNotePath = useNoteViewStore((state) => state.activeNotePath);
   const noteTitle = useVaultStore((state) =>
     noteId ? (state.notes.find((note) => note.id === noteId)?.title ?? "") : "",
@@ -36,15 +35,9 @@ export function NoteMetaPanel({ noteId, body, onOpenNote, onSelectHeading }: Not
   return (
     <aside
       aria-label="Note metadata"
-      className={`${collapsed ? "hidden lg:flex" : "flex"} absolute inset-y-0 right-0 z-10 w-80 flex-col gap-5 overflow-y-auto border-l border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)] p-4 lg:static lg:flex`}
+      data-collapsed={collapsed}
+      className={`${collapsed ? "hidden" : "flex"} absolute inset-y-0 right-0 z-10 w-80 flex-col gap-5 overflow-y-auto border-l border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)] p-4 lg:static`}
     >
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        className="self-end rounded-full border border-[var(--color-noxe-border)] px-3 py-1 text-xs lg:hidden"
-      >
-        {collapsed ? "Show meta" : "Hide meta"}
-      </button>
       <Outline items={outline} activeId={activeId} onSelect={(item) => onSelectHeading?.(item)} />
       <NoteProperties noteId={noteId} body={body} />
       <InsightsCard noteId={noteId} body={body} title={noteTitle} />

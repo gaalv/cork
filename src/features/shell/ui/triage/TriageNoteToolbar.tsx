@@ -1,9 +1,10 @@
-import { Star, Trash } from "@phosphor-icons/react";
+import { Sidebar, Star, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { toggleStar } from "@/features/drawers/services/starService";
 import { flushEditorSave } from "@/features/editor/hooks/useAutoSave";
 import { useEditorStore } from "@/features/editor/state/editorStore";
+import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
@@ -19,6 +20,8 @@ export function TriageNoteToolbar({ noteId }: TriageNoteToolbarProps) {
   const pushToast = useShellStore((state) => state.pushToast);
   const buffer = useEditorStore((state) => state.buffers.get(noteId) ?? null);
   const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
+  const togglePanel = useNoteViewStore((state) => state.togglePanelCollapsed);
+  const panelCollapsed = useNoteViewStore((state) => state.panelCollapsed);
 
   const note = notes.find((entry) => entry.id === noteId) ?? null;
   const starred = buffer?.frontmatter.starred === true;
@@ -105,6 +108,20 @@ export function TriageNoteToolbar({ noteId }: TriageNoteToolbarProps) {
           className="rounded p-1.5 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none disabled:opacity-50"
         >
           <Trash size={14} />
+        </button>
+        <button
+          type="button"
+          aria-label={panelCollapsed ? "Show inspector" : "Hide inspector"}
+          aria-pressed={!panelCollapsed}
+          title={panelCollapsed ? "Show inspector" : "Hide inspector"}
+          onClick={togglePanel}
+          className={`rounded p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none ${
+            panelCollapsed
+              ? "text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)]"
+              : "bg-[var(--color-noxe-panel-2)] text-[var(--color-noxe-ink)]"
+          }`}
+        >
+          <Sidebar size={14} className="-scale-x-100" />
         </button>
       </div>
     </div>

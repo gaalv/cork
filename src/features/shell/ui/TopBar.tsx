@@ -1,4 +1,11 @@
-import { ArrowLeft, Command as CommandIcon, Plus, Star, Trash } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  Command as CommandIcon,
+  Plus,
+  Sidebar,
+  Star,
+  Trash,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { toggleStar } from "@/features/drawers/services/starService";
@@ -6,6 +13,7 @@ import { flushEditorSave } from "@/features/editor/hooks/useAutoSave";
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { InlineRename } from "@/features/folder-ops/ui/InlineRename";
 import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
+import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 import { SyncIndicator } from "@/features/sync/ui/SyncIndicator";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
@@ -28,6 +36,8 @@ export function TopBar() {
     view.kind === "note" ? (state.buffers.get(view.id) ?? null) : null,
   );
   const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
+  const togglePanel = useNoteViewStore((state) => state.togglePanelCollapsed);
+  const panelCollapsed = useNoteViewStore((state) => state.panelCollapsed);
   const [busyStar, setBusyStar] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
   const vaultName = vaultPath
@@ -135,6 +145,23 @@ export function TopBar() {
           className="rounded-full p-1.5 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-red-500 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none disabled:opacity-50"
         >
           <Trash size={16} />
+        </button>
+      )}
+
+      {view.kind === "note" && (
+        <button
+          type="button"
+          aria-label={panelCollapsed ? "Show inspector" : "Hide inspector"}
+          aria-pressed={!panelCollapsed}
+          title={panelCollapsed ? "Show inspector" : "Hide inspector"}
+          onClick={togglePanel}
+          className={`rounded-full p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none ${
+            panelCollapsed
+              ? "text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)]"
+              : "bg-[var(--color-noxe-panel-2)] text-[var(--color-noxe-ink)]"
+          }`}
+        >
+          <Sidebar size={16} className="-scale-x-100" />
         </button>
       )}
 
