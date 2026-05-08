@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { useTodosStore } from "@/features/todos/state/todosStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
 
-import type { TagCount } from "@/shared/ipc/IpcContract";
+import type { TagCount, Todo } from "@/shared/ipc/IpcContract";
 import type { JsonRecord, NoteEntry } from "@/shared/ipc/types";
 
 const STARRED_LIMIT = 4;
 const RECENTS_LIMIT = 8;
 const TAG_LIMIT = 6;
 const PAGE_SIZE = 30;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type HomeNote = NoteEntry & {
   frontmatter: JsonRecord;
@@ -29,10 +31,16 @@ export type HomeSections = {
   loadMore: () => void;
   refresh: () => Promise<void>;
   flagsByPath: Map<string, { pinned: boolean; starred: boolean; icon?: string }>;
+  todos: Todo[];
+  todosDoneThisWeek: number;
+  toggleTodo: (id: string) => Promise<void>;
 };
 
 export function useHomeSections(): HomeSections {
   const vaultNotes = useVaultStore((state) => state.notes);
+  const todos = useTodosStore((state) => state.todos);
+  const loadTodos = useTodosStore((state) => state.load);
+  const toggleTodoAction = useTodosStore((state) => state.toggle);
   const [starred, setStarred] = useState<HomeNote[]>([]);
   const [recents, setRecents] = useState<NoteEntry[]>([]);
   const [tags, setTags] = useState<TagCount[]>([]);
@@ -41,10 +49,13 @@ export function useHomeSections(): HomeSections {
   const [pageCount, setPageCount] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [flagsByPath, setFlagsByPath] = useState<Map<string, { pinned: boolean; starred: boolean; icon?: string }>>(new Map());
+  const [flagsByPath, setFlagsByPath] = useState<
+    Map<string, { pinned: boolean; starred: boolean; icon?: string }>
+  >(new Map());
 
   const load = useCallback(async () => {
     setIsLoading(true);
+    void loadTodos();
     try {
       const [recentNotes, tagCounts, firstPage] = await Promise.all([
         client.notes.recent(200),
@@ -77,7 +88,7 @@ export function useHomeSections(): HomeSections {
     } finally {
       setIsLoading(false);
     }
-  }, [vaultNotes]);
+  }, [loadTodos, vaultNotes]);
 
   useEffect(() => {
     void load();
@@ -132,7 +143,35 @@ export function useHomeSections(): HomeSections {
     };
   }, [pageCount]);
 
-  return { starred, recents, tagsTop: tags, allPage, hasMore, isLoading, error, loadMore, refresh: load, flagsByPath };
+  const toggleTodo = useCallback(
+    async (id: string) => {
+      await toggleTodoAction(id);
+    },
+    [toggleTodoAction],
+  );
+
+  const since = Date.now() - WEEK_MS;
+  const todosDoneThisWeek = todos.filter((todo) => {
+    if (!todo.done || !todo.completedAt) return false;
+    const completed = Date.parse(todo.completedAt);
+    return !Number.isNaN(completed) && completed >= since;
+  }).length;
+
+  return {
+    starred,
+    recents,
+    tagsTop: tags,
+    allPage,
+    hasMore,
+    isLoading,
+    error,
+    loadMore,
+    refresh: load,
+    flagsByPath,
+    todos,
+    todosDoneThisWeek,
+    toggleTodo,
+  };
 }
 
 async function enrichNotes(notes: NoteEntry[]): Promise<HomeNote[]> {
@@ -167,7 +206,9 @@ async function enrichNotes(notes: NoteEntry[]): Promise<HomeNote[]> {
     .sort((left, right) => right.mtime - left.mtime);
 }
 
-function buildFlagsMap(notes: HomeNote[]): Map<string, { pinned: boolean; starred: boolean; icon?: string }> {
+function buildFlagsMap(
+  notes: HomeNote[],
+): Map<string, { pinned: boolean; starred: boolean; icon?: string }> {
   const map = new Map<string, { pinned: boolean; starred: boolean; icon?: string }>();
   for (const note of notes) {
     const icon = typeof note.frontmatter.icon === "string" ? note.frontmatter.icon : undefined;
@@ -177,10 +218,12 @@ function buildFlagsMap(notes: HomeNote[]): Map<string, { pinned: boolean; starre
 }
 
 function firstLine(markdown: string): string {
-  return markdown
-    .split("\n")
-    .map((line) => line.replace(/^#+\s*/, "").trim())
-    .find((line) => line.length > 0) ?? "No preview available";
+  return (
+    markdown
+      .split("\n")
+      .map((line) => line.replace(/^#+\s*/, "").trim())
+      .find((line) => line.length > 0) ?? "No preview available"
+  );
 }
 
 function errorMessage(error: unknown): string {

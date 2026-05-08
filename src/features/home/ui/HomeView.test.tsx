@@ -11,6 +11,7 @@ const { clientMock } = vi.hoisted(() => ({
     notes: { allPaged: vi.fn(), recent: vi.fn(), read: vi.fn() },
     tags: { list: vi.fn() },
     events: { on: vi.fn() },
+    todos: { load: vi.fn(), save: vi.fn() },
   },
 }));
 
@@ -24,11 +25,20 @@ beforeEach(() => {
   clientMock.notes.read.mockReset();
   clientMock.tags.list.mockReset();
   clientMock.events.on.mockReset();
+  clientMock.todos.load.mockReset();
+  clientMock.todos.save.mockReset();
   clientMock.events.on.mockResolvedValue(vi.fn());
   clientMock.notes.allPaged.mockResolvedValue([note]);
   clientMock.notes.recent.mockResolvedValue([note]);
-  clientMock.notes.read.mockResolvedValue({ path: note.path, frontmatter: {}, body: "Body", mtime: 1 });
+  clientMock.notes.read.mockResolvedValue({
+    path: note.path,
+    frontmatter: {},
+    body: "Body",
+    mtime: 1,
+  });
   clientMock.tags.list.mockResolvedValue([]);
+  clientMock.todos.load.mockResolvedValue({ todos: [] });
+  clientMock.todos.save.mockResolvedValue({ todos: [] });
   useShellStore.getState().reset();
   useVaultStore.setState({ path: "/vault", notes: [note], isLoading: false, error: null });
 });

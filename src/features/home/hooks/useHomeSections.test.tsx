@@ -12,6 +12,7 @@ const { clientMock } = vi.hoisted(() => ({
     notes: { allPaged: vi.fn(), recent: vi.fn(), read: vi.fn() },
     tags: { list: vi.fn() },
     events: { on: vi.fn() },
+    todos: { load: vi.fn(), save: vi.fn() },
   },
 }));
 
@@ -29,7 +30,11 @@ beforeEach(() => {
   clientMock.notes.read.mockReset();
   clientMock.tags.list.mockReset();
   clientMock.events.on.mockReset();
+  clientMock.todos.load.mockReset();
+  clientMock.todos.save.mockReset();
   clientMock.events.on.mockResolvedValue(vi.fn());
+  clientMock.todos.load.mockResolvedValue({ todos: [] });
+  clientMock.todos.save.mockResolvedValue({ todos: [] });
   useVaultStore.setState({ path: "/vault", notes, isLoading: false, error: null });
 });
 
@@ -39,7 +44,12 @@ describe("useHomeSections", () => {
     clientMock.notes.recent.mockResolvedValue(notes);
     clientMock.tags.list.mockResolvedValue([{ tag: "dev", count: 2 }]);
     clientMock.notes.read.mockImplementation((path: string) =>
-      Promise.resolve({ path, frontmatter: { starred: path.endsWith("a.md") }, body: "# Snippet", mtime: 1 }),
+      Promise.resolve({
+        path,
+        frontmatter: { starred: path.endsWith("a.md") },
+        body: "# Snippet",
+        mtime: 1,
+      }),
     );
 
     const { result } = renderHook(() => useHomeSections());
@@ -53,20 +63,33 @@ describe("useHomeSections", () => {
 
   it("refreshes when vault file changes", async () => {
     const listeners = new Map<IpcEventName, (payload: IpcEventPayload<IpcEventName>) => void>();
-    clientMock.events.on.mockImplementation((event: IpcEventName, callback: (payload: IpcEventPayload<IpcEventName>) => void) => {
-      listeners.set(event, callback);
-      return Promise.resolve(vi.fn());
-    });
+    clientMock.events.on.mockImplementation(
+      (event: IpcEventName, callback: (payload: IpcEventPayload<IpcEventName>) => void) => {
+        listeners.set(event, callback);
+        return Promise.resolve(vi.fn());
+      },
+    );
     clientMock.notes.allPaged.mockResolvedValue(notes);
     clientMock.notes.recent.mockResolvedValue(notes);
     clientMock.tags.list.mockResolvedValue([]);
-    clientMock.notes.read.mockResolvedValue({ path: "/vault/a.md", frontmatter: {}, body: "Body", mtime: 1 });
+    clientMock.notes.read.mockResolvedValue({
+      path: "/vault/a.md",
+      frontmatter: {},
+      body: "Body",
+      mtime: 1,
+    });
 
     renderHook(() => useHomeSections());
     await waitFor(() => expect(clientMock.notes.recent).toHaveBeenCalledTimes(1));
 
     await act(async () => {
-      listeners.get("vault:fileChanged")?.({ path: "/vault/a.md", kind: "modified", source: "external", mtime: 2, size: 3 });
+      listeners.get("vault:fileChanged")?.({
+        path: "/vault/a.md",
+        kind: "modified",
+        source: "external",
+        mtime: 2,
+        size: 3,
+      });
     });
 
     await waitFor(() => expect(clientMock.notes.recent).toHaveBeenCalledTimes(2));
