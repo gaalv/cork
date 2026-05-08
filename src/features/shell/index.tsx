@@ -16,7 +16,6 @@ import { Toaster } from "@/features/shell/ui/Toaster";
 import { TopBar } from "@/features/shell/ui/TopBar";
 import { ViewRouter } from "@/features/shell/ui/ViewRouter";
 import { TriageBody } from "@/features/shell/ui/triage/TriageBody";
-import { useViewportWidth } from "@/features/shell/hooks/useViewportWidth";
 import { SettingsPanel } from "@/features/settings/ui/SettingsPanel";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { client } from "@/shared/ipc/client";
@@ -83,14 +82,10 @@ export function Shell() {
   );
 }
 
-const TRIAGE_MIN_WIDTH = 1100;
-
 function ShellChrome() {
   const layoutMode = useAppSettingsStore((state) => state.settings.layout.mode);
-  const width = useViewportWidth();
-  const effectiveMode = width < TRIAGE_MIN_WIDTH ? "focus" : layoutMode;
 
-  if (effectiveMode === "triage") {
+  if (layoutMode === "triage") {
     return (
       <div data-shell-mode="triage" className="relative flex h-full min-w-0 flex-1 overflow-hidden">
         <TriageBody />
