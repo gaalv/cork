@@ -219,6 +219,54 @@ src-tauri/
 **Trade-off:** "Ask my vault" semantic search isn't built into Noxe — users relying on it must invoke their AI CLI manually against the vault folder. Tag-overlap "Related notes" replaces it inside the app.
 **Impact:** F20 marked SUPERSEDED in roadmap; spec stays as historical reference. F21 spec written; F22–F24 to follow. The existing `ai_send_prompt` command is kept as the low-level subprocess primitive that the new `ai_run_skill` runner builds on.
 
+### AD-037: AI generation runs background-first with sonner toasts (2026-05-07)
+
+**Decision:** Long-running AI calls (notably `generate-note` and the slash commands) dispatch through the F21 runner in the background; the UI does not block. Progress / success / error are surfaced via sonner toasts. Per-skill `timeout_secs` in the skill YAML frontmatter overrides the 60s default.
+**Reason:** A 60s synchronous freeze made the editor feel broken even though the LLM was healthy. Streaming Claude/Copilot stdout is not available in non-interactive mode, so the cheap, robust win was to detach the call.
+**Trade-off:** No live progress bar (only toast). Cancelling an in-flight call is not implemented — the subprocess runs until completion or timeout.
+**Impact:** All AI-skill consumers must accept a Promise resolved out-of-band; no synchronous result is exposed in the UI thread. Documented in F23 / F24 specs.
+
+### AD-038: F26 sync uses SSH-only auth (HTTPS+PAT removed) (2026-05-07)
+
+**Decision:** GitHub sync uses SSH exclusively. Per-vault SSH Deploy Key is the recommended setup; the runner auto-falls-back to `ssh.github.com:443` when port 22 is blocked (typical on corporate / coffee-shop networks). HTTPS+PAT and the prior `gh`-CLI auto-create flow are removed from both UI and backend.
+**Reason:** macOS Keychain + `gh` credential helpers consistently override per-repo `extraheader` PAT credentials, producing HTTP 403 with the PAT showing as "never used" on GitHub. After multiple iterations the team accepted the system-level constraint and pivoted. Provisional F27 work is captured in `.specs/features/F27-cross-account-sync-pivot/` as "absorbed into F26".
+**Trade-off:** First-run setup is heavier — the user must add a Deploy Key to the GitHub repo. User feedback labelled this acceptable ("for devs this is intuitive and secure").
+**Impact:** Single sanctioned auth path simplifies the codebase considerably; AD-022 in this file is superseded by this entry.
+
+### AD-039: Sweep-on-sync covers the entire vault (2026-05-07)
+
+**Decision:** Each sync iteration commits **all** changed files inside the vault, not only the actively edited note. Excludes `.git/`, `.noxe/local-history/` and other non-shareable artefacts. Commit message format is Conventional Commits with a file-list trailer:
+
+```
+feat(notes): update Welcome.md, Daily/2026-05-07.md (+3 more)
+
+Source: noxe-app
+Timestamp: 2026-05-07T12:34:56Z
+Files:
+  - Welcome.md
+  - Daily/2026-05-07.md
+  - .noxe/todos.json
+```
+
+Scope classification rules: `notes` (only note files), `single` (one file), `mixed` (notes + non-note files), `empty` (sweep with no changes — skipped). Capped at 25 file lines in the trailer.
+**Reason:** User reported that the GitHub repo did not reflect what was in the app — todos and `.noxe/*` settings were silently excluded.
+**Trade-off:** Slightly larger commits and more frequent activity in the repo timeline.
+**Impact:** Commit log is now a usable audit trail. AD-022's reference to "note-only commits" is superseded.
+
+### AD-040: Dual layout modes with viewport guardrail (2026-05-07)
+
+**Decision:** Ship both Focus (current 2-column) and Triage (3-column nav + list + view) layouts as a user-toggleable `layout.mode` setting. Toggle via Settings → Appearance and via `Cmd+Shift+M`. When viewport width < 1100px the renderer silently downgrades Triage to Focus to prevent cramped panels; the setting persists.
+**Reason:** User stays attached to the Linear-style 3-column prototype while preferring Focus for actual writing. Forcing one or the other rejected; both are first-class.
+**Trade-off:** Two layouts to keep in sync. Mitigated by sharing all body components and routing — only the chrome differs.
+**Impact:** New components live under `src/features/shell/ui/triage/*` (NavPane, ListPane, TriageBody) plus `Splitter.tsx`, `state/triageStore.ts`, `hooks/useViewportWidth.ts`. Shortcut conflict avoided: `Cmd+Shift+L` stays bound to `cycleTheme`. No `react-resizable-panels` dependency — custom Splitter (zero deps).
+
+### AD-041: First-run onboarding scaffold (2026-05-07)
+
+**Decision:** New vaults are seeded with a small, opinionated set of files on first open: `Welcome.md`, `Daily/<today>.md`, `Projects/Sample.md`, `Meetings/Sample.md`, `Cheatsheet.md`, plus three starter todos in `.noxe/todos.json`. Idempotency is enforced via `.noxe/scaffold.json` marker; existing files are never overwritten.
+**Reason:** Empty vaults make the app feel inert — Linear/Obsidian both seed examples that demonstrate features. User explicitly approved seeding their own vault for the demo.
+**Trade-off:** Marker file lives in `.noxe/`, so deleting it triggers re-seed. This is by design — it lets advanced users replay the scaffold.
+**Impact:** New Rust module `src-tauri/src/vault/scaffold.rs` with `vault.scaffoldIfNeeded` IPC; called once per vault open after watcher initialisation.
+
 ---
 
 ## Active Blockers
@@ -243,6 +291,10 @@ _None._
 - **L-012:** Home E2E note locators should target the intended section because Recents, All Notes, and card menus can expose duplicate note-title buttons.
 - **L-013:** Parser parity is more robust when Markdown extensions expose stable semantic tokens rather than comparing renderer-specific HTML across different parser stacks.
 - **L-014:** Browser tests must guard Tauri event listeners behind `window.__TAURI_INTERNALS__`; otherwise jsdom shells report unhandled rejections from `@tauri-apps/api/event`.
+- **L-015:** macOS Keychain + `gh` credential helper override per-repo `extraheader` PATs at a layer below `GIT_CONFIG_NOSYSTEM` and isolated `$HOME` — symptom is HTTP 403 with the PAT showing as "never used" on GitHub. Solution is to abandon HTTPS+PAT, not to keep patching git transport.
+- **L-016:** Corporate / coffee-shop networks frequently block outbound port 22 — `ssh.github.com:443` is the documented escape hatch and should be the default fallback in any tool that uses git over SSH.
+- **L-017:** Long-running CLI subprocesses (Claude / Copilot) buffer stdout in non-interactive mode, so "stream the output as it arrives" is not actually available — the cheap, robust pattern is to dispatch the call in the background and surface progress via toasts.
+- **L-018:** Three-column "triage" layouts feel cramped under ~1100px; a viewport guardrail that silently downgrades to a single-column focus mode is more user-friendly than letting the panels collapse.
 
 ---
 
@@ -272,6 +324,18 @@ _None._
 | 019 | Complete F10 vault management (close/recent, switcher, per-vault config, switch chaos E2E) plus unblock F11 attachments config and F12 topbar rename          | 2026-05-06 | multiple | ✅ Done    |
 | 020 | Implement F14 Markdown Extensions (callouts, footnotes, highlights, semantic parser parity, CM6 decorations)                                                  | 2026-05-06 | multiple | ✅ Done    |
 | 021 | Implement F13 Settings + Search + App Menu (settings panel rows, in-note search, native menu, window recovery, about/diagnostics/shortcuts)                   | 2026-05-06 | multiple | ✅ Done    |
+| 022 | Implement F21 AI infrastructure (skills loader, BLAKE3 cache, telemetry, runner)                                                                              | 2026-05-07 | multiple | ✅ Done    |
+| 023 | Implement F22 Insights sidebar + remove F20 chat                                                                                                              | 2026-05-07 | cf589a7  | ✅ Done    |
+| 024 | Implement F23 Generate-note-from-topic (palette + modal + background runner)                                                                                  | 2026-05-07 | a77c057  | ✅ Done    |
+| 025 | Implement F24 AI slash commands (`/ai-summarize`, `/ai-rephrase`, `/ai-expand`, `/ai-continue`)                                                               | 2026-05-07 | e6a4b3e  | ✅ Done    |
+| 026 | Per-skill `timeout_secs` + background generate-note with sonner toasts                                                                                        | 2026-05-07 | d95bec1  | ✅ Done    |
+| 027 | Implement F25 per-vault Todos (TodosView, palette, shortcut, tray, rail icon)                                                                                 | 2026-05-07 | multiple | ✅ Done    |
+| 028 | Implement F26 GitHub sync — backend + frontend (initial PAT path, later removed)                                                                              | 2026-05-07 | 1b6b3d4  | ✅ Done    |
+| 029 | F26 hardening — SSH Deploy Key + ssh.github.com:443 fallback + sweep-on-sync + structured commits                                                             | 2026-05-07 | multiple | ✅ Done    |
+| 030 | Implement F28 Dual layout modes (Focus + Triage) with viewport guardrail and Cmd+Shift+M shortcut                                                             | 2026-05-07 | multiple | ✅ Done    |
+| 031 | Implement F29 Home polish (denser cards, hero CTA, 2-col all-notes, pending-todos card)                                                                       | 2026-05-07 | multiple | ✅ Done    |
+| 032 | Implement F30 First-run vault scaffold (Welcome / Daily / Projects / Meetings / Cheatsheet + starter todos, idempotent marker)                                | 2026-05-07 | 1642636  | ✅ Done    |
+| 033 | SDD audit — backfill F22/F23/F24/F25/F27 specs, mark M6/M6.5/M7 features in roadmap, log AD-037..AD-041 + L-015..L-018                                        | 2026-05-07 | —        | ✅ Done    |
 
 ---
 

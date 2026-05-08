@@ -14,6 +14,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 ### Features
 
 **[F01 — Foundation](../features/F01-foundation/spec.md)** — COMPLETE
+
 - Tauri 2 + Rust scaffold + IPC contract skeleton
 - Vite 7 + React 19 + TypeScript strict + Tailwind v4
 - ESLint flat config + Prettier
@@ -30,11 +31,13 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 ### Features
 
 **[F02 — Vault FS](../features/F02-vault-fs/spec.md)** — COMPLETE
+
 - Open vault (folder picker), persist recent vaults
 - Read/write `.md` files via Rust IPC
 - File watcher (Rust `notify`) emitting Tauri events to frontend
 
 **[F03 — Index (SQLite)](../features/F03-index/spec.md)** — COMPLETE
+
 - SQLite schema: `notes`, `links`, `tags`, `note_tags`
 - Markdown parser (Rust `pulldown-cmark`) extracting title, tags, wikilinks
 - Incremental indexer reactive to file watcher events
@@ -49,6 +52,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 ### Features
 
 **[F04 — Shell](../features/F04-shell/spec.md)** — COMPLETE
+
 - Slim icon rail
 - Top bar with breadcrumb, ⌘K trigger, Nova nota
 - Drawer container (Search/Folders/Recent/Starred/Tags routes)
@@ -65,6 +69,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 ### Features
 
 **[F05 — Editor](../features/F05-editor/spec.md)** — COMPLETE
+
 - CodeMirror 6 setup (markdown lang, theme, save-on-change debounced)
 - Shiki-powered code blocks in preview
 - KaTeX math rendering
@@ -73,18 +78,21 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Wikilink autocomplete in editor
 
 **[F08 — Note view + Meta panel](../features/F08-note-view/spec.md)** — COMPLETE
+
 - Note layout (editor + right meta)
 - Right panel: Outline, Backlinks, Recents
 - Breadcrumb + Back-to-Home in top bar
 - AI suggestion card (UI stub only)
 
 **[F09 — Wikilinks & Backlinks](../features/F09-wikilinks-backlinks/spec.md)** — COMPLETE
+
 - Wikilink resolution (title → note id) via index
 - Click-to-navigate
 - Create-on-click for missing notes
 - Backlinks query + panel data
 
 **[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — COMPLETE
+
 - Tauri `asset://` protocol w/ runtime-scoped vault path
 - `assets` SQLite table populated by extended F02 walker
 - Inline image rendering (`![[image.png]]` and `![alt](path)`)
@@ -92,6 +100,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - Click non-image asset opens with OS handler (safelist + confirm)
 
 **[F12 — Folder Ops & Rename UX](../features/F12-folder-ops/spec.md)** — COMPLETE
+
 - `folders.create/rename/move/trash` IPC
 - FoldersDrawer context menu + inline rename
 - Drag-and-drop notes between folders (`@dnd-kit/core`)
@@ -107,6 +116,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 ### Features
 
 **[F06 — Home Dashboard](../features/F06-home/spec.md)** — COMPLETE
+
 - Hero (greeting + counts + "Abrir nota de hoje")
 - Pinned grid
 - Recents list
@@ -114,6 +124,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - All Notes grid
 
 **[F07 — Drawers](../features/F07-drawers/spec.md)** — COMPLETE
+
 - Drawer container & open/close from rail
 - Search drawer (full-text via SQLite FTS5)
 - Folders drawer (tree)
@@ -130,11 +141,13 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 ### Features
 
 **[F10 — Daily Notes & Multi-vault](../features/F10-daily-multivault/spec.md)** — COMPLETE
+
 - Daily note creation + template
 - Multi-vault list & switcher
 - Active-vault persistence
 
 **[F13 — Settings + In-note Search + App Menu](../features/F13-settings-search-menu/spec.md)** — COMPLETE
+
 - Settings panel (General/Editor/Files/Markdown/Daily/Advanced)
 - Per-vault overrides in `<vault>/.noxe/config.json`
 - ⌘F / ⌘⇧F via `@codemirror/search`
@@ -143,6 +156,7 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 - About + diagnostics + shortcuts list
 
 **[F14 — Markdown Extensions](../features/F14-markdown-extensions/spec.md)** — COMPLETE
+
 - Obsidian-style callouts (`> [!note]` etc.)
 - Footnotes (`[^1]`)
 - Highlight (`==text==`)
@@ -158,39 +172,98 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 ### Features
 
 **[F20 — AI Chat Panel](../features/F20-ai-chat/spec.md)** — SUPERSEDED by F21–F24
+
 - Generic right-side chat panel scoped to the open note. Shipped, then deprecated when we realised the user already has `claude` / `copilot` CLIs for free-form Q&A. Spec stays as historical reference.
 
-**[F21 — AI Infrastructure](../features/F21-ai-infrastructure/spec.md)** — PLANNED
+**[F21 — AI Infrastructure](../features/F21-ai-infrastructure/spec.md)** — COMPLETE
+
 - Skills system: bundled defaults + `~/.noxe/skills/*.md` overrides
 - BLAKE3 content-hash cache (`ai_cache` table)
 - Telemetry (`ai_calls` table) + Settings → AI → Usage
 - `ai_run_skill` runner orchestrates skill → cache → subprocess
 - Removes the F20 chat UI (low-level subprocess primitive stays)
 
-**F22 — Insights sidebar** — PLANNED (spec to be written)
-- Replaces the "Coming soon" panel on note view with three on-demand cards: Summary, Suggested tags, Related notes
-- Each card is opt-in (explicit "Generate" button) and cached via F21
-- "Related notes" uses keyword-overlap on cached suggested-tag output (no embeddings)
+**[F22 — Insights sidebar](../features/F22-ai-insights/spec.md)** — COMPLETE
 
-**F23 — Generate note from topic** — PLANNED (spec to be written)
-- Command palette entry + Home button "New from topic"
-- Modal asks for topic + optional folder; produces a draft note via the `generate-note` skill
+- Three on-demand cards on note view (Summary / Suggested tags / Related notes), each opt-in, cached via F21
+- Related-notes resolves LLM titles back to real vault notes via the index
+- Removed the F20 chat panel + rail button
 
-**F24 — Slash commands** — PLANNED (spec to be written)
-- In-editor `/summarize`, `/expand`, `/rephrase`, `/continue` commands operating on the current selection (or paragraph)
-- Streams not required — replace the selection with the result on completion
+**[F23 — Generate note from topic](../features/F23-generate-note/spec.md)** — COMPLETE
+
+- Command palette entry + modal (topic + optional folder)
+- Background generation with sonner toast; per-skill `timeout_secs` for longer drafts
+- Disabled-AI state shows Settings link instead of input
+
+**[F24 — Slash commands](../features/F24-slash-commands/spec.md)** — COMPLETE
+
+- `/ai-summarize`, `/ai-rephrase`, `/ai-expand`, `/ai-continue` in CodeMirror slash menu
+- Single undoable replace edit per command; failures preserve original text
+- Disabled-AI state surfaces a toast instead of running
 
 ---
 
-## M7 — Release prep (post-mock)
+## M6.5 — Productivity surfaces
 
-**Goal:** Cross-platform build pipeline, icons, branding, public v1 release. Specs to be written when M5/M6 land.
+**Goal:** Add lightweight productivity capture on top of the AI features so daily workflows live inside the app.
+
+### Features
+
+**[F25 — Per-vault Todos](../features/F25-todos/spec.md)** — COMPLETE
+
+- `<vault>/.noxe/todos.json` store + dedicated TodosView
+- Side rail icon, Cmd+Shift+T global shortcut, system tray entry
+- Cmd+K palette: open todos searchable + "Create todo" fallback
+- Pending-todos card on Home (refined under F29)
+
+---
+
+## M7 — Sync, layout & onboarding
+
+**Goal:** Make the app usable across machines, configurable for two work modes, and welcoming on first run.
+
+### Features
+
+**[F26 — GitHub sync](../features/F26-github-sync/spec.md)** — COMPLETE
+
+- Per-vault GitHub remote synced over SSH with `ssh.github.com:443` auto-fallback
+- Full vault sweep on every commit (notes, frontmatter, todos, settings, attachments) — not only the actively edited note
+- Structured commit messages: Conventional Commits style + ISO timestamp + file-list trailer + `Source: noxe-app`
+- Conflict-as-copy resolution (no merge UX)
+
+**[F27 — Cross-account sync auth pivot](../features/F27-cross-account-sync-pivot/spec.md)** — ABSORBED INTO F26
+
+- HTTPS+PAT path removed entirely after macOS Keychain / `gh` helpers proved un-bypassable
+- SSH Deploy Key + `ssh.github.com:443` chosen as the single sanctioned path
+- `gh`-CLI auto-create removed; user creates the empty repo and pastes the SSH URL
+
+**[F28 — Dual layout modes (Focus + Triage)](../features/F28-dual-layout-modes/spec.md)** — COMPLETE
+
+- New `layout.mode` setting (`focus` = current 2-col; `triage` = 3-col nav + list + view)
+- Cmd+Shift+M toggle (Cmd+Shift+L stays bound to theme cycle)
+- Custom Splitter, NavPane, ListPane, TriageBody components; Rail buttons mode-aware
+- Auto-fallback to `focus` on viewports < 1100px (prevents cramped triage)
+
+**[F29 — Home polish](../features/F29-home-polish/spec.md)** — COMPLETE
+
+- Denser NoteCard with tag pills; HomeHero with primary CTA; AllNotesGrid 2-col compact
+- Pending-todos card surfaced on Home; AllNotes hidden behind a toggle to keep Home short
+
+**[F30 — Onboarding scaffold](../features/F30-onboarding-scaffold/spec.md)** — COMPLETE
+
+- New vaults seeded with Welcome.md / Daily / Projects / Meetings / Cheatsheet + 3 starter todos
+- Idempotent via `.noxe/scaffold.json` marker; respects pre-existing files
+
+---
+
+## M8 — Release prep (post-mock)
+
+**Goal:** Cross-platform build pipeline, icons, branding, public v1 release. Specs to be written when M5/M6/M7 land.
 
 ### Features
 
 - Tauri release config (signing, updater) — PLANNED
 - App icons + branding — PLANNED
-- First-run onboarding — PLANNED
 - Crash/error reporting (opt-in) — PLANNED
 
 ---
