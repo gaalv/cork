@@ -91,7 +91,7 @@ export function ListPane() {
           <button
             type="button"
             onClick={() => openPalette()}
-            className="rounded border border-[var(--color-noxe-border)] bg-white px-1 text-[10px] font-medium text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)]"
+            className="rounded border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] px-1 text-[10px] font-medium text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)]"
             title="Open command palette"
           >
             ⌘K
