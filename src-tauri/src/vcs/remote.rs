@@ -577,12 +577,15 @@ fn git_push(vault_root: &Path) -> Result<(), String> {
     // settings, etc.). `git commit` returns non-zero when there is nothing
     // to commit — that's fine.
     let _ = run_git(vault_root, &["add", "-A"]);
+    let (subject, body) = build_sweep_commit_message(vault_root);
     let _ = run_git(
         vault_root,
         &[
             "commit",
             "-m",
-            "Sync vault changes",
+            &subject,
+            "-m",
+            &body,
             "--author=Noxe <noxe@local>",
         ],
     );
@@ -609,6 +612,122 @@ fn git_push(vault_root: &Path) -> Result<(), String> {
         )),
         Err(e) => Err(e),
     }
+}
+
+/// Inspect the staged index and produce a Conventional-Commits style message
+/// that summarises what's about to be committed.
+///
+/// Subject pattern: `sync(<scope>): <summary>` where `<scope>` is one of
+/// `single`, `notes`, `mixed`, `empty`. The body lists up to `MAX_LISTED`
+/// changed files (with status code) plus a totals line and a timestamp,
+/// so commits remain useful in `git log` and the in-app history view.
+fn build_sweep_commit_message(vault_root: &Path) -> (String, String) {
+    const MAX_LISTED: usize = 25;
+
+    let staged = run_git(
+        vault_root,
+        &["diff", "--cached", "--name-status", "-z"],
+    )
+    .ok()
+    .filter(|o| o.status.success())
+    .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+    .unwrap_or_default();
+
+    let mut entries: Vec<(char, String)> = Vec::new();
+    let mut iter = staged.split('\0').filter(|s| !s.is_empty());
+    while let Some(token) = iter.next() {
+        // With `--name-status -z`, each record is laid out as:
+        //   normal:  "<status>\0<path>\0"            (status is "A" | "M" | "D" | "T" | "U")
+        //   rename:  "R<score>\0<oldpath>\0<newpath>\0"
+        //   copy:    "C<score>\0<oldpath>\0<newpath>\0"
+        let first = match token.chars().next() {
+            Some(c) => c,
+            None => continue,
+        };
+        if first == 'R' || first == 'C' {
+            let _old = iter.next().unwrap_or("");
+            let new = iter.next().unwrap_or("");
+            if !new.is_empty() {
+                entries.push((first, new.to_string()));
+            }
+        } else {
+            let path = iter.next().unwrap_or("");
+            if !path.is_empty() {
+                entries.push((first, path.to_string()));
+            }
+        }
+    }
+
+    let total = entries.len();
+    let timestamp = chrono::Utc::now().to_rfc3339();
+
+    if total == 0 {
+        return (
+            "sync(empty): no changes".to_string(),
+            format!("Timestamp: {timestamp}\n\nSource: noxe-app"),
+        );
+    }
+
+    let added = entries.iter().filter(|(s, _)| *s == 'A').count();
+    let modified = entries.iter().filter(|(s, _)| *s == 'M').count();
+    let deleted = entries.iter().filter(|(s, _)| *s == 'D').count();
+    let renamed = entries.iter().filter(|(s, _)| *s == 'R').count();
+    let other = total - added - modified - deleted - renamed;
+
+    let only_notes = entries
+        .iter()
+        .all(|(_, p)| p.ends_with(".md") || p.ends_with(".markdown"));
+
+    let scope = if total == 1 {
+        "single"
+    } else if only_notes {
+        "notes"
+    } else {
+        "mixed"
+    };
+
+    let subject = if total == 1 {
+        let (status, path) = &entries[0];
+        let verb = match status {
+            'A' => "add",
+            'D' => "delete",
+            'M' => "update",
+            'R' => "rename",
+            'C' => "copy",
+            _ => "change",
+        };
+        format!("sync({scope}): {verb} {path}")
+    } else {
+        let mut parts: Vec<String> = Vec::new();
+        if added > 0 {
+            parts.push(format!("+{added}"));
+        }
+        if modified > 0 {
+            parts.push(format!("~{modified}"));
+        }
+        if deleted > 0 {
+            parts.push(format!("-{deleted}"));
+        }
+        if renamed > 0 {
+            parts.push(format!("→{renamed}"));
+        }
+        if other > 0 {
+            parts.push(format!("?{other}"));
+        }
+        let stats = parts.join(" ");
+        format!("sync({scope}): {total} change(s) [{stats}]")
+    };
+
+    let mut body = format!("Timestamp: {timestamp}\nFiles ({total}):\n");
+    for (status, path) in entries.iter().take(MAX_LISTED) {
+        body.push_str(&format!("  {status}  {path}\n"));
+    }
+    if total > MAX_LISTED {
+        body.push_str(&format!("  … and {} more\n", total - MAX_LISTED));
+    }
+    body.push_str("\nSource: noxe-app");
+
+    (subject, body)
 }
 
 #[derive(Debug)]
@@ -1337,5 +1456,96 @@ mod tests {
         let outcome = pull_with_conflict_copy(&alice).expect("pull ok");
         assert!(matches!(outcome, PullOutcome::Merged));
         assert!(alice.join("b.md").exists());
+    }
+
+    #[test]
+    fn sweep_message_empty_when_index_is_clean() {
+        if !super::super::git_available() {
+            return;
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        init_repo(root);
+        // Initial commit so the index has a HEAD to compare against
+        std::fs::write(root.join("seed.md"), "seed\n").unwrap();
+        run(root, &["add", "-A"]);
+        run(root, &["commit", "-m", "seed"]);
+
+        let (subject, body) = build_sweep_commit_message(root);
+        assert_eq!(subject, "sync(empty): no changes");
+        assert!(body.contains("Source: noxe-app"));
+    }
+
+    #[test]
+    fn sweep_message_single_change_uses_single_scope() {
+        if !super::super::git_available() {
+            return;
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        init_repo(root);
+        std::fs::write(root.join("seed.md"), "seed\n").unwrap();
+        run(root, &["add", "-A"]);
+        run(root, &["commit", "-m", "seed"]);
+
+        std::fs::write(root.join("new.md"), "hi\n").unwrap();
+        run(root, &["add", "-A"]);
+
+        let (subject, body) = build_sweep_commit_message(root);
+        assert_eq!(subject, "sync(single): add new.md");
+        assert!(body.contains("A  new.md"));
+    }
+
+    #[test]
+    fn sweep_message_mixed_change_lists_files_and_stats() {
+        if !super::super::git_available() {
+            return;
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        init_repo(root);
+        std::fs::write(root.join("a.md"), "a\n").unwrap();
+        std::fs::write(root.join("b.md"), "b\n").unwrap();
+        std::fs::create_dir_all(root.join(".noxe")).unwrap();
+        std::fs::write(root.join(".noxe/todos.json"), "[]").unwrap();
+        run(root, &["add", "-A"]);
+        run(root, &["commit", "-m", "seed"]);
+
+        // Modify a, delete b, add settings, change todos
+        std::fs::write(root.join("a.md"), "a updated\n").unwrap();
+        std::fs::remove_file(root.join("b.md")).unwrap();
+        std::fs::write(root.join(".noxe/settings.json"), "{}").unwrap();
+        std::fs::write(root.join(".noxe/todos.json"), "[{}]").unwrap();
+        run(root, &["add", "-A"]);
+
+        let (subject, body) = build_sweep_commit_message(root);
+        assert!(subject.starts_with("sync(mixed): 4 change(s)"), "got: {subject}");
+        assert!(subject.contains("+1"));
+        assert!(subject.contains("~2"));
+        assert!(subject.contains("-1"));
+        assert!(body.contains("a.md"));
+        assert!(body.contains("b.md"));
+        assert!(body.contains(".noxe/settings.json"));
+        assert!(body.contains(".noxe/todos.json"));
+    }
+
+    #[test]
+    fn sweep_message_only_notes_uses_notes_scope() {
+        if !super::super::git_available() {
+            return;
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        init_repo(root);
+        std::fs::write(root.join("seed.md"), "seed\n").unwrap();
+        run(root, &["add", "-A"]);
+        run(root, &["commit", "-m", "seed"]);
+
+        std::fs::write(root.join("a.md"), "a\n").unwrap();
+        std::fs::write(root.join("b.md"), "b\n").unwrap();
+        run(root, &["add", "-A"]);
+
+        let (subject, _body) = build_sweep_commit_message(root);
+        assert!(subject.starts_with("sync(notes): 2 change(s)"), "got: {subject}");
     }
 }

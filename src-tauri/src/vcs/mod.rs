@@ -223,13 +223,20 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
         .args(["add", "-A"])
         .status();
 
+    let init_body = format!(
+        "Timestamp: {}\nVault: {}\n\nSource: noxe-app",
+        chrono::Utc::now().to_rfc3339(),
+        vault_root.display()
+    );
     let commit = Command::new("git")
         .current_dir(vault_root)
         .args([
             "commit",
             "--allow-empty",
             "-m",
-            "Initial commit",
+            "vault(init): initial commit",
+            "-m",
+            &init_body,
             "--author=Noxe <noxe@local>",
         ])
         .output()
@@ -259,8 +266,13 @@ fn do_commit(vault_root: &Path, note_path: &Path, is_new: bool) -> Result<(), St
         .to_string_lossy()
         .to_string();
 
-    let verb = if is_new { "Create" } else { "Update" };
-    let message = format!("{verb} {rel}");
+    let verb = if is_new { "create" } else { "update" };
+    let subject = format!("note({verb}): {rel}");
+    let body = format!(
+        "Timestamp: {}\nFile: {}\n\nSource: noxe-app",
+        chrono::Utc::now().to_rfc3339(),
+        rel
+    );
 
     let _ = Command::new("git")
         .current_dir(vault_root)
@@ -273,7 +285,9 @@ fn do_commit(vault_root: &Path, note_path: &Path, is_new: bool) -> Result<(), St
         .args([
             "commit",
             "-m",
-            &message,
+            &subject,
+            "-m",
+            &body,
             "--author=Noxe <noxe@local>",
         ])
         .status();
@@ -416,7 +430,13 @@ pub fn vcs_restore(
     } else {
         &input.sha
     };
-    let message = format!("Restore {rel} from {short_sha}");
+    let subject = format!("note(restore): {rel} from {short_sha}");
+    let body = format!(
+        "Timestamp: {}\nFile: {}\nRestored from: {}\n\nSource: noxe-app",
+        chrono::Utc::now().to_rfc3339(),
+        rel,
+        input.sha
+    );
 
     let _ = Command::new("git")
         .current_dir(&vault_root)
@@ -425,7 +445,14 @@ pub fn vcs_restore(
 
     let _ = Command::new("git")
         .current_dir(&vault_root)
-        .args(["commit", "-m", &message, "--author=Noxe <noxe@local>"])
+        .args([
+            "commit",
+            "-m",
+            &subject,
+            "-m",
+            &body,
+            "--author=Noxe <noxe@local>",
+        ])
         .status();
 
     // Remove any pending debounced commit for this file to avoid a duplicate
