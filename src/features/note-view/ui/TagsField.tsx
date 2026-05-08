@@ -3,7 +3,10 @@ import { CaretDown, Check, Plus, X } from "@phosphor-icons/react";
 
 import { useEditorStore } from "@/features/editor/state/editorStore";
 import { useTagTree } from "@/features/drawers/hooks/useTagTree";
-import { useVaultSettingsStore, normalizeTagName } from "@/features/settings/state/vaultSettingsStore";
+import {
+  useVaultSettingsStore,
+  normalizeTagName,
+} from "@/features/settings/state/vaultSettingsStore";
 
 type TagsFieldProps = {
   noteId: string | null;
@@ -48,7 +51,7 @@ function flattenTree(nodes: ReturnType<typeof useTagTree>["tree"]): string[] {
 }
 
 export function TagsField({ noteId }: TagsFieldProps) {
-  const buffer = useEditorStore((state) => (noteId ? state.buffers.get(noteId) ?? null : null));
+  const buffer = useEditorStore((state) => (noteId ? (state.buffers.get(noteId) ?? null) : null));
   const updateFrontmatter = useEditorStore((state) => state.updateFrontmatter);
   const { tree } = useTagTree();
   const addLibraryTag = useVaultSettingsStore((state) => state.addLibraryTag);
@@ -108,8 +111,8 @@ export function TagsField({ noteId }: TagsFieldProps) {
   }
 
   return (
-    <section aria-label="Tags" className="space-y-1.5">
-      <h3 className="text-xs font-medium text-[var(--color-noxe-muted)]">Tags</h3>
+    <section aria-label="Tags" className="space-y-1">
+      <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-noxe-subtle)]">Tags</h3>
       <div className="flex flex-wrap gap-1.5">
         {tags.map((tag) => (
           <span
@@ -151,7 +154,9 @@ export function TagsField({ noteId }: TagsFieldProps) {
             />
             <ul role="listbox" className="max-h-48 overflow-y-auto py-1">
               {filtered.length === 0 && !canCreate ? (
-                <li className="px-2 py-1 text-[11px] text-[var(--color-noxe-muted)]">No tags found.</li>
+                <li className="px-2 py-1 text-[11px] text-[var(--color-noxe-muted)]">
+                  No tags found.
+                </li>
               ) : null}
               {filtered.map((tag) => {
                 const checked = tagSet.has(tag);
@@ -165,7 +170,13 @@ export function TagsField({ noteId }: TagsFieldProps) {
                       className="flex w-full items-center justify-between gap-2 px-2 py-1 text-left text-xs text-[var(--color-noxe-ink)] hover:bg-[var(--color-noxe-panel-2)]"
                     >
                       <span className="truncate">#{tag}</span>
-                      {checked ? <Check size={12} weight="bold" className="text-[var(--color-noxe-accent)]" /> : null}
+                      {checked ? (
+                        <Check
+                          size={12}
+                          weight="bold"
+                          className="text-[var(--color-noxe-accent)]"
+                        />
+                      ) : null}
                     </button>
                   </li>
                 );

@@ -1,9 +1,7 @@
 import { InsightsCard } from "@/features/ai/ui/InsightsCard";
 import { BacklinksList } from "./BacklinksList";
-import { NoteFolderField } from "./NoteFolderField";
-import { NoteMetaFooter } from "./NoteMetaFooter";
+import { NoteProperties } from "./NoteProperties";
 import { Outline } from "./Outline";
-import { TagsField } from "./TagsField";
 
 import { useBacklinks } from "@/features/note-view/hooks/useBacklinks";
 import { useOutline } from "@/features/note-view/hooks/useOutline";
@@ -24,12 +22,12 @@ type NoteMetaPanelProps = {
   onSelectHeading?: (item: OutlineItem) => void;
 };
 
-export function NoteMetaPanel({ noteId, body, updated, created, onOpenNote, onSelectHeading }: NoteMetaPanelProps) {
+export function NoteMetaPanel({ noteId, body, onOpenNote, onSelectHeading }: NoteMetaPanelProps) {
   const collapsed = useNoteViewStore((state) => state.panelCollapsed);
   const toggleCollapsed = useNoteViewStore((state) => state.togglePanelCollapsed);
   const activeNotePath = useNoteViewStore((state) => state.activeNotePath);
   const noteTitle = useVaultStore((state) =>
-    noteId ? state.notes.find((note) => note.id === noteId)?.title ?? "" : "",
+    noteId ? (state.notes.find((note) => note.id === noteId)?.title ?? "") : "",
   );
   const outline = useOutline(body);
   const activeId = useScrollSpy(outline.map((item) => item.id));
@@ -48,12 +46,10 @@ export function NoteMetaPanel({ noteId, body, updated, created, onOpenNote, onSe
         {collapsed ? "Show meta" : "Hide meta"}
       </button>
       <Outline items={outline} activeId={activeId} onSelect={(item) => onSelectHeading?.(item)} />
-      <NoteFolderField noteId={noteId} />
-      <TagsField noteId={noteId} />
+      <NoteProperties noteId={noteId} body={body} />
+      <InsightsCard noteId={noteId} body={body} title={noteTitle} />
       <NoteHistory notePath={activeNotePath} noteId={noteId} />
       <BacklinksList backlinks={backlinks} onOpen={onOpenNote} />
-      <InsightsCard noteId={noteId} body={body} title={noteTitle} />
-      <NoteMetaFooter body={body} created={created} updated={updated} />
     </aside>
   );
 }

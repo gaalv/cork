@@ -10,7 +10,7 @@ type NoteFolderFieldProps = {
 
 export function NoteFolderField({ noteId }: NoteFolderFieldProps) {
   const notes = useVaultStore((state) => state.notes);
-  const note = noteId ? notes.find((entry) => entry.id === noteId) ?? null : null;
+  const note = noteId ? (notes.find((entry) => entry.id === noteId) ?? null) : null;
 
   const options = useMemo(() => {
     const set = new Set<string>();
@@ -32,8 +32,10 @@ export function NoteFolderField({ noteId }: NoteFolderFieldProps) {
   }
 
   return (
-    <section aria-label="Folder" className="space-y-1.5">
-      <h3 className="text-xs font-medium text-[var(--color-noxe-muted)]">Folder</h3>
+    <section aria-label="Folder" className="space-y-1">
+      <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-noxe-subtle)]">
+        Folder
+      </h3>
       <Select
         ariaLabel="Move note to folder"
         value={note.folder}

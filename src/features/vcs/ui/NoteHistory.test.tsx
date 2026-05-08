@@ -37,12 +37,10 @@ beforeEach(() => {
 });
 
 describe("NoteHistory", () => {
-  it("shows 'no history yet' when list is empty", async () => {
+  it("shows 'no versions yet' when list is empty", async () => {
     render(<NoteHistory notePath="/vault/note.md" noteId="n1" />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/no history yet/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/no versions yet/i)).toBeInTheDocument());
   });
 
   it("shows commit entries", async () => {
@@ -58,10 +56,8 @@ describe("NoteHistory", () => {
 
     render(<NoteHistory notePath="/vault/note.md" noteId="n1" />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Update note.md")).toBeInTheDocument(),
-    );
-    expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Update note.md")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /restore version abc123d/i })).toBeInTheDocument();
   });
 
   it("shows confirm buttons after clicking Restore", async () => {
@@ -78,10 +74,10 @@ describe("NoteHistory", () => {
     render(<NoteHistory notePath="/vault/note.md" noteId="n1" />);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /restore version abc123d/i })).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+    fireEvent.click(screen.getByRole("button", { name: /restore version abc123d/i }));
 
     expect(screen.getByRole("button", { name: "Yes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "No" })).toBeInTheDocument();
@@ -101,15 +97,15 @@ describe("NoteHistory", () => {
     render(<NoteHistory notePath="/vault/note.md" noteId="n1" />);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /restore version abc123d/i })).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+    fireEvent.click(screen.getByRole("button", { name: /restore version abc123d/i }));
     expect(screen.getByRole("button", { name: "No" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "No" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /restore version abc123d/i })).toBeInTheDocument(),
     );
   });
 
@@ -118,13 +114,11 @@ describe("NoteHistory", () => {
 
     render(<NoteHistory notePath="/vault/note.md" noteId="n1" />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/install git/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/install git/i)).toBeInTheDocument());
   });
 
   it("renders nothing problematic when notePath is null", () => {
     render(<NoteHistory notePath={null} noteId={null} />);
-    expect(screen.getByRole("heading", { name: "Version History" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
   });
 });
