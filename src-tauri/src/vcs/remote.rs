@@ -53,11 +53,8 @@ pub struct RemoteInfo {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnableRemoteInput {
+    /// SSH remote URL, e.g. `git@github.com:owner/repo.git`.
     pub url: Option<String>,
-    /// Optional personal access token. When provided alongside an https URL,
-    /// it is embedded in the remote URL stored in `.git/config` so that push
-    /// authenticates as the token's owner — bypassing the active `gh` account.
-    pub token: Option<String>,
 }
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -206,10 +203,14 @@ fn heartbeat_worker_loop(inner: Arc<Mutex<RemoteInner>>) {
         };
         if let Some(root) = root {
             let outcome = pull_with_conflict_copy(&root);
-            let push_after = matches!(&outcome, Ok(PullOutcome::Merged | PullOutcome::ConflictCopied(_)))
-                && local_is_ahead(&root);
+            let pull_ok = outcome.is_ok();
             finish_op(&inner, outcome.map(|_| ()).map_err(|e| e), OpKind::Pull);
-            if push_after {
+            // Always queue a push attempt after a successful pull. `git_push`
+            // is idempotent — it sweeps `git add -A`, commits if anything
+            // changed, and no-ops if there's nothing to send. This catches
+            // changes that don't go through `on_note_saved` (folder ops,
+            // deletions, todos.json, settings, …).
+            if pull_ok {
                 if let Ok(mut g) = inner.lock() {
                     g.push_pending = true;
                     g.push_queued_at = Some(Instant::now() - PUSH_DEBOUNCE);
@@ -356,37 +357,6 @@ fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Like [`run_git`] but completely isolates git from the user's global
-/// gitconfig (`~/.gitconfig`, `~/.config/git/config`) and the system
-/// gitconfig. Only the per-repo `.git/config` is honored. Use this for
-/// PAT-authenticated push so no inherited credential helper, alias, or
-/// http directive can interfere.
-fn run_git_isolated(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
-    use std::time::SystemTime;
-
-    let stamp = SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let isolated_home = std::env::temp_dir().join(format!("noxe-git-iso-{stamp}"));
-    let _ = std::fs::create_dir_all(&isolated_home);
-
-    let result = Command::new("git")
-        .current_dir(vault_root)
-        .env("GIT_TERMINAL_PROMPT", "0")
-        .env("GIT_ASKPASS", "")
-        .env("SSH_ASKPASS", "")
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("HOME", &isolated_home)
-        .env("XDG_CONFIG_HOME", &isolated_home)
-        .args(args)
-        .output()
-        .map_err(|e| e.to_string());
-
-    let _ = std::fs::remove_dir_all(&isolated_home);
-    result
-}
-
 fn run_git_check(vault_root: &Path, args: &[&str]) -> Result<String, String> {
     let out = run_git(vault_root, args)?;
     if !out.status.success() {
@@ -402,32 +372,6 @@ fn run_git_check(vault_root: &Path, args: &[&str]) -> Result<String, String> {
         ));
     }
     Ok(String::from_utf8_lossy(&out.stdout).to_string())
-}
-
-/// True when the per-repo .git/config has an extraheader override for
-/// github.com — i.e. the repo was set up with a PAT and should be run
-/// in an isolated $HOME so nothing from the user's global config can
-/// override the inline auth.
-fn repo_uses_pat_auth(vault_root: &Path) -> bool {
-    run_git(
-        vault_root,
-        &[
-            "config",
-            "--local",
-            "--get",
-            "http.https://github.com/.extraheader",
-        ],
-    )
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
-
-fn run_git_auto(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
-    if repo_uses_pat_auth(vault_root) {
-        run_git_isolated(vault_root, args)
-    } else {
-        run_git(vault_root, args)
-    }
 }
 
 // ── SSH deploy key support ───────────────────────────────────────────────────
@@ -628,7 +572,21 @@ fn looks_like_port_22_block(stderr: &str) -> bool {
 
 fn git_push(vault_root: &Path) -> Result<(), String> {
     let _ = append_log(vault_root, "[push] start");
-    let out = run_git_auto(vault_root, &["push", "origin", "HEAD"]);
+    // Sweep up any changes not yet captured by the per-note debounced commit
+    // (folder create/rename/delete, note delete/rename/move, todos.json,
+    // settings, etc.). `git commit` returns non-zero when there is nothing
+    // to commit — that's fine.
+    let _ = run_git(vault_root, &["add", "-A"]);
+    let _ = run_git(
+        vault_root,
+        &[
+            "commit",
+            "-m",
+            "Sync vault changes",
+            "--author=Noxe <noxe@local>",
+        ],
+    );
+    let out = run_git(vault_root, &["push", "origin", "HEAD"]);
     let _ = append_log(
         vault_root,
         &match &out {
@@ -665,7 +623,7 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
         return Ok(PullOutcome::NotConfigured);
     }
     let _ = append_log(vault_root, "[pull] fetch");
-    let fetch_out = run_git_auto(vault_root, &["fetch", "origin"])?;
+    let fetch_out = run_git(vault_root, &["fetch", "origin"])?;
     if !fetch_out.status.success() {
         return Err(String::from_utf8_lossy(&fetch_out.stderr).trim().to_string());
     }
@@ -766,18 +724,6 @@ pub fn build_conflict_filename(path: &Path, host: &str, stamp: &str) -> String {
     }
 }
 
-/// Sanitizes a URL by dropping any `user:pass@` segment so that the value
-/// stored in vault settings never carries credentials.
-fn strip_userinfo(url: &str) -> String {
-    if let Some(rest) = url.strip_prefix("https://") {
-        if let Some(at) = rest.find('@') {
-            // Drop "user:pass@" segment, keep host+path.
-            return format!("https://{}", &rest[at + 1..]);
-        }
-    }
-    url.to_string()
-}
-
 fn hostname() -> String {
     std::env::var("HOSTNAME")
         .or_else(|_| std::env::var("COMPUTERNAME"))
@@ -854,374 +800,147 @@ fn enable_remote_blocking(
     vault_root: &Path,
     input: EnableRemoteInput,
 ) -> Result<String, IpcError> {
-
-    let url_set: String;
-    if let Some(url) = input.url.clone() {
-        let trimmed_url = url.trim().to_string();
-
-        // ── SSH deploy-key path ──────────────────────────────────────
-        if is_ssh_url(&trimmed_url) {
-            if !has_deploy_key(&vault_root) {
-                return Err(IpcError::Other(
-                    "Deploy key not generated yet. Click \"Generate deploy key\" first, \
-                     paste the public key into the repo's Deploy Keys (with write \
-                     access), then Connect."
-                        .into(),
-                ));
-            }
-            let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
-            run_git_check(&vault_root, &["remote", "add", "origin", &trimmed_url])
-                .map_err(IpcError::Other)?;
-
-            // Clear any leftover HTTPS auth state from a prior connection.
-            let _ = run_git(
-                &vault_root,
-                &["config", "--local", "--remove-section", "http.https://github.com/"],
-            );
-
-            // Pin core.sshCommand so git uses ONLY our deploy key.
-            // Start with port 22; if push fails with a network-block
-            // signature, we retry with ssh.github.com:443 and persist
-            // that command for future operations.
-            let ssh_cmd_22 = build_ssh_command(&vault_root, false);
-            run_git_check(
-                &vault_root,
-                &["config", "--local", "core.sshCommand", &ssh_cmd_22],
+    let url = input
+        .url
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| {
+            IpcError::Other(
+                "Missing repository URL. Use the SSH form: \
+                 git@github.com:owner/repo.git"
+                    .into(),
             )
-            .map_err(IpcError::Other)?;
+        })?
+        .to_string();
 
-            // Make sure HEAD exists.
-            let has_head = run_git(&vault_root, &["rev-parse", "HEAD"])
-                .map(|o| o.status.success())
-                .unwrap_or(false);
-            if !has_head {
-                let _ = run_git(&vault_root, &["add", "-A"]);
-                let _ = run_git(
-                    &vault_root,
-                    &[
-                        "commit",
-                        "--allow-empty",
-                        "-m",
-                        "Initial commit",
-                        "--author=Noxe <noxe@local>",
-                    ],
-                );
-            }
-
-            let mut push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
-                .map_err(IpcError::Other)?;
-            let mut tried_443 = false;
-            if !push_out.status.success() {
-                let stderr = String::from_utf8_lossy(&push_out.stderr).to_string();
-                if looks_like_port_22_block(&stderr) {
-                    // Retry over ssh.github.com:443 — GitHub's officially
-                    // supported SSH-over-HTTPS endpoint for firewalled
-                    // networks. If it works, persist this command so all
-                    // subsequent fetch/push use it too.
-                    tried_443 = true;
-                    let ssh_cmd_443 = build_ssh_command(&vault_root, true);
-                    run_git_check(
-                        &vault_root,
-                        &["config", "--local", "core.sshCommand", &ssh_cmd_443],
-                    )
-                    .map_err(IpcError::Other)?;
-                    push_out = run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
-                        .map_err(IpcError::Other)?;
-                    if !push_out.status.success() {
-                        // Both attempts failed — restore the simpler
-                        // command (less surprising in .git/config) before
-                        // surfacing the error.
-                        let _ = run_git(
-                            &vault_root,
-                            &["config", "--local", "core.sshCommand", &ssh_cmd_22],
-                        );
-                    }
-                }
-            }
-            if !push_out.status.success() {
-                let stderr = String::from_utf8_lossy(&push_out.stderr).trim().to_string();
-                let stdout = String::from_utf8_lossy(&push_out.stdout).trim().to_string();
-                let mut msg = if tried_443 {
-                    "git push (ssh) failed on both port 22 and port 443"
-                } else {
-                    "git push (ssh) failed"
-                }
-                .to_string();
-                if !stderr.is_empty() {
-                    msg.push_str(": ");
-                    msg.push_str(&stderr);
-                }
-                if !stdout.is_empty() {
-                    msg.push_str(" | ");
-                    msg.push_str(&stdout);
-                }
-                let lower = format!("{stderr} {stdout}").to_lowercase();
-                if lower.contains("permission denied") || lower.contains("publickey") {
-                    msg.push_str(
-                        "\nHint: the deploy key wasn't accepted. On the repo page → \
-                         Settings → Deploy keys → Add deploy key, paste the PUBLIC \
-                         key shown above and check \"Allow write access\".",
-                    );
-                } else if lower.contains("repository not found")
-                    || lower.contains("does not exist")
-                {
-                    msg.push_str(
-                        "\nHint: the SSH URL is wrong. Use \
-                         git@github.com:owner/repo.git (no https://).",
-                    );
-                } else if looks_like_port_22_block(&lower) {
-                    msg.push_str(
-                        "\nHint: outbound SSH appears to be blocked from this \
-                         machine (corporate firewall or VPN). We tried both port \
-                         22 and ssh.github.com:443 and neither connected. Try \
-                         disconnecting the VPN, or fall back to HTTPS + PAT.",
-                    );
-                }
-                return Err(IpcError::Other(msg));
-            }
-            return Ok(trimmed_url);
-        }
-
-        // ── HTTPS + optional PAT path (legacy) ───────────────────────
-        let stored = strip_userinfo(&trimmed_url);
-        let token = input
-            .token
-            .as_deref()
-            .map(str::trim)
-            .filter(|s| !s.is_empty());
-
-        let _ = run_git(&vault_root, &["remote", "remove", "origin"]);
-        // Always store the sanitized URL (no token) as the remote URL.
-        // Authentication is configured separately so it never lands in
-        // .git/config in plaintext when not needed, and so we can use
-        // http.extraHeader which bypasses any credential helper.
-        run_git_check(&vault_root, &["remote", "add", "origin", &stored])
-            .map_err(IpcError::Other)?;
-
-        // Reset any previous per-remote auth overrides.
-        let _ = run_git(
-            &vault_root,
-            &["config", "--local", "--unset-all", "credential.helper"],
-        );
-        let _ = run_git(
-            &vault_root,
-            &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
-        );
-        let _ = run_git(
-            &vault_root,
-            &["config", "--local", "--remove-section", "http.https://github.com/"],
-        );
-
-        if let Some(t) = token {
-            // Disable inherited credential helpers — both the URL-less form
-            // and the URL-specific one that `gh auth setup-git` writes
-            // (otherwise gh's helper still answers for github.com URLs and
-            // overrides our token with the active gh account, which on this
-            // machine is the enterprise one and produces 403s).
-            let _ = run_git(
-                &vault_root,
-                &["config", "--local", "credential.helper", ""],
-            );
-            let _ = run_git(
-                &vault_root,
-                &["config", "--local", "credential.https://github.com.helper", ""],
-            );
-            // Force HTTP/1.1 — HTTP/2 multiplexing on GitHub occasionally
-            // produces "RPC failed; HTTP 403 ... send-pack: unexpected
-            // disconnect" when the auth header isn't reapplied across the
-            // multiplexed streams.
-            let _ = run_git(
-                &vault_root,
-                &["config", "--local", "http.version", "HTTP/1.1"],
-            );
-            // GitHub's git HTTPS endpoint expects HTTP Basic auth with
-            // `x-access-token:<PAT>` base64-encoded. This is the exact
-            // format actions/checkout uses.
-            use base64::Engine as _;
-            let basic = base64::engine::general_purpose::STANDARD
-                .encode(format!("x-access-token:{t}"));
-            let header = format!("AUTHORIZATION: basic {basic}");
-            run_git_check(
-                &vault_root,
-                &[
-                    "config",
-                    "--local",
-                    "http.https://github.com/.extraheader",
-                    &header,
-                ],
-            )
-            .map_err(IpcError::Other)?;
-        }
-
-        // Make absolutely sure there's at least one commit before we push;
-        // a brand-new repo with no HEAD would fail with the cryptic
-        // "src refspec HEAD does not match any" error.
-        let has_head = run_git(&vault_root, &["rev-parse", "HEAD"])
-            .map(|o| o.status.success())
-            .unwrap_or(false);
-        if !has_head {
-            let _ = run_git(&vault_root, &["add", "-A"]);
-            let _ = run_git(
-                &vault_root,
-                &[
-                    "commit",
-                    "--allow-empty",
-                    "-m",
-                    "Initial commit",
-                    "--author=Noxe <noxe@local>",
-                ],
-            );
-        }
-
-        let push_out = if input
-            .token
-            .as_deref()
-            .map(str::trim)
-            .map(|s| !s.is_empty())
-            .unwrap_or(false)
-        {
-            // With a PAT we run git in an isolated $HOME so the user's
-            // global gitconfig (and any inherited credential helper /
-            // includeIf / extra http config) cannot influence auth — only
-            // the per-vault .git/config we just wrote.
-            run_git_isolated(&vault_root, &["push", "-u", "origin", "HEAD"])
-                .map_err(IpcError::Other)?
-        } else {
-            run_git(&vault_root, &["push", "-u", "origin", "HEAD"])
-                .map_err(IpcError::Other)?
-        };
-        if !push_out.status.success() {
-            let stderr = String::from_utf8_lossy(&push_out.stderr)
-                .trim()
-                .to_string();
-            let stdout = String::from_utf8_lossy(&push_out.stdout)
-                .trim()
-                .to_string();
-            let mut msg = "git push failed".to_string();
-            if !stderr.is_empty() {
-                msg.push_str(": ");
-                msg.push_str(&stderr);
-            }
-            if !stdout.is_empty() {
-                msg.push_str(" | ");
-                msg.push_str(&stdout);
-            }
-            // Inline hints for the most common failure modes when
-            // pushing with a PAT.
-            let lower = format!("{stderr} {stdout}").to_lowercase();
-            if lower.contains("403") || lower.contains("permission") {
-                msg.push_str(
-                    "\nHint: the PAT must have `Contents: Read and write` on this repo. \
-                     Fine-grained PATs targeting an org repo also need org owner approval.",
-                );
-            } else if lower.contains("401") || lower.contains("authentication") {
-                msg.push_str(
-                    "\nHint: the PAT was rejected. Make sure you copied the full token \
-                     and that it hasn't expired.",
-                );
-            } else if lower.contains("not found") || lower.contains("repository not found") {
-                msg.push_str(
-                    "\nHint: the repository URL is wrong, the repo doesn't exist, \
-                     or the PAT cannot see it (Repository access selection in the PAT).",
-                );
-            }
-            // Append a sanitized snapshot of the credential / http config
-            // that's actually visible to git from this repo. Helps
-            // pinpoint when an inherited helper or an extraHeader is
-            // missing / overriding what we set.
-            if let Ok(out) = run_git(
-                &vault_root,
-                &["config", "--show-origin", "--list"],
-            ) {
-                if out.status.success() {
-                    let listing = String::from_utf8_lossy(&out.stdout);
-                    let mut diag = String::from("\nConfig snapshot (credential/http/remote):");
-                    let mut any = false;
-                    for line in listing.lines() {
-                        let lower_line = line.to_lowercase();
-                        if lower_line.contains("credential.")
-                            || lower_line.contains("http.")
-                            || lower_line.contains("remote.")
-                        {
-                            any = true;
-                            diag.push('\n');
-                            // Redact the actual extraheader value but keep
-                            // its presence visible so we know it's set.
-                            if let Some(idx) = line.to_lowercase().find("extraheader=") {
-                                diag.push_str(&line[..idx]);
-                                diag.push_str("extraheader=<redacted>");
-                            } else {
-                                diag.push_str(line);
-                            }
-                        }
-                    }
-                    if any {
-                        msg.push_str(&diag);
-                    }
-                }
-            }
-            return Err(IpcError::Other(msg));
-        }
-        url_set = stored;
-    } else {
-        if !gh_available() {
-            return Err(IpcError::Other(
-                "gh CLI not found. Install GitHub CLI and run `gh auth login`.".into(),
-            ));
-        }
-        // Clear any leftover credential.helper or extraHeader override
-        // from a previous token-based connection so gh's helper takes
-        // effect again.
-        let _ = run_git(
-            &vault_root,
-            &["config", "--local", "--unset-all", "credential.helper"],
-        );
-        let _ = run_git(
-            &vault_root,
-            &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
-        );
-        let _ = run_git(
-            &vault_root,
-            &["config", "--local", "--remove-section", "http.https://github.com/"],
-        );
-        let auth = Command::new("gh")
-            .args(["auth", "status"])
-            .output()
-            .map_err(|e| IpcError::Other(e.to_string()))?;
-        if !auth.status.success() {
-            return Err(IpcError::Other(
-                "gh is not authenticated. Run `gh auth login`.".into(),
-            ));
-        }
-        let name = format!(
-            "noxe-vault-{}",
-            chrono::Utc::now().format("%Y%m%d%H%M%S")
-        );
-        let create = Command::new("gh")
-            .current_dir(&vault_root)
-            .args([
-                "repo",
-                "create",
-                &name,
-                "--private",
-                "--source",
-                ".",
-                "--remote",
-                "origin",
-                "--push",
-            ])
-            .output()
-            .map_err(|e| IpcError::Other(e.to_string()))?;
-        if !create.status.success() {
-            let stderr = String::from_utf8_lossy(&create.stderr).to_string();
-            return Err(IpcError::Other(format!("gh repo create failed: {stderr}")));
-        }
-        let url_out = run_git_check(&vault_root, &["remote", "get-url", "origin"])
-            .map_err(IpcError::Other)?;
-        url_set = url_out.trim().to_string();
+    if !is_ssh_url(&url) {
+        return Err(IpcError::Other(
+            "Only SSH URLs are supported. Use the form \
+             git@github.com:owner/repo.git (no https://)."
+                .into(),
+        ));
     }
 
-    Ok(url_set)
+    if !has_deploy_key(vault_root) {
+        return Err(IpcError::Other(
+            "Deploy key not generated yet. Click \"Generate deploy key\" first, \
+             paste the public key into the repo's Deploy Keys (with write \
+             access), then Connect."
+                .into(),
+        ));
+    }
+
+    let _ = run_git(vault_root, &["remote", "remove", "origin"]);
+    run_git_check(vault_root, &["remote", "add", "origin", &url])
+        .map_err(IpcError::Other)?;
+
+    // Wipe any HTTPS auth state from a previous (legacy) attempt so
+    // nothing competes with our SSH command.
+    let _ = run_git(
+        vault_root,
+        &["config", "--local", "--remove-section", "http.https://github.com/"],
+    );
+    let _ = run_git(
+        vault_root,
+        &["config", "--local", "--unset-all", "credential.helper"],
+    );
+    let _ = run_git(
+        vault_root,
+        &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
+    );
+
+    // Pin core.sshCommand so git uses ONLY our deploy key. Start with
+    // port 22; if push fails with a network-block signature we retry
+    // with ssh.github.com:443 and persist that command for future ops.
+    let ssh_cmd_22 = build_ssh_command(vault_root, false);
+    run_git_check(
+        vault_root,
+        &["config", "--local", "core.sshCommand", &ssh_cmd_22],
+    )
+    .map_err(IpcError::Other)?;
+
+    // Make sure HEAD exists.
+    let has_head = run_git(vault_root, &["rev-parse", "HEAD"])
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !has_head {
+        let _ = run_git(vault_root, &["add", "-A"]);
+        let _ = run_git(
+            vault_root,
+            &[
+                "commit",
+                "--allow-empty",
+                "-m",
+                "Initial commit",
+                "--author=Noxe <noxe@local>",
+            ],
+        );
+    }
+
+    let mut push_out = run_git(vault_root, &["push", "-u", "origin", "HEAD"])
+        .map_err(IpcError::Other)?;
+    let mut tried_443 = false;
+    if !push_out.status.success() {
+        let stderr = String::from_utf8_lossy(&push_out.stderr).to_string();
+        if looks_like_port_22_block(&stderr) {
+            tried_443 = true;
+            let ssh_cmd_443 = build_ssh_command(vault_root, true);
+            run_git_check(
+                vault_root,
+                &["config", "--local", "core.sshCommand", &ssh_cmd_443],
+            )
+            .map_err(IpcError::Other)?;
+            push_out = run_git(vault_root, &["push", "-u", "origin", "HEAD"])
+                .map_err(IpcError::Other)?;
+            if !push_out.status.success() {
+                let _ = run_git(
+                    vault_root,
+                    &["config", "--local", "core.sshCommand", &ssh_cmd_22],
+                );
+            }
+        }
+    }
+    if !push_out.status.success() {
+        let stderr = String::from_utf8_lossy(&push_out.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&push_out.stdout).trim().to_string();
+        let mut msg = if tried_443 {
+            "git push (ssh) failed on both port 22 and port 443"
+        } else {
+            "git push (ssh) failed"
+        }
+        .to_string();
+        if !stderr.is_empty() {
+            msg.push_str(": ");
+            msg.push_str(&stderr);
+        }
+        if !stdout.is_empty() {
+            msg.push_str(" | ");
+            msg.push_str(&stdout);
+        }
+        let lower = format!("{stderr} {stdout}").to_lowercase();
+        if lower.contains("permission denied") || lower.contains("publickey") {
+            msg.push_str(
+                "\nHint: the deploy key wasn't accepted. On the repo page → \
+                 Settings → Deploy keys → Add deploy key, paste the PUBLIC \
+                 key shown above and check \"Allow write access\".",
+            );
+        } else if lower.contains("repository not found") || lower.contains("does not exist") {
+            msg.push_str(
+                "\nHint: the SSH URL is wrong. Use \
+                 git@github.com:owner/repo.git (no https://).",
+            );
+        } else if looks_like_port_22_block(&lower) {
+            msg.push_str(
+                "\nHint: outbound SSH appears to be blocked from this machine \
+                 (corporate firewall or VPN). We tried both port 22 and \
+                 ssh.github.com:443 and neither connected. Try disconnecting \
+                 the VPN.",
+            );
+        }
+        return Err(IpcError::Other(msg));
+    }
+    Ok(url)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1362,30 +1081,6 @@ mod tests {
         let p = PathBuf::from("README");
         let s = build_conflict_filename(&p, "h", "t");
         assert_eq!(s, "README (conflict from h t).md");
-    }
-
-    #[test]
-    fn strip_userinfo_drops_existing_userinfo_in_https() {
-        assert_eq!(
-            strip_userinfo("https://oldtoken@github.com/me/vault.git"),
-            "https://github.com/me/vault.git"
-        );
-    }
-
-    #[test]
-    fn strip_userinfo_passes_clean_url_through() {
-        assert_eq!(
-            strip_userinfo("https://github.com/me/vault.git"),
-            "https://github.com/me/vault.git"
-        );
-    }
-
-    #[test]
-    fn strip_userinfo_leaves_ssh_urls_untouched() {
-        assert_eq!(
-            strip_userinfo("git@github.com:me/vault.git"),
-            "git@github.com:me/vault.git"
-        );
     }
 
     #[test]
