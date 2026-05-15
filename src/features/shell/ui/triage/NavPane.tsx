@@ -7,6 +7,7 @@ import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNot
 import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useTriageStore, type TriageSelection } from "@/features/shell/state/triageStore";
 import { SyncIndicator } from "@/features/sync/ui/SyncIndicator";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { cn } from "@/shared/utils/cn";
 const TAG_LIMIT = 20;
 
@@ -17,6 +18,9 @@ export function NavPane() {
   const { tree: tagTree } = useTagTree();
   const flatTags = useMemo(() => flattenTags(tagTree).slice(0, TAG_LIMIT), [tagTree]);
   const openSettings = useSettingsUiStore((state) => state.openSettings);
+  const vaultPath = useVaultStore((state) => state.path);
+  const noteCount = useVaultStore((state) => state.notes.length);
+  const footerPath = vaultPath ? formatVaultPath(vaultPath) : "";
 
   const isActive = (s: TriageSelection) => isSelectionEqual(selection, s);
 
@@ -115,13 +119,26 @@ export function NavPane() {
         </Section>
       </div>
 
-      <footer className="flex items-center justify-end border-t border-[var(--color-noxe-border)] px-2 py-1.5">
+      <footer
+        data-testid="triage-nav-footer"
+        className="flex items-center gap-2 border-t border-[var(--color-noxe-border)] px-3 py-1.5 text-[11px] text-[var(--color-noxe-muted)]"
+      >
+        <span
+          data-testid="triage-nav-vault-path"
+          className="min-w-0 flex-1 truncate"
+          title={vaultPath ?? undefined}
+        >
+          {footerPath || "No vault"}
+        </span>
+        <span data-testid="triage-nav-note-count" className="shrink-0 tabular-nums">
+          {noteCount} {noteCount === 1 ? "note" : "notes"}
+        </span>
         <button
           type="button"
           aria-label="Settings"
           data-testid="triage-settings"
           onClick={() => openSettings()}
-          className="rounded p-1.5 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+          className="rounded p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
           title="Settings"
         >
           <GearSix size={14} />
@@ -240,4 +257,12 @@ function isSelectionEqual(a: TriageSelection, b: TriageSelection): boolean {
   if (a.kind === "folder" && b.kind === "folder") return a.path === b.path;
   if (a.kind === "tag" && b.kind === "tag") return a.tag === b.tag;
   return false;
+}
+
+function formatVaultPath(absolute: string): string {
+  const normalised = absolute.replace(/\\/g, "/").replace(/\/$/, "");
+  const segments = normalised.split("/").filter(Boolean);
+  if (segments.length === 0) return normalised || "/";
+  if (segments.length <= 2) return normalised;
+  return "…/" + segments.slice(-2).join("/");
 }

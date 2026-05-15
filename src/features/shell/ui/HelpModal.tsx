@@ -5,9 +5,46 @@ import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
 
 const shortcutGroups = [
-  { title: "Navigation", shortcuts: [["⌘K", "Open command palette"], ["⌘[", "Back"], ["⌘]", "Forward"], ["⌘⇧G", "Open Graph view"]] },
-  { title: "Vault", shortcuts: [["⌘O", "Open vault"], ["⌘N", "New note"]] },
-  { title: "Shell", shortcuts: [["⌘\\", "Toggle last drawer"], ["?", "Show shortcuts"]] },
+  {
+    title: "Navigation",
+    shortcuts: [
+      ["⌘K", "Open command palette"],
+      ["⌘[", "Back"],
+      ["⌘]", "Forward"],
+      ["⌘⇧G", "Open Graph view"],
+      ["⌘⇧C", "Open Calendar view"],
+    ],
+  },
+  {
+    title: "Vault",
+    shortcuts: [
+      ["⌘O", "Open vault"],
+      ["⌘N", "New note"],
+      ["⌘D", "Open today's daily note"],
+    ],
+  },
+  {
+    title: "View",
+    shortcuts: [
+      ["⌘\\", "Toggle last drawer"],
+      ["⌘⇧M", "Switch focus / triage layout"],
+      ["⌘⇧L", "Cycle theme"],
+    ],
+  },
+  {
+    title: "Global",
+    shortcuts: [
+      ["⌘⇧I", "Quick capture (system-wide)"],
+      ["⌘⇧T", "Open todos (system-wide)"],
+    ],
+  },
+  {
+    title: "App",
+    shortcuts: [
+      ["⌘,", "Open settings"],
+      ["?", "Show shortcuts"],
+    ],
+  },
 ];
 
 export function HelpModal() {
@@ -37,7 +74,11 @@ export function HelpModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4" role="presentation" onMouseDown={closeHelp}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4"
+      role="presentation"
+      onMouseDown={closeHelp}
+    >
       <section
         role="dialog"
         aria-modal="true"
@@ -61,7 +102,9 @@ export function HelpModal() {
           <label className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm">
             <span>
               <span className="block font-medium">Rewrite wikilinks on rename</span>
-              <span className="text-[12px] text-[var(--color-noxe-muted)]">Keep [[Old]] links pointing at renamed notes.</span>
+              <span className="text-[12px] text-[var(--color-noxe-muted)]">
+                Keep [[Old]] links pointing at renamed notes.
+              </span>
             </span>
             <input
               type="checkbox"
@@ -72,12 +115,16 @@ export function HelpModal() {
           </label>
           {shortcutGroups.map((group) => (
             <div key={group.title}>
-              <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]">{group.title}</h3>
+              <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]">
+                {group.title}
+              </h3>
               <dl className="space-y-2">
                 {group.shortcuts.map(([keys, label]) => (
                   <div key={keys} className="flex items-center justify-between gap-4 text-sm">
                     <dt>{label}</dt>
-                    <dd className="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium">{keys}</dd>
+                    <dd className="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium">
+                      {keys}
+                    </dd>
                   </div>
                 ))}
               </dl>

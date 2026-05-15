@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-07T14:35-03:00
-**Current Work:** F20 superseded; F21 (AI Infrastructure) spec written, ready for tasks/implementation
+**Last Updated:** 2026-05-15T17:55-03:00
+**Current Work:** F31 closed and M9 marked COMPLETE. Next milestone is M10 (Release prep) — specs not yet written.
 
 ---
 
@@ -267,6 +267,55 @@ Scope classification rules: `notes` (only note files), `single` (one file), `mix
 **Trade-off:** Marker file lives in `.noxe/`, so deleting it triggers re-seed. This is by design — it lets advanced users replay the scaffold.
 **Impact:** New Rust module `src-tauri/src/vault/scaffold.rs` with `vault.scaffoldIfNeeded` IPC; called once per vault open after watcher initialisation.
 
+### AD-042: Dark theme un-deferred via runtime CSS variables (2026-05-09)
+
+**Decision:** Ship Light / Dark / System theme switching now (F15) instead of waiting for v2. Theme is applied at module-load via a `<html data-theme>` attribute + CSS-variable token sets in `index.css`; Shiki swaps between `vitesse-light` and `vitesse-dark`.
+**Reason:** PROJECT.md "Dark theme — Out of scope for v1" was a planning artefact; the user actually wanted dark from day one and the cost was small once tokens were already variable-based.
+**Trade-off:** Adds a tiny runtime to listen for `prefers-color-scheme` changes and reapply tokens; CodeMirror theme had to be reworked to consume the same vars.
+**Impact:** PROJECT.md "Dark theme deferred" line is superseded. AppearanceTheme widens from `"light"` to `"light" | "dark" | "system"`. AD-012 stays valid.
+
+### AD-043: Single-pane editor via CM6 decorations (no BlockNote) (2026-05-09)
+
+**Decision:** Bring the Obsidian / Tolaria single-pane "WYSIWYG-feel" editing to Noxe (F16) by adding decoration plugins on top of CodeMirror 6 that conceal markdown markers when the caret leaves the line. The split-pane Preview is kept available for blocks (KaTeX / Mermaid / Shiki) but is no longer the default note view.
+**Reason:** Honour AD-006 (CM6, no BlockNote) and AD-028 (split-pane) while addressing the user feedback that 50/50 split wastes horizontal space. Decorations stay lossless because the markdown on disk is untouched.
+**Trade-off:** Fenced code blocks, math and Mermaid still render raw inside the editor — only inline markers (headings, emphasis, code, links, wikilinks) get the WYSIWYG treatment.
+**Impact:** AD-028 still describes the available split-pane fallback; AD-043 documents the new default. Editor feature owns the decoration plugins; preview pipeline is reused unchanged.
+
+### AD-044: Inbox-as-vault-root + tray quick-capture (2026-05-10)
+
+**Decision:** F17 treats the vault root as the canonical `Inbox/` (visible as "Inbox" in the Folders drawer). New notes default there unless a folder is selected as the active target. A macOS tray icon + `CmdOrCtrl+Shift+I` global shortcut create an Inbox note from anywhere; closing the window hides it rather than quits.
+**Reason:** Root quickly became a junk drawer with no semantic meaning; tray capture removes friction for the "I just remembered something" use case the user kept hitting.
+**Trade-off:** Inbox path and shortcut are hard-coded in v1; Settings-level configuration deferred. Drag-and-drop folder moves still go through Bulk Ops — `NoteMetaPanel` folder selector covers the in-note path.
+**Impact:** Folder drawer no longer shows "Root"; new system-tray module owns global-shortcut wiring and lifecycle.
+
+### AD-045: Local git history sidebar without remote (2026-05-10)
+
+**Decision:** F18 ships per-vault git auto-commit (5 s debounce) and a `NoteHistory` panel in `NoteMetaPanel` that lists up to 30 recent commits touching the open note with a "Restore" affordance. Uses the system `git` binary (shell-out) — no `git2`/libgit2 dependency. Silently degrades when `git` is missing.
+**Reason:** Power users repeatedly hit the "I deleted/overwrote a paragraph" failure mode; shelling out to `git` matches DEFERRED §D2 sketch and avoided pulling in libgit2 + its bundle weight.
+**Trade-off:** No diff view in v1 (text-only restore); no remote push (F26 owns that path separately).
+**Impact:** Added `src-tauri/src/vcs/` module; `NoteMetaPanel` gains a History section (then folded under F32's Inspector restructure).
+
+### AD-046: Calendar surface as a top-level Rail view (2026-05-11)
+
+**Decision:** F19 adds a calendar/agenda screen as a peer of Home (not a drawer). Month grid + agenda side panel; daily notes and notes with `event:` frontmatter populate day cells.
+**Reason:** Daily notes already existed (F10) but had no surface for "what was on this day?" — a month grid was the cheapest way to expose them and unlocked the F31 triage tool-overlay carve-out.
+**Trade-off:** No Google Calendar sync, no week/day views — those stay in DEFERRED §D1 until proven necessary.
+**Impact:** Shell view router gains `{ kind: "calendar" }`; F31 routes it via the tool-overlay so triage's third column survives.
+
+### AD-047: Triage hides app chrome to match the prototype (2026-05-13)
+
+**Decision:** Inside `layout.mode = "triage"`, the app rail and TopBar are hidden; NavPane owns the brand, the New-note CTA, the folder navigation, the settings gear, and the footer. Graph / Calendar / Todos no longer replace column 3 — they layer in via a tool-overlay store. Focus mode is untouched.
+**Reason:** The prototype the user keeps validating against has neither rail nor topbar in triage; shipping them was the single biggest visual regression flagged.
+**Trade-off:** Two distinct chrome topologies must be kept in sync (rail+topbar vs. NavPane-owned); some shortcuts must dispatch via NavPane buttons in triage.
+**Impact:** F31 owns the rework. AD-026 (temporary folder seams in shell) is partially superseded by NavPane reclaiming those rows.
+
+### AD-048: Inspector restructured into 4 ordered sections (2026-05-13)
+
+**Decision:** F32 collapses the right-side meta panel into exactly four sections in a fixed order: **Outline / Properties / AI / History**. The panel is collapsible from the header. Tag list in NavPane gets a resilient client-side fallback while the index is still building. The ⌘K chip stops using a hard-coded `bg-white` so it reads in dark mode.
+**Reason:** The user described the previous stack as a "flat pile of widgets"; Tolaria-style icon-labeled section headers with consistent denser typography read better and let the AI cards live next to Properties without dominating.
+**Trade-off:** Re-ordering shipped sections forced a small wave of test updates; the inspector is now a single component tree rather than a free-form column.
+**Impact:** Replaces the per-section ad-hoc layout from F08/F18/F22. Future right-panel additions must declare which of the four sections they extend.
+
 ---
 
 ## Active Blockers
@@ -295,6 +344,11 @@ _None._
 - **L-016:** Corporate / coffee-shop networks frequently block outbound port 22 — `ssh.github.com:443` is the documented escape hatch and should be the default fallback in any tool that uses git over SSH.
 - **L-017:** Long-running CLI subprocesses (Claude / Copilot) buffer stdout in non-interactive mode, so "stream the output as it arrives" is not actually available — the cheap, robust pattern is to dispatch the call in the background and surface progress via toasts.
 - **L-018:** Three-column "triage" layouts feel cramped under ~1100px; a viewport guardrail that silently downgrades to a single-column focus mode is more user-friendly than letting the panels collapse.
+- **L-019:** A "deferred to v2" line in the original vision (dark theme, in our case) is not a guarantee — once token plumbing is variable-based the cost can drop low enough that shipping early is the right call.
+- **L-020:** Single-pane WYSIWYG-feel can be achieved on raw CodeMirror 6 with decoration plugins that hide markers when the caret leaves the line, no block-editor migration required.
+- **L-021:** Shelling out to the system `git` binary keeps Local History bundle-cheap; libgit2 (`git2` crate) was tempting but added megabytes for no user-visible win.
+- **L-022:** When a chrome topology has two valid shapes (rail+topbar vs. NavPane-owned), build the shared body components first and let chrome composition diverge; otherwise you end up duplicating drawer / palette wiring across modes.
+- **L-023:** Tag list rendering must not assume the index has emitted its first `index:updated` event before the component subscribes — derive a fallback from open buffer + recent notes, then reconcile when the real list arrives.
 
 ---
 
@@ -336,6 +390,15 @@ _None._
 | 031 | Implement F29 Home polish (denser cards, hero CTA, 2-col all-notes, pending-todos card)                                                                       | 2026-05-07 | multiple | ✅ Done    |
 | 032 | Implement F30 First-run vault scaffold (Welcome / Daily / Projects / Meetings / Cheatsheet + starter todos, idempotent marker)                                | 2026-05-07 | 1642636  | ✅ Done    |
 | 033 | SDD audit — backfill F22/F23/F24/F25/F27 specs, mark M6/M6.5/M7 features in roadmap, log AD-037..AD-041 + L-015..L-018                                        | 2026-05-07 | —        | ✅ Done    |
+| 034 | Implement F15 Theme Switching (Light / Dark / System runtime + Shiki swap + menu/palette toggle)                                                              | 2026-05-09 | c5bf2f7+ | ✅ Done    |
+| 035 | Implement F16 Live Preview Editor (CM6 decorations conceal inline markers; split-pane retained for blocks)                                                    | 2026-05-09 | d11c41a  | ✅ Done    |
+| 036 | Implement F17 Inbox + tray quick-capture + in-note folder move + close-to-tray                                                                                | 2026-05-10 | multiple | ✅ Done    |
+| 037 | Implement F18 Local Git Sync v0+v1 (vault git init, auto-commit on save, `NoteHistory` restore panel)                                                         | 2026-05-10 | bddd282+ | ✅ Done    |
+| 038 | Implement F19 Calendar / Agenda View (Rail entry, month grid, agenda panel, daily-note + event indicators)                                                    | 2026-05-11 | 4705a25+ | ✅ Done    |
+| 039 | Land F31 Triage fidelity rework (hide rail+topbar in triage, NavPane brand/CTA/footer, enriched ListPane, tool-overlay carve-out, splitter polish)            | 2026-05-13 | multiple | ✅ Done    |
+| 040 | Implement F32 Inspector redesign (Outline/Properties/AI/History sections, collapsible panel, tag-list fallback, dark-mode ⌘K chip fix)                        | 2026-05-13 | 69033b5+ | ✅ Done    |
+| 041 | Spec alignment sweep — refresh ROADMAP/STATE/STRUCTURE/ARCHITECTURE/CONCERNS/STACK/DEFERRED to match shipped state (M0–M8 done, M9 in flight)                 | 2026-05-14 | —        | ✅ Done    |
+| 042 | Close F31 (NavPane footer path+count, palette Tools section + open-calendar, ⌘⇧C shortcut, design.md/tasks.md authored, F31 → COMPLETE, M9 → COMPLETE)        | 2026-05-15 | —        | ✅ Done    |
 
 ---
 

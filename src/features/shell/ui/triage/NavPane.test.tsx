@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useTriageStore } from "@/features/shell/state/triageStore";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 
 vi.mock("@/features/drawers/hooks/useFolderTree", () => ({
   useFolderTree: () => [
@@ -61,5 +62,19 @@ describe("NavPane", () => {
     render(<NavPane />);
     fireEvent.click(screen.getByTestId("nav-shortcut-pinned"));
     expect(useTriageStore.getState().selection).toEqual({ kind: "shortcut", id: "pinned" });
+  });
+
+  it("footer renders vault path, total note count, and settings gear", () => {
+    useVaultStore.setState({
+      path: "/Users/sam/notes/work-vault",
+      notes: [
+        { id: "a", path: "a.md", title: "A", folder: "", mtime: 0 },
+        { id: "b", path: "b.md", title: "B", folder: "", mtime: 0 },
+      ] as never,
+    });
+    render(<NavPane />);
+    expect(screen.getByTestId("triage-nav-vault-path").textContent).toBe("…/notes/work-vault");
+    expect(screen.getByTestId("triage-nav-note-count").textContent).toBe("2 notes");
+    expect(screen.getByTestId("triage-settings")).toBeTruthy();
   });
 });

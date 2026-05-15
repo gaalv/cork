@@ -1,9 +1,9 @@
 # Roadmap
 
-**Current Milestone:** M1 — Vault & Index
-**Status:** F13 complete; M5 polish settings/search/menu shipped
+**Current Milestone:** M10 — Release prep (specs TBD)
+**Status:** M0–M9 complete; M10 not yet started
 
-Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
+Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERSEDED`
 
 ---
 
@@ -256,9 +256,74 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED`
 
 ---
 
-## M8 — Release prep (post-mock)
+## M8 — Post-v1 polish
 
-**Goal:** Cross-platform build pipeline, icons, branding, public v1 release. Specs to be written when M5/M6/M7 land.
+**Goal:** Cover the highest-leverage gaps the original v1 scope deferred: theming, single-pane editor, capture/inbox, local history, calendar surface.
+
+### Features
+
+**[F15 — Theme Switching (Light / Dark / System)](../features/F15-theme-switching/spec.md)** — COMPLETE
+
+- `appearance.theme` setting honoured end-to-end; CSS-variable dark palette
+- Settings select + command palette + native menu "Toggle theme" cycle
+- System mode reacts to OS `prefers-color-scheme` changes at runtime
+- Shiki preview swaps `vitesse-light` ↔ `vitesse-dark` per theme
+
+**[F16 — Live Preview Editor](../features/F16-live-preview-editor/spec.md)** — COMPLETE
+
+- Single-pane WYSIWYG-feel for inline markdown (headings, emphasis, code, links, wikilinks)
+- Stays on CodeMirror 6 — markdown on disk is preserved byte-for-byte
+- Split-pane Preview retained for blocks (KaTeX / Mermaid / Shiki) when needed
+
+**[F17 — Inbox + In-place Moves + Tray Quick Capture](../features/F17-inbox-and-quick-capture/spec.md)** — COMPLETE
+
+- Canonical `Inbox/` folder + selected-folder "new note" target
+- Folder selector in `NoteMetaPanel` (move-from-inside-the-note)
+- macOS tray icon + `CmdOrCtrl+Shift+I` global quick-capture
+- Close-to-tray behaviour; tray "Quit" actually quits
+
+**[F18 — Local Git Sync (v0/v1 local-only)](../features/F18-local-git-sync/spec.md)** — COMPLETE
+
+- Per-vault `git init` + auto-commit on save (5 s debounce)
+- `NoteHistory` panel in `NoteMetaPanel` with restore-to-revision
+- Silent degrade when `git` is not on PATH
+- Diff view + GitHub push deferred to F26 / future
+
+**[F19 — Calendar / Agenda View (v0/v1)](../features/F19-calendar-view/spec.md)** — COMPLETE
+
+- `{ kind: "calendar" }` shell route + Rail entry (`CalendarBlank`)
+- Month grid with prev/next/today; daily-note + `event:`-frontmatter indicators
+- Agenda side-panel listing the day's notes; "Create daily note" CTA
+- Google Calendar OAuth + week/day views remain in DEFERRED
+
+---
+
+## M9 — Prototype fidelity
+
+**Goal:** Close the gap between shipped UI and the locked Linear-style prototype the user keeps validating against.
+
+### Features
+
+**[F31 — Triage layout fidelity](../features/F31-triage-fidelity/spec.md)** — COMPLETE
+
+- Hide app rail + TopBar inside triage mode (prototype has neither)
+- NavPane: brand row, big "New note" CTA, "Folders" naming, footer with `~/path · N notes`, settings gear
+- Enriched ListPane cards: title + HH:mm + 2-line excerpt + tag pills; auto-select first note
+- Tool-overlay carve-out so Graph / Calendar / Todos don't replace column 3
+- Resizable splitter polish + placeholder when no note is open
+
+**[F32 — Inspector redesign + tag list bug + dark-mode chip fix](../features/F32-inspector-redesign/spec.md)** — COMPLETE
+
+- Inspector restructured into four ordered sections: Outline / Properties / AI / History
+- Fixes NavPane "Tags" empty state when the index publishes after subscription
+- ⌘K chip moved off `bg-white` so it stays legible in dark mode
+- Collapsible right panel toggled from the header
+
+---
+
+## M10 — Release prep
+
+**Goal:** Cross-platform build pipeline, icons, branding, public v1 release. Specs to be written when M9 lands.
 
 ### Features
 

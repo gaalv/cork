@@ -202,7 +202,7 @@ function buildPaletteItems(
     ...todoItems,
     ...recent,
     ...pinned,
-    ...commandsRegistry.slice(0, 11),
+    ...commandsRegistry,
     ...tags.slice(0, 5).map(toTagItem),
     ...allNotes,
   ];
@@ -220,8 +220,8 @@ function filterPaletteItems(items: PaletteItem[], query: string): PaletteItem[] 
 
 function groupItems(items: PaletteItem[], query: string): Array<[string, PaletteItem[]]> {
   const order = query.trim()
-    ? ["Todos", "Notes", "Commands", "AI", "Tags", "Vault Actions", "Recents", "Pinned"]
-    : ["Todos", "Recents", "Pinned", "Commands", "AI", "Tags", "Vault Actions"];
+    ? ["Todos", "Notes", "Commands", "Tools", "AI", "Tags", "Vault Actions", "Recents", "Pinned"]
+    : ["Todos", "Recents", "Pinned", "Commands", "Tools", "AI", "Tags", "Vault Actions"];
   return order
     .map(
       (section) =>
@@ -348,6 +348,9 @@ function runCommand(
   }
   if (id === "open-graph") {
     openToolView("graph");
+  }
+  if (id === "open-calendar") {
+    openToolView("calendar");
   }
   if (id === "open-todos" || id === "new-todo") {
     openToolView("todos");

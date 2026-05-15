@@ -104,6 +104,13 @@ export function useShortcuts() {
         event.preventDefault();
         openToolView("graph");
       },
+      "$mod+Shift+c": (event) => {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+        openToolView("calendar");
+      },
       "$mod+Shift+m": (event) => {
         if (isEditableTarget(event.target)) {
           return;

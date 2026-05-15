@@ -1,6 +1,6 @@
 # F31 — Triage layout fidelity (match the prototype)
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 **Scope:** Large (multi-component shell rework; keeps Focus mode intact)
 **Depends on:** F28 (dual layout modes), F29 (home polish), F25 (todos), F19 (calendar — modal carve-out)
 
