@@ -37,6 +37,9 @@ export type AppSettings = {
     triageNavWidth: number;
     triageListWidth: number;
   };
+  updates: {
+    autoCheck: boolean;
+  };
 };
 
 export type VaultScopedSettings = {
@@ -88,6 +91,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   assets: { offlineMode: false },
   ai: { provider: "disabled" },
   layout: { mode: "focus", triageNavWidth: 240, triageListWidth: 320 },
+  updates: { autoCheck: true },
 };
 
 export const DEFAULT_VAULT_SETTINGS: Required<VaultScopedSettings> = {

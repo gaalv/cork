@@ -338,6 +338,34 @@ export type IpcCommandMap = {
     args: { list: TodoList };
     result: TodoList;
   };
+  // === F35 Diagnostics ===
+  "diagnostics.reportError": {
+    args: {
+      source: string;
+      message: string;
+      stack?: string;
+      route?: string;
+      version?: string;
+    };
+    result: void;
+  };
+  "diagnostics.crashLogPath": {
+    args: undefined;
+    result: string;
+  };
+  "diagnostics.recent": {
+    args: { limit?: number };
+    result: CrashEvent[];
+  };
+};
+
+export type CrashEvent = {
+  timestamp: string;
+  source: string;
+  message: string;
+  stack?: string;
+  route?: string;
+  version?: string;
 };
 
 export type Todo = {

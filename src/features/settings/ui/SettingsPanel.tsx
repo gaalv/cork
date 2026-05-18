@@ -16,9 +16,11 @@ import { GitHubSyncSection } from "@/features/sync/ui/GitHubSyncSection";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 import { AboutDialog } from "./AboutDialog";
 import { AiUsageSection } from "./AiUsageSection";
+import { DiagnosticsSection } from "./DiagnosticsSection";
 import { SettingRow } from "./SettingRow";
 import { ShortcutsList } from "./ShortcutsList";
 import { TemplatesSection } from "./TemplatesSection";
+import { UpdatesSection } from "./UpdatesSection";
 import { Select } from "@/shared/ui/Select";
 
 import type { ChangeEvent } from "react";
@@ -39,6 +41,8 @@ const sections: Array<{ id: SettingsSectionId; label: string }> = [
   { id: "templates", label: "Templates" },
   { id: "ai", label: "AI" },
   { id: "sync", label: "Sync" },
+  { id: "updates", label: "Updates" },
+  { id: "diagnostics", label: "Diagnostics" },
   { id: "advanced", label: "Advanced" },
   { id: "shortcuts", label: "Shortcuts" },
   { id: "about", label: "About" },
@@ -190,6 +194,14 @@ function renderSection(section: SettingsSectionId, context: SectionContext) {
   } = context;
   if (section === "about") {
     return <AboutDialog />;
+  }
+
+  if (section === "updates") {
+    return <UpdatesSection />;
+  }
+
+  if (section === "diagnostics") {
+    return <DiagnosticsSection />;
   }
 
   if (section === "shortcuts") {

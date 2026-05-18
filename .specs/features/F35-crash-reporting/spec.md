@@ -1,6 +1,6 @@
 # F35 — Crash + error reporting (opt-in)
 
-**Status:** PLANNED
+**Status:** PARTIAL — local logging shipped; remote opt-in reporting deferred to F36
 **Scope:** Large (Rust panic hook, JS error boundary, log rotation, Settings panel, opt-in flow)
 **Depends on:** F33 (release builds need symbols for useful stack traces)
 
@@ -123,20 +123,20 @@ explicitly opts in, and we surface the payload before they do.
 
 ## Requirements traceability
 
-| ID  | Story                                       | Phase  | Status  |
-| --- | ------------------------------------------- | ------ | ------- |
-| R1  | Rust panic hook → `crashes.log`             | Design | Pending |
-| R2  | JS error boundary + global listeners        | Design | Pending |
-| R3  | Log rotation (1 MB, 2 files)                | Design | Pending |
-| R4  | Settings → "Open crash log" button          | Design | Pending |
-| R5  | Local logging is best-effort                | Design | Pending |
-| R6  | `diagnostics.crashReporting` tri-state      | Design | Pending |
-| R7  | Settings panel with payload Preview         | Design | Pending |
-| R8  | Configurable endpoint (default Sentry DSN)  | Design | Pending |
-| R9  | Rust transport with timeout + degrade       | Design | Pending |
-| R10 | One-time consent modal                      | Design | Pending |
-| R11 | Redaction rules (path, tokens, body length) | Design | Pending |
-| R12 | Same redactor on disk + wire                | Design | Pending |
+| ID  | Story                                       | Phase | Status      |
+| --- | ------------------------------------------- | ----- | ----------- |
+| R1  | Rust panic hook → `crashes.log`             | Build | Implemented |
+| R2  | JS error boundary + global listeners        | Build | Implemented |
+| R3  | Log rotation (1 MB, 2 files)                | Build | Implemented |
+| R4  | Settings → "Open crash log" button          | Build | Implemented |
+| R5  | Local logging is best-effort                | Build | Implemented |
+| R6  | `diagnostics.crashReporting` tri-state      | Build | Deferred    |
+| R7  | Settings panel with payload Preview         | Build | Partial     |
+| R8  | Configurable endpoint (default Sentry DSN)  | Build | Deferred    |
+| R9  | Rust transport with timeout + degrade       | Build | Deferred    |
+| R10 | One-time consent modal                      | Build | Deferred    |
+| R11 | Redaction rules (path, tokens, body length) | Build | Implemented |
+| R12 | Same redactor on disk + wire                | Build | Implemented |
 
 ## Acceptance
 
@@ -169,3 +169,27 @@ pnpm exec vitest run && cargo test`).
 - F33's release runbook should be amended after F35 to mention
   uploading Rust debug symbols to Sentry so stack traces resolve to
   source lines.
+- **Implementation notes (M10 landing):**
+  - `src-tauri/src/diagnostics.rs` — Rust panic hook, redactor,
+    rotation (1 MB → `crashes.log.1`), and three IPC commands:
+    `diagnostics_report_error`, `diagnostics_crash_log_path`,
+    `diagnostics_recent`. 5 unit tests cover redaction +
+    rotation.
+  - `src/shared/ui/RootErrorBoundary.tsx` — React class boundary
+    plus `installGlobalErrorReporters()` (window.error +
+    unhandledrejection). Wraps the tree in `src/main.tsx`.
+  - `Settings → Diagnostics` section shows the crash log path,
+    "Open crash log" button, "Refresh / Preview recent events"
+    actions, and a placeholder "Send crash reports — Off (local
+    only)" row. The Preview modal renders the on-disk JSON exactly
+    as it would be sent if remote reporting existed (D-2 holds).
+  - Vault root is propagated to the redactor via
+    `crate::diagnostics::set_vault_root` on `vault.open` /
+    `vault.close`, so the redactor swaps the active vault path
+    with `<vault>`.
+- **Deferred to F36 — "Remote crash reporting opt-in":**
+  R6 (tri-state setting), R8 (Sentry endpoint), R9 (HTTP transport),
+  R10 (consent modal). These bring **real outbound network calls**,
+  which need their own privacy review, a stable Sentry/compatible
+  endpoint, and a clear acceptance test. Landing them as a separate
+  feature keeps M10's release-prep scope tight (local + offline only).

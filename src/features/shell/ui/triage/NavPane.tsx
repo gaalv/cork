@@ -8,6 +8,7 @@ import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
 import { useTriageStore, type TriageSelection } from "@/features/shell/state/triageStore";
 import { SyncIndicator } from "@/features/sync/ui/SyncIndicator";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { NoxeLogo } from "@/shared/ui/NoxeLogo";
 import { cn } from "@/shared/utils/cn";
 const TAG_LIMIT = 20;
 
@@ -37,6 +38,7 @@ export function NavPane() {
     >
       <header className="flex h-12 items-center justify-between gap-2 px-4">
         <div className="flex min-w-0 items-center gap-2">
+          <NoxeLogo size={18} aria-hidden="true" />
           <span className="truncate text-sm font-semibold tracking-tight text-[var(--color-noxe-ink)]">
             Noxe
           </span>

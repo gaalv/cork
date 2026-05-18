@@ -86,6 +86,9 @@ const commandNames: Record<IpcCommandName, string> = {
   "ai.telemetryClear": "ai_telemetry_clear",
   "todos.load": "todos_load",
   "todos.save": "todos_save",
+  "diagnostics.reportError": "diagnostics_report_error",
+  "diagnostics.crashLogPath": "diagnostics_crash_log_path",
+  "diagnostics.recent": "diagnostics_recent",
 };
 
 type RustArgs = Record<string, unknown> | undefined;
@@ -226,6 +229,17 @@ export const client = {
     load: () => invokeCommand("todos.load", undefined),
     save: (list: TodoList) => invokeCommand("todos.save", { list }),
   },
+  diagnostics: {
+    reportError: (input: {
+      source: string;
+      message: string;
+      stack?: string;
+      route?: string;
+      version?: string;
+    }) => invokeCommand("diagnostics.reportError", input),
+    crashLogPath: () => invokeCommand("diagnostics.crashLogPath", undefined),
+    recent: (limit?: number) => invokeCommand("diagnostics.recent", { limit }),
+  },
   events: {
     on: <Name extends IpcEventName>(
       event: Name,
@@ -267,6 +281,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "ai.skillsList":
     case "ai.telemetryClear":
     case "todos.load":
+    case "diagnostics.crashLogPath":
       return undefined;
     case "vault.open":
     case "vault.removeRecent":
@@ -341,6 +356,8 @@ function toRustArgs<Name extends IpcCommandName>(
     case "notes.bulkTrash":
     case "notes.bulkSetFrontmatter":
     case "todos.save":
+    case "diagnostics.reportError":
+    case "diagnostics.recent":
       return args as RustArgs;
   }
 }

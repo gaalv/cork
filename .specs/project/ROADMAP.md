@@ -1,7 +1,7 @@
 # Roadmap
 
-**Current Milestone:** M10 — Release prep (specs TBD)
-**Status:** M0–M9 complete; M10 not yet started
+**Current Milestone:** M10 — Release prep
+**Status:** M0–M9 complete; M10 in progress (F34 complete; F33 + F35 partial; F36 planned)
 
 Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERSEDED`
 
@@ -327,27 +327,36 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 
 ### Features
 
-**[F33 — Release config (signing, notarization, updater)](../features/F33-release-config/spec.md)** — PLANNED
+**[F33 — Release config (signing, notarization, updater)](../features/F33-release-config/spec.md)** — PARTIAL
 
-- macOS Developer ID signing + Apple notarisation + stapling
-- Windows Authenticode code signing
-- Linux AppImage + .deb with detached GPG signature
-- `tauri-plugin-updater` wired to GitHub Releases `latest.json`
-- Settings → Updates panel with auto-check toggle (default on)
+- macOS Developer ID signing + Apple notarisation + stapling _(deferred — needs cert)_
+- Windows Authenticode code signing _(deferred — needs cert)_
+- Linux AppImage + .deb with detached GPG signature _(deferred — needs key)_
+- `tauri-plugin-updater` installed as a Rust dependency, **not yet registered** (needs signing keypair)
+- ✅ Settings → Updates panel scaffolded with auto-check toggle (default on) + "View releases" link
 
-**[F34 — App icons + branding](../features/F34-icons-branding/spec.md)** — PLANNED
+**[F34 — App icons + branding](../features/F34-icons-branding/spec.md)** — COMPLETE
 
-- Source `brand/noxe-logo.svg` (square) + `brand/noxe-wordmark.svg`
-- Full Tauri icon matrix regenerated (replaces placeholder rocket)
-- Favicon, NavPane glyph, EmptyVault hero, HelpModal wordmark, README banner
-- Brand tokens (indigo + ink/paper + Inter / JetBrains Mono) documented
+- ✅ Source `brand/noxe-logo.svg` (square) + `brand/noxe-wordmark.svg`
+- ✅ Full Tauri icon matrix regenerated (replaces placeholder rocket)
+- ✅ Favicon, NavPane glyph, HelpModal + AboutDialog wordmark
+- ✅ Brand tokens (indigo + ink/paper + Inter / JetBrains Mono) documented in `brand/README.md`
+- _Deferred to follow-up:_ EmptyVault wordmark hero, README banner, GitHub social-preview asset
 
-**[F35 — Crash + error reporting (opt-in)](../features/F35-crash-reporting/spec.md)** — PLANNED
+**[F35 — Crash + error reporting (opt-in)](../features/F35-crash-reporting/spec.md)** — PARTIAL
 
-- Always-on local crash log (Rust panic hook + JS error boundary) with rotation
-- Opt-in tri-state remote reporter (off / ask / on) targeting Sentry-compatible endpoint
-- One-time consent modal + payload Preview before opt-in
-- Mandatory redactor (vault path, token shapes, body length) shared by local + wire
+- ✅ Always-on local crash log (Rust panic hook + JS error boundary) with rotation
+- ✅ Mandatory redactor (vault path, token shapes, body length) shared by local + wire
+- ✅ Settings → Diagnostics section: Open crash log, Refresh, Preview payload
+- _Deferred to **F36 — Remote crash reporting opt-in:**_ tri-state remote reporter (off / ask / on), Sentry endpoint config, one-time consent modal, HTTP transport.
+
+**F36 — Remote crash reporting opt-in** — PLANNED
+
+- Tri-state `diagnostics.crashReporting` setting (off / ask / on); default off
+- Configurable endpoint (default: Sentry-compatible DSN baked at build time)
+- One-time consent modal quoting the privacy contract before first remote send
+- Rust transport with 5-second timeout + silent local-only failure mode
+- Inherits the F35 redactor unchanged — same on disk as on the wire
 
 ---
 

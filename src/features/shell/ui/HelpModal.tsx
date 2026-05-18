@@ -3,6 +3,7 @@ import { X } from "@phosphor-icons/react";
 
 import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { NoxeLogo } from "@/shared/ui/NoxeLogo";
 
 const shortcutGroups = [
   {
@@ -87,7 +88,10 @@ export function HelpModal() {
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Keyboard shortcuts</h2>
+          <div className="flex items-center gap-2">
+            <NoxeLogo size={20} aria-hidden="true" />
+            <h2 className="text-lg font-semibold">Keyboard shortcuts</h2>
+          </div>
           <button
             ref={closeButtonRef}
             type="button"

@@ -1,5 +1,6 @@
 pub mod ai;
 pub mod assets;
+pub mod diagnostics;
 pub mod error;
 pub mod index;
 pub mod menu;
@@ -158,6 +159,7 @@ pub fn run() {
         .manage(vcs::remote::RemoteState::default())
         .manage(ai::AiState::default())
         .setup(|app| {
+            diagnostics::setup(app.handle());
             vault::setup(app)?;
             index::setup(app)?;
             ai::setup(app.handle())?;
@@ -261,7 +263,11 @@ pub fn run() {
             ai::ai_telemetry_clear,
             // === F25 Todos ===
             todos::todos_load,
-            todos::todos_save
+            todos::todos_save,
+            // === F35 Diagnostics ===
+            diagnostics::diagnostics_report_error,
+            diagnostics::diagnostics_crash_log_path,
+            diagnostics::diagnostics_recent
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

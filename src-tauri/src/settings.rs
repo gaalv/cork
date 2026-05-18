@@ -23,6 +23,21 @@ pub struct AppSettings {
     pub assets: AssetSettings,
     #[serde(default)]
     pub ai: AiSettings,
+    #[serde(default)]
+    pub updates: UpdatesSettings,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatesSettings {
+    #[serde(default = "default_true")]
+    pub auto_check: bool,
+}
+
+impl Default for UpdatesSettings {
+    fn default() -> Self {
+        Self { auto_check: true }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -6,8 +6,10 @@ import { installThemeRuntime } from "@/features/settings/runtime/themeRuntime";
 import { installQuickCaptureRuntime } from "@/features/quick-capture/services/registerQuickCapture";
 import { installOpenTodosRuntime } from "@/features/todos/services/registerOpenTodos";
 import { installSyncNowRuntime } from "@/features/sync/services/registerSyncNow";
+import { installGlobalErrorReporters, RootErrorBoundary } from "@/shared/ui/RootErrorBoundary";
 import "@/index.css";
 
+installGlobalErrorReporters();
 installThemeRuntime();
 void installQuickCaptureRuntime();
 void installOpenTodosRuntime();
@@ -20,8 +22,10 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <Providers>
-      <App />
-    </Providers>
+    <RootErrorBoundary>
+      <Providers>
+        <App />
+      </Providers>
+    </RootErrorBoundary>
   </StrictMode>,
 );

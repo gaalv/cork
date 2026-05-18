@@ -9,6 +9,8 @@ export type SettingsSectionId =
   | "templates"
   | "ai"
   | "sync"
+  | "updates"
+  | "diagnostics"
   | "advanced"
   | "shortcuts"
   | "about";

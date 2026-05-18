@@ -15,6 +15,11 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset", "test", "tray-icon"] }
 tauri-plugin-opener = "2"
+# F33 — Tauri updater plugin is installed as a dependency but not yet
+# registered in lib.rs::run. Registration requires a signing keypair
+# (`pnpm tauri signer generate`) and an `endpoints[]` entry pointing at a
+# real `latest.json`. Wire-up lands when CI secrets exist.
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"

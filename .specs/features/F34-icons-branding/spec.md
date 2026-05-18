@@ -1,6 +1,6 @@
 # F34 — App icons + branding
 
-**Status:** PLANNED
+**Status:** COMPLETE
 **Scope:** Medium (assets + Tauri config + a handful of UI strings)
 **Depends on:** none (independent of F33/F35)
 
@@ -92,21 +92,21 @@ small set of UI surfaces that should pick up the new mark.
 
 ## Requirements traceability
 
-| ID  | Story                                | Phase  | Status  |
-| --- | ------------------------------------ | ------ | ------- |
-| R1  | Vector logo source + variants        | Design | Pending |
-| R2  | Wordmark variant                     | Design | Pending |
-| R3  | Brand tokens documented              | Design | Pending |
-| R4  | Regenerate Tauri icon matrix         | Design | Pending |
-| R5  | Verify full icon set present         | Design | Pending |
-| R6  | `public/favicon.svg` + PNG fallback  | Design | Pending |
-| R7  | `index.html` title + description     | Design | Pending |
-| R8  | NavPane glyph                        | Design | Pending |
-| R9  | EmptyVault wordmark hero             | Design | Pending |
-| R10 | HelpModal wordmark                   | Design | Pending |
-| R11 | Window title / bundle name unchanged | Design | Pending |
-| R12 | README banner                        | Design | Pending |
-| R13 | GitHub social preview asset          | Design | Pending |
+| ID  | Story                                | Phase | Status      |
+| --- | ------------------------------------ | ----- | ----------- |
+| R1  | Vector logo source + variants        | Build | Implemented |
+| R2  | Wordmark variant                     | Build | Implemented |
+| R3  | Brand tokens documented              | Build | Implemented |
+| R4  | Regenerate Tauri icon matrix         | Build | Implemented |
+| R5  | Verify full icon set present         | Build | Implemented |
+| R6  | `public/favicon.svg` + PNG fallback  | Build | Implemented |
+| R7  | `index.html` title + description     | Build | Implemented |
+| R8  | NavPane glyph                        | Build | Implemented |
+| R9  | EmptyVault wordmark hero             | Build | Deferred    |
+| R10 | HelpModal wordmark                   | Build | Implemented |
+| R11 | Window title / bundle name unchanged | Build | Implemented |
+| R12 | README banner                        | Build | Deferred    |
+| R13 | GitHub social preview asset          | Build | Deferred    |
 
 ## Acceptance
 
@@ -130,3 +130,17 @@ small set of UI surfaces that should pick up the new mark.
 - A dark-mode logo variant might be needed once the EmptyVault hero
   picks up a dark-mode background; currently the monochrome variant
   handles both themes.
+- **Implementation notes (M10 landing):**
+  - `brand/noxe-logo.svg`, `brand/noxe-wordmark.svg`, `brand/README.md`
+    committed. PNG render of the logo at 1024×1024 used as input to
+    `pnpm tauri icon` which regenerated the full
+    `src-tauri/icons/` matrix (desktop + iOS + Android).
+  - `public/favicon-32.png` + `public/apple-touch-icon.png` rendered
+    via `sharp` (devDep added). `index.html` head links them and sets
+    `theme-color="#3F3DFF"`.
+  - `<NoxeLogo>` + `<NoxeWordmark>` live in `src/shared/ui/NoxeLogo.tsx`
+    and are wired into `NavPane`, `HelpModal`, and `AboutDialog`.
+  - **Deferred (R9, R12, R13):** EmptyVault hero swap and the
+    README / GitHub social-preview banners — these are pure marketing
+    assets and depend on a final wordmark export that the design team
+    will refine. Tracked separately, not blocking M10 release.

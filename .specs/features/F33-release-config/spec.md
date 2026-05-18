@@ -1,6 +1,6 @@
 # F33 — Release config (signing, notarization, updater)
 
-**Status:** PLANNED
+**Status:** PARTIAL — UI scaffolding + dependency installed; signing/CI work deferred until certificates are provisioned
 **Scope:** Large (touches Tauri config, CI workflow, Rust deps, secrets management)
 **Depends on:** F34 (real icons need to exist before signed builds ship publicly)
 
@@ -129,21 +129,21 @@ F33 closes that gap so a `git tag v0.x.y && git push --tags` produces:
 
 ## Requirements traceability
 
-| ID  | Story                              | Phase  | Status  |
-| --- | ---------------------------------- | ------ | ------- |
-| R1  | Add updater plugin (TS + Rust)     | Design | Pending |
-| R2  | Tauri config: macOS/Win/Linux sign | Design | Pending |
-| R3  | Updater key runbook                | Design | Pending |
-| R4  | Release runbook + required secrets | Design | Pending |
-| R5  | CI: macOS notarisation env         | Design | Pending |
-| R6  | CI: Windows code-signing env       | Design | Pending |
-| R7  | CI: updater key on every platform  | Design | Pending |
-| R8  | CI: publish `latest.json` manifest | Design | Pending |
-| R9  | Drafts only — manual promotion     | Design | Pending |
-| R10 | Quality workflow untouched         | Design | Pending |
-| R11 | Settings → Updates panel           | Design | Pending |
-| R12 | Auto-check on launch + toast       | Design | Pending |
-| R13 | Failure modes degrade silently     | Design | Pending |
+| ID  | Story                              | Phase | Status      |
+| --- | ---------------------------------- | ----- | ----------- |
+| R1  | Add updater plugin (TS + Rust)     | Build | Partial     |
+| R2  | Tauri config: macOS/Win/Linux sign | Build | Deferred    |
+| R3  | Updater key runbook                | Build | Deferred    |
+| R4  | Release runbook + required secrets | Build | Deferred    |
+| R5  | CI: macOS notarisation env         | Build | Deferred    |
+| R6  | CI: Windows code-signing env       | Build | Deferred    |
+| R7  | CI: updater key on every platform  | Build | Deferred    |
+| R8  | CI: publish `latest.json` manifest | Build | Deferred    |
+| R9  | Drafts only — manual promotion     | Build | Deferred    |
+| R10 | Quality workflow untouched         | Build | Implemented |
+| R11 | Settings → Updates panel           | Build | Partial     |
+| R12 | Auto-check on launch + toast       | Build | Deferred    |
+| R13 | Failure modes degrade silently     | Build | Deferred    |
 
 ## Acceptance
 
@@ -171,3 +171,22 @@ F33 closes that gap so a `git tag v0.x.y && git push --tags` produces:
   earn instant SmartScreen reputation (~$300/yr higher cost).
 - A future F-NN can add a "What's new" modal that reads release notes
   from the manifest's `notes` field after a successful update.
+- **Implementation notes (M10 landing):**
+  - `tauri-plugin-updater = "2"` added to `src-tauri/Cargo.toml`
+    but **not yet registered** in `lib.rs::run()` — registration
+    requires a non-empty pubkey in `tauri.conf.json` which we don't
+    have until the signing keypair is generated (see R3).
+  - `Settings → Updates` section ships now with: current app
+    version (from `getVersion()`), "Auto-check on launch" toggle
+    (persisted as `appSettings.updates.autoCheck`, default `true`),
+    and a "View releases" button that opens the GitHub releases
+    page until the real updater is wired. A help row links back to
+    this spec for the rollout plan.
+  - `tauri.conf.json` is intentionally **unchanged** — adding the
+    `plugins.updater` block with an empty pubkey would break the
+    build.
+- **Deferred work (still owned by F33, blocked on secrets):**
+  R2–R9 + R12–R13. Unblocked when the maintainers provision Apple
+  Developer ID + Authenticode certificates and generate the updater
+  signing keypair. The runbooks in R3/R4 will land alongside that
+  work.

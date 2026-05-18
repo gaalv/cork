@@ -21,7 +21,8 @@
     "tauri:build": "tauri build",
     "prepare": "husky",
     "test:parity": "node scripts/check-parser-parity.mjs",
-    "bench:index": "node scripts/bench-index.mjs"
+    "bench:index": "node scripts/bench-index.mjs",
+    "check:bundle-size": "node scripts/check-bundle-size.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.2",
@@ -84,6 +85,7 @@
     "jsdom": "^26.1.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.4.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.16.0",

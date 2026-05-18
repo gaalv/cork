@@ -3,6 +3,7 @@ import { getName, getTauriVersion, getVersion } from "@tauri-apps/api/app";
 import { arch, platform, version as osVersion } from "@tauri-apps/plugin-os";
 
 import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { NoxeLogo } from "@/shared/ui/NoxeLogo";
 import { DiagnosticsButton } from "./DiagnosticsButton";
 
 type RuntimeInfo = {
@@ -45,7 +46,15 @@ export function AboutDialog() {
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] p-4">
-        <h3 className="text-base font-semibold">{runtime.appName}</h3>
+        <div className="flex items-center gap-3">
+          <NoxeLogo size={36} />
+          <div>
+            <h3 className="text-base font-semibold">{runtime.appName}</h3>
+            <p className="text-xs text-[var(--color-noxe-muted)]">
+              Local-first Markdown notes for developers
+            </p>
+          </div>
+        </div>
         <dl className="mt-3 grid gap-2 text-sm text-[var(--color-noxe-muted)] sm:grid-cols-[140px_1fr]">
           <dt>App version</dt>
           <dd>{runtime.appVersion}</dd>

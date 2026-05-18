@@ -54,6 +54,9 @@ export type AppSettings = {
     triageNavWidth: number;
     triageListWidth: number;
   };
+  updates?: {
+    autoCheck: boolean;
+  };
 };
 
 export type VaultSettings = {

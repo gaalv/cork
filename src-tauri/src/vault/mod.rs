@@ -334,6 +334,7 @@ pub async fn vault_open(
         let remote = app.state::<crate::vcs::remote::RemoteState>();
         let settings = crate::vault::settings::load_vault_settings(&path).ok();
         remote.configure(Some(path.clone()), settings.and_then(|s| s.git_remote));
+        crate::diagnostics::set_vault_root(Some(&path));
     }
     state.start_watcher(&app)?;
     let path = state.current_path().ok_or(IpcError::NotFound)?;
@@ -351,6 +352,7 @@ pub fn vault_close(
 ) -> Result<(), IpcError> {
     let previous_path = state.close_current_path()?;
     index.close();
+    crate::diagnostics::set_vault_root(None);
     app.emit("vault:closed", VaultClosedEvent { previous_path })
         .map_err(|err| IpcError::Other(err.to_string()))?;
     Ok(())
