@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-15T17:55-03:00
-**Current Work:** F31 closed and M9 marked COMPLETE. Next milestone is M10 (Release prep) — specs not yet written.
+**Last Updated:** 2026-05-18T16:05-03:00
+**Current Work:** M10 specs authored — F33 (release config), F34 (icons + branding), F35 (crash reporting opt-in). Ready to size/design first one.
 
 ---
 
@@ -399,6 +399,7 @@ _None._
 | 040 | Implement F32 Inspector redesign (Outline/Properties/AI/History sections, collapsible panel, tag-list fallback, dark-mode ⌘K chip fix)                        | 2026-05-13 | 69033b5+ | ✅ Done    |
 | 041 | Spec alignment sweep — refresh ROADMAP/STATE/STRUCTURE/ARCHITECTURE/CONCERNS/STACK/DEFERRED to match shipped state (M0–M8 done, M9 in flight)                 | 2026-05-14 | —        | ✅ Done    |
 | 042 | Close F31 (NavPane footer path+count, palette Tools section + open-calendar, ⌘⇧C shortcut, design.md/tasks.md authored, F31 → COMPLETE, M9 → COMPLETE)        | 2026-05-15 | —        | ✅ Done    |
+| 043 | Author M10 release-prep specs — F33 (signing/notarisation/updater), F34 (icons + branding), F35 (opt-in crash reporting); link in ROADMAP                     | 2026-05-18 | —        | ✅ Done    |
 
 ---
 

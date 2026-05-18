@@ -323,13 +323,31 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 
 ## M10 — Release prep
 
-**Goal:** Cross-platform build pipeline, icons, branding, public v1 release. Specs to be written when M9 lands.
+**Goal:** Cross-platform build pipeline, icons, branding, public v1 release.
 
 ### Features
 
-- Tauri release config (signing, updater) — PLANNED
-- App icons + branding — PLANNED
-- Crash/error reporting (opt-in) — PLANNED
+**[F33 — Release config (signing, notarization, updater)](../features/F33-release-config/spec.md)** — PLANNED
+
+- macOS Developer ID signing + Apple notarisation + stapling
+- Windows Authenticode code signing
+- Linux AppImage + .deb with detached GPG signature
+- `tauri-plugin-updater` wired to GitHub Releases `latest.json`
+- Settings → Updates panel with auto-check toggle (default on)
+
+**[F34 — App icons + branding](../features/F34-icons-branding/spec.md)** — PLANNED
+
+- Source `brand/noxe-logo.svg` (square) + `brand/noxe-wordmark.svg`
+- Full Tauri icon matrix regenerated (replaces placeholder rocket)
+- Favicon, NavPane glyph, EmptyVault hero, HelpModal wordmark, README banner
+- Brand tokens (indigo + ink/paper + Inter / JetBrains Mono) documented
+
+**[F35 — Crash + error reporting (opt-in)](../features/F35-crash-reporting/spec.md)** — PLANNED
+
+- Always-on local crash log (Rust panic hook + JS error boundary) with rotation
+- Opt-in tri-state remote reporter (off / ask / on) targeting Sentry-compatible endpoint
+- One-time consent modal + payload Preview before opt-in
+- Mandatory redactor (vault path, token shapes, body length) shared by local + wire
 
 ---
 
