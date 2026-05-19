@@ -371,4 +371,3 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 - **Executable code blocks** (notebook mode)
 - **Plugin / extensibility API**
 - **Public link sharing / collaboration**
-- **Dark theme**
