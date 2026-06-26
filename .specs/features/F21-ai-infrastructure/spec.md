@@ -34,8 +34,8 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
   ```
 - **R1.2** Skills load from two locations, in this order (later overrides earlier by `id`):
   1. **Bundled defaults**, shipped inside the Tauri binary (loaded via `include_dir!` from `src-tauri/skills/`).
-  2. **User overrides** in `~/.noxe/skills/*.md` (and per-vault overrides in `<vault>/.noxe/skills/*.md`).
-- **R1.3** Skills are loaded once at startup and re-loaded on demand via a `skills.reload` IPC command. A file watcher on `~/.noxe/skills/` is **deferred** (out of scope).
+  2. **User overrides** in `~/.cork/skills/*.md` (and per-vault overrides in `<vault>/.cork/skills/*.md`).
+- **R1.3** Skills are loaded once at startup and re-loaded on demand via a `skills.reload` IPC command. A file watcher on `~/.cork/skills/` is **deferred** (out of scope).
 - **R1.4** A skill that fails to parse is logged (skill id + error) and skipped — it never crashes the loader.
 - **R1.5** Bundled defaults shipped in v1: `summarize`, `suggest-tags`, `related-notes`, `generate-note`, `slash-rephrase`, `slash-expand`, `slash-continue`. These cover all three upcoming features.
 
@@ -118,7 +118,7 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
 
 - **R7.1** New `src/features/ai/services/skillsClient.ts` wrapping the IPC commands: `runSkill(skillId, variables)`, `cacheClear(skillId?)`, `stats(since?)`, `reload()`.
 - **R7.2** `useAiStatsStore` (Zustand) holds the last fetched stats and a `refresh()` action. Used by the Settings → AI → Usage section.
-- **R7.3** No UI for managing individual skills in v1 — the user edits files in `~/.noxe/skills/` and clicks `Reload skills` in Settings.
+- **R7.3** No UI for managing individual skills in v1 — the user edits files in `~/.cork/skills/` and clicks `Reload skills` in Settings.
 
 ### R8 — Removal of F20 generic chat
 
@@ -133,10 +133,10 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
 - Streaming output (still deferred — see DEFERRED.md § D3).
 - Real per-provider tokenizers (we use `bytes / 4` approximation).
 - HTTP API providers (OpenAI/Anthropic SDK) — only `claude` / `copilot` CLI in v1.
-- File watcher on `~/.noxe/skills/` (manual `Reload` button only).
+- File watcher on `~/.cork/skills/` (manual `Reload` button only).
 - Embeddings, vector search, RAG.
 - Per-skill cost computation in fiat — telemetry shows tokens, not dollars.
-- A UI to author skills inside Noxe — v1 is "edit Markdown in `~/.noxe/skills/`".
+- A UI to author skills inside Cork — v1 is "edit Markdown in `~/.cork/skills/`".
 
 ---
 
@@ -145,6 +145,6 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
 - [ ] Bundled `summarize` skill loads on startup; `ai.runSkill("summarize", {title, body, frontmatter})` returns a string.
 - [ ] Calling the same skill with identical variables a second time returns instantly with `cache_hit = true` and writes a row to `ai_calls`.
 - [ ] Setting provider to `disabled` makes `ai.runSkill` fail with `provider_disabled` and writes a telemetry row with `error_kind = "provider_disabled"`.
-- [ ] Editing `~/.noxe/skills/summarize.md` and clicking `Reload` in Settings replaces the bundled skill.
+- [ ] Editing `~/.cork/skills/summarize.md` and clicking `Reload` in Settings replaces the bundled skill.
 - [ ] `Settings → AI → Usage` shows non-zero counters after a call and goes back to zero after `Clear telemetry`.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint`, `cargo check`, `cargo test --lib` all green.

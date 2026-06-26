@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-05-18T16:05-03:00
-**Current Work:** M10 specs authored — F33 (release config), F34 (icons + branding), F35 (crash reporting opt-in). Ready to size/design first one.
+**Last Updated:** 2026-06-25T00:00-03:00
+**Current Work:** F38 Relay Auth & Identity spec/design/tasks authored (M11). GitHub OAuth + JWT for hosted relay, shared-secret HMAC for self-hosted.
 
 ---
 
@@ -30,8 +30,8 @@
 
 ### AD-004: SQLite index lives in app data dir, vault stays pure `.md` (2026-05-06)
 
-**Decision:** The index database file lives in the OS app data directory (`~/Library/Application Support/Noxe/` on macOS, `%APPDATA%/Noxe/` on Windows, `~/.local/share/Noxe/` on Linux). The vault folder contains ONLY `.md` files (and whatever the user already has — assets are passthrough).
-**Reason:** Vault must stay portable; opening a Noxe vault in Obsidian must "just work".
+**Decision:** The index database file lives in the OS app data directory (`~/Library/Application Support/Cork/` on macOS, `%APPDATA%/Cork/` on Windows, `~/.local/share/Cork/` on Linux). The vault folder contains ONLY `.md` files (and whatever the user already has — assets are passthrough).
+**Reason:** Vault must stay portable; opening a Cork vault in Obsidian must "just work".
 **Trade-off:** Index can desync if vault is moved without app running; mitigated by re-index-on-open.
 **Impact:** F02, F03 assume this split. No sidecar files in the vault for core features.
 
@@ -123,7 +123,7 @@ src-tauri/
 
 ### AD-023: Browser E2E uses a localhost-only vault injection hook (2026-05-06)
 
-**Decision:** Playwright web E2E sets fixture vault entries through `window.__noxe_test_setVault(path, notes)`, enabled only for non-production mode or localhost preview.
+**Decision:** Playwright web E2E sets fixture vault entries through `window.__cork_test_setVault(path, notes)`, enabled only for non-production mode or localhost preview.
 **Reason:** Playwright runs against Vite preview in a browser, not the Tauri app, so it cannot drive the native folder picker or Rust IPC.
 **Trade-off:** The E2E validates UI wiring/listing with a fixture-shaped payload; Rust IPC/file walking remain covered by cargo tests.
 **Impact:** Production desktop builds do not expose the hook unless served on localhost for tests.
@@ -151,7 +151,7 @@ src-tauri/
 
 ### AD-027: F07 drawer state uses web-safe localStorage and indexed frontmatter (2026-05-06)
 
-**Decision:** Search history is persisted via the drawer Zustand store to `localStorage` (`noxe.searchHistory`) and starred notes are queried from the F03 `frontmatter` index (`starred: true`) rather than a second `starred.json` source.
+**Decision:** Search history is persisted via the drawer Zustand store to `localStorage` (`cork.searchHistory`) and starred notes are queried from the F03 `frontmatter` index (`starred: true`) rather than a second `starred.json` source.
 **Reason:** Drawers must run in Vite preview/Playwright without Tauri store APIs, and frontmatter keeps starred state portable in the pure Markdown vault.
 **Trade-off:** Search history is WebView-local until F13 settings/store migration; starred toggles require the note to be reindexed after save.
 **Impact:** F07 `notes.starred` reads the SQLite `frontmatter` table and `starService` writes `frontmatter.starred`.
@@ -172,14 +172,14 @@ src-tauri/
 
 ### AD-030: F11 browser E2E writes attachments through a localhost-only test bridge (2026-05-06)
 
-**Decision:** Asset drop E2E uses `window.__noxe_test_writeAttachment` to route browser-file bytes to a Playwright-exposed Node writer under `test-results/`.
+**Decision:** Asset drop E2E uses `window.__cork_test_writeAttachment` to route browser-file bytes to a Playwright-exposed Node writer under `test-results/`.
 **Reason:** Playwright runs Vite preview without Tauri IPC, but F11 needs to verify the real CM6 drop path, attachment-link insertion, preview image rendering, and on-disk attachment output together.
 **Trade-off:** Browser E2E validates frontend integration with a fixture writer; Rust `assets.write_attachment` remains covered by cargo tests.
 **Impact:** Production builds do not expose the bridge outside non-production/localhost test runs.
 
 ### AD-031: Multi-vault recents and switch tests use web-safe bridges (2026-05-06)
 
-**Decision:** F10 persists recent vaults in the existing app-data `vault.json` and exposes a localhost-only `window.__noxe_test_setRecentVaults` bridge for browser E2E.
+**Decision:** F10 persists recent vaults in the existing app-data `vault.json` and exposes a localhost-only `window.__cork_test_setRecentVaults` bridge for browser E2E.
 **Reason:** Playwright cannot drive native folder pickers or Tauri IPC in Vite preview, but switcher UX still needs deterministic no-data-loss coverage.
 **Trade-off:** Browser E2E validates UI/store behavior and failed IPC resilience; Rust tests cover persistence and native settings loading.
 **Impact:** Production builds do not expose the recent-vault test bridge outside non-production/localhost runs.
@@ -215,8 +215,8 @@ src-tauri/
 ### AD-036: AI pivots from generic chat (F20) to contextual skills (F21–F24) (2026-05-07)
 
 **Decision:** Drop the F20 generic chat panel. Replace with three integrated AI features (Insights sidebar, Generate-from-topic, Slash commands) built on a small skills + cache + telemetry infrastructure (F21). No embeddings, no RAG, no HTTP API providers — keep using `claude` / `copilot` CLI subprocesses.
-**Reason:** User feedback — generic chat is already free-form-Q&A territory that the user's AI CLIs handle better directly against the `.md` files. Noxe's leverage is contextual integration in the editor and note view. Embeddings/RAG add a heavy dependency (model download, vector DB) for a use case the CLI already covers.
-**Trade-off:** "Ask my vault" semantic search isn't built into Noxe — users relying on it must invoke their AI CLI manually against the vault folder. Tag-overlap "Related notes" replaces it inside the app.
+**Reason:** User feedback — generic chat is already free-form-Q&A territory that the user's AI CLIs handle better directly against the `.md` files. Cork's leverage is contextual integration in the editor and note view. Embeddings/RAG add a heavy dependency (model download, vector DB) for a use case the CLI already covers.
+**Trade-off:** "Ask my vault" semantic search isn't built into Cork — users relying on it must invoke their AI CLI manually against the vault folder. Tag-overlap "Related notes" replaces it inside the app.
 **Impact:** F20 marked SUPERSEDED in roadmap; spec stays as historical reference. F21 spec written; F22–F24 to follow. The existing `ai_send_prompt` command is kept as the low-level subprocess primitive that the new `ai_run_skill` runner builds on.
 
 ### AD-037: AI generation runs background-first with sonner toasts (2026-05-07)
@@ -226,30 +226,30 @@ src-tauri/
 **Trade-off:** No live progress bar (only toast). Cancelling an in-flight call is not implemented — the subprocess runs until completion or timeout.
 **Impact:** All AI-skill consumers must accept a Promise resolved out-of-band; no synchronous result is exposed in the UI thread. Documented in F23 / F24 specs.
 
-### AD-038: F26 sync uses SSH-only auth (HTTPS+PAT removed) (2026-05-07)
+### AD-038: F26 sync initially used SSH-only auth (superseded by AD-051) (2026-05-07)
 
 **Decision:** GitHub sync uses SSH exclusively. Per-vault SSH Deploy Key is the recommended setup; the runner auto-falls-back to `ssh.github.com:443` when port 22 is blocked (typical on corporate / coffee-shop networks). HTTPS+PAT and the prior `gh`-CLI auto-create flow are removed from both UI and backend.
 **Reason:** macOS Keychain + `gh` credential helpers consistently override per-repo `extraheader` PAT credentials, producing HTTP 403 with the PAT showing as "never used" on GitHub. After multiple iterations the team accepted the system-level constraint and pivoted. Provisional F27 work is captured in `.specs/features/F27-cross-account-sync-pivot/` as "absorbed into F26".
 **Trade-off:** First-run setup is heavier — the user must add a Deploy Key to the GitHub repo. User feedback labelled this acceptable ("for devs this is intuitive and secure").
-**Impact:** Single sanctioned auth path simplifies the codebase considerably; AD-022 in this file is superseded by this entry.
+**Impact:** Single sanctioned auth path simplified the codebase for the first F26 release; AD-051 supersedes the SSH-only constraint after corporate environments blocked all SSH access to GitHub.
 
 ### AD-039: Sweep-on-sync covers the entire vault (2026-05-07)
 
-**Decision:** Each sync iteration commits **all** changed files inside the vault, not only the actively edited note. Excludes `.git/`, `.noxe/local-history/` and other non-shareable artefacts. Commit message format is Conventional Commits with a file-list trailer:
+**Decision:** Each sync iteration commits **all** changed files inside the vault, not only the actively edited note. Excludes `.git/`, `.cork/local-history/` and other non-shareable artefacts. Commit message format is Conventional Commits with a file-list trailer:
 
 ```
 feat(notes): update Welcome.md, Daily/2026-05-07.md (+3 more)
 
-Source: noxe-app
+Source: cork-app
 Timestamp: 2026-05-07T12:34:56Z
 Files:
   - Welcome.md
   - Daily/2026-05-07.md
-  - .noxe/todos.json
+  - .cork/todos.json
 ```
 
 Scope classification rules: `notes` (only note files), `single` (one file), `mixed` (notes + non-note files), `empty` (sweep with no changes — skipped). Capped at 25 file lines in the trailer.
-**Reason:** User reported that the GitHub repo did not reflect what was in the app — todos and `.noxe/*` settings were silently excluded.
+**Reason:** User reported that the GitHub repo did not reflect what was in the app — todos and `.cork/*` settings were silently excluded.
 **Trade-off:** Slightly larger commits and more frequent activity in the repo timeline.
 **Impact:** Commit log is now a usable audit trail. AD-022's reference to "note-only commits" is superseded.
 
@@ -262,9 +262,9 @@ Scope classification rules: `notes` (only note files), `single` (one file), `mix
 
 ### AD-041: First-run onboarding scaffold (2026-05-07)
 
-**Decision:** New vaults are seeded with a small, opinionated set of files on first open: `Welcome.md`, `Daily/<today>.md`, `Projects/Sample.md`, `Meetings/Sample.md`, `Cheatsheet.md`, plus three starter todos in `.noxe/todos.json`. Idempotency is enforced via `.noxe/scaffold.json` marker; existing files are never overwritten.
+**Decision:** New vaults are seeded with a small, opinionated set of files on first open: `Welcome.md`, `Daily/<today>.md`, `Projects/Sample.md`, `Meetings/Sample.md`, `Cheatsheet.md`, plus three starter todos in `.cork/todos.json`. Idempotency is enforced via `.cork/scaffold.json` marker; existing files are never overwritten.
 **Reason:** Empty vaults make the app feel inert — Linear/Obsidian both seed examples that demonstrate features. User explicitly approved seeding their own vault for the demo.
-**Trade-off:** Marker file lives in `.noxe/`, so deleting it triggers re-seed. This is by design — it lets advanced users replay the scaffold.
+**Trade-off:** Marker file lives in `.cork/`, so deleting it triggers re-seed. This is by design — it lets advanced users replay the scaffold.
 **Impact:** New Rust module `src-tauri/src/vault/scaffold.rs` with `vault.scaffoldIfNeeded` IPC; called once per vault open after watcher initialisation.
 
 ### AD-042: Dark theme un-deferred via runtime CSS variables (2026-05-09)
@@ -276,7 +276,7 @@ Scope classification rules: `notes` (only note files), `single` (one file), `mix
 
 ### AD-043: Single-pane editor via CM6 decorations (no BlockNote) (2026-05-09)
 
-**Decision:** Bring the Obsidian / Tolaria single-pane "WYSIWYG-feel" editing to Noxe (F16) by adding decoration plugins on top of CodeMirror 6 that conceal markdown markers when the caret leaves the line. The split-pane Preview is kept available for blocks (KaTeX / Mermaid / Shiki) but is no longer the default note view.
+**Decision:** Bring the Obsidian / Tolaria single-pane "WYSIWYG-feel" editing to Cork (F16) by adding decoration plugins on top of CodeMirror 6 that conceal markdown markers when the caret leaves the line. The split-pane Preview is kept available for blocks (KaTeX / Mermaid / Shiki) but is no longer the default note view.
 **Reason:** Honour AD-006 (CM6, no BlockNote) and AD-028 (split-pane) while addressing the user feedback that 50/50 split wastes horizontal space. Decorations stay lossless because the markdown on disk is untouched.
 **Trade-off:** Fenced code blocks, math and Mermaid still render raw inside the editor — only inline markers (headings, emphasis, code, links, wikilinks) get the WYSIWYG treatment.
 **Impact:** AD-028 still describes the available split-pane fallback; AD-043 documents the new default. Editor feature owns the decoration plugins; preview pipeline is reused unchanged.
@@ -330,6 +330,41 @@ Scope classification rules: `notes` (only note files), `single` (one file), `mix
 **Trade-off:** v1 binaries still ship unsigned; "Auto-check on launch" is honoured by the store but doesn't do anything yet.
 **Impact:** F33 status is PARTIAL with most R-rows Deferred. ROADMAP M10 reflects this. F33 owns the deferred work — no new feature needed.
 
+### AD-051: F26 supports repo-scoped HTTPS PAT auth alongside SSH (2026-05-22)
+
+**Decision:** GitHub sync supports HTTPS remotes using a fine-grained PAT scoped to the selected repository. The token is stored only in the vault repo's local Git credential file (`.git/cork-credentials`) with inherited credential helpers reset; vault settings persist only the remote URL. SSH Deploy Key auth remains available as a fallback. New devices use the empty-vault "Clone synced vault" flow, which clones via HTTPS+PAT, writes credentials only into that local clone, and opens the vault automatically.
+**Reason:** The company environment now blocks SSH access to GitHub, including the previous `ssh.github.com:443` escape hatch. The user explicitly wants to keep auth scoped per repo rather than falling back to a global GitHub account or `gh` login.
+**Trade-off:** Users must create and paste a fine-grained PAT per repository; unlike SSH deploy keys, GitHub PATs can expire and may require organization approval.
+**Impact:** Supersedes the SSH-only portion of AD-038 and updates F26/F27 docs. Do not reintroduce `gh repo create` or account-global credential flows for sync.
+
+### AD-052: Daily notes stay flat and Todos opens as a triage modal (2026-05-22)
+
+**Decision:** Daily note creation no longer creates date subfolders. The default path is `Daily/YYYY-MM-DD.md`, and legacy/custom daily patterns that contain nested folder segments are constrained to a single folder plus today's flat filename. Todos uses the triage tool overlay as a compact modal rather than replacing the third column. Triage folder rows expose a guarded "Move to trash" action so accidental folders can be removed in-context.
+**Reason:** The user reported that opening daily/today Todos created hard-to-delete subfolders under `Daily` and wants no subfolder creation. They also want Todos to behave like a modal/surface in triage instead of a full navigation replacement.
+**Trade-off:** Existing vault configs with old nested daily patterns keep their top-level folder but stop honoring nested year/month path segments.
+**Impact:** F10/F13 daily defaults are updated. Triage tool openers must go through `openToolView("todos")` so Focus mode still navigates while Triage opens the modal overlay. Folder deletion in triage must keep a confirmation step and use the existing `folderOps.trash` flow.
+
+### AD-053: Note pinning uses Pinned naming and `pinned` frontmatter (2026-05-22)
+
+**Decision:** The saved-note highlight feature is named "Pinned" across user-facing UI, commands, drawers, triage shortcuts, IPC, and seed vault content. Pin state is stored as `pinned: true` frontmatter and queried via `notes.pinned`.
+**Reason:** The app already wrote `frontmatter.pinned` from Home/Note actions while some lists still queried or labeled the old Starred path, so pinned notes could fail to appear in pinned views.
+**Trade-off:** The old Starred drawer id/API is removed from active source; older prototype/spec references remain historical only unless updated by their owning feature.
+**Impact:** Do not add new `starred` frontmatter, `notes.starred`, or "Starred" user-facing copy. Pinned lists must derive from `frontmatter.pinned`.
+
+### AD-055: Relay auth uses GitHub OAuth + JWT for hosted, shared-secret for self-hosted (2026-06-25)
+
+**Decision:** The CRDT relay supports two auth modes that coexist: (1) **JWT mode** for hosted relays — client authenticates via GitHub OAuth, relay exchanges the authorization code for GitHub identity server-side, issues its own Ed25519 JWT (15-min access + 30-day refresh token); (2) **HMAC mode** for self-hosted relays — unchanged from F37's per-vault shared secret. The relay exposes `GET / → { authMode }` so the client adapts UI and connection logic automatically. Vault ownership is enforced server-side: only the registering user's JWTs can join that vault's relay rooms. JWT claims are provider-agnostic (`sub`, `did`, `iat`, `exp`) so future identity providers (passkeys, email) require only a new `/auth/<provider>` endpoint without changing WebSocket auth, vault registration, or device management.
+**Reason:** A hosted relay needs identity to distinguish users, authorize vault access, and enable device management — shared secrets cannot provide this. GitHub OAuth is natural for Cork's dev audience and avoids building a password/email auth system. Keeping HMAC for self-hosted preserves F37's zero-account philosophy.
+**Trade-off:** GitHub-only identity in v1 excludes non-GitHub users from the hosted relay; mitigated by the provider-agnostic architecture. Relay gains a SQLite database (users, vaults, devices, refresh_tokens) — adds operational complexity vs. F37's stateless relay.
+**Impact:** F37's `RelayProvider.connect()` gains a `token` param alongside `auth`. The relay server grows from ~200 lines to a small service with REST API + WebSocket + SQLite. Client stores tokens in OS keychain via new `keyring` crate integration. See F38 spec/design/tasks.
+
+### AD-054: Focus sidebar opens full-page library views (2026-05-22)
+
+**Decision:** In Focus mode, sidebar items for Search, Folders, Pinned, Tags, and Recent navigate to full-page `ShellView` routes instead of opening overlay drawers. The active `DrawerHost` overlay is removed from shell chrome. Triage mode keeps its own NavPane/list layout and existing tool overlays.
+**Reason:** User feedback favored clicking sidebar items and seeing the content in the main workspace, consistent with Home, because it gives more room and avoids drawer overlays.
+**Trade-off:** The existing `drawers/*` components remain as reusable library-view bodies for now, and `toggleDrawer` remains a legacy compatibility path that navigates to the equivalent page.
+**Impact:** New Focus sidebar surfaces should be modeled as shell routes, not overlay drawers. Rail clicks, Home tag pills, "Reveal in Folders", TopBar breadcrumbs, menu actions, command palette tag items, and `Cmd+\` must navigate to these page views.
+
 ---
 
 ## Active Blockers
@@ -354,7 +389,7 @@ _None._
 - **L-012:** Home E2E note locators should target the intended section because Recents, All Notes, and card menus can expose duplicate note-title buttons.
 - **L-013:** Parser parity is more robust when Markdown extensions expose stable semantic tokens rather than comparing renderer-specific HTML across different parser stacks.
 - **L-014:** Browser tests must guard Tauri event listeners behind `window.__TAURI_INTERNALS__`; otherwise jsdom shells report unhandled rejections from `@tauri-apps/api/event`.
-- **L-015:** macOS Keychain + `gh` credential helper override per-repo `extraheader` PATs at a layer below `GIT_CONFIG_NOSYSTEM` and isolated `$HOME` — symptom is HTTP 403 with the PAT showing as "never used" on GitHub. Solution is to abandon HTTPS+PAT, not to keep patching git transport.
+- **L-015:** macOS Keychain + `gh` credential helper override per-repo `extraheader` PATs at a layer below `GIT_CONFIG_NOSYSTEM` and isolated `$HOME` — symptom is HTTP 403 with the PAT showing as "never used" on GitHub. If HTTPS is required, use a repo-local credential store with inherited helpers reset rather than `http.extraHeader`.
 - **L-016:** Corporate / coffee-shop networks frequently block outbound port 22 — `ssh.github.com:443` is the documented escape hatch and should be the default fallback in any tool that uses git over SSH.
 - **L-017:** Long-running CLI subprocesses (Claude / Copilot) buffer stdout in non-interactive mode, so "stream the output as it arrives" is not actually available — the cheap, robust pattern is to dispatch the call in the background and surface progress via toasts.
 - **L-018:** Three-column "triage" layouts feel cramped under ~1100px; a viewport guardrail that silently downgrades to a single-column focus mode is more user-friendly than letting the panels collapse.
@@ -415,6 +450,10 @@ _None._
 | 042 | Close F31 (NavPane footer path+count, palette Tools section + open-calendar, ⌘⇧C shortcut, design.md/tasks.md authored, F31 → COMPLETE, M9 → COMPLETE)                                                                                                          | 2026-05-15 | —        | ✅ Done    |
 | 043 | Author M10 release-prep specs — F33 (signing/notarisation/updater), F34 (icons + branding), F35 (opt-in crash reporting); link in ROADMAP                                                                                                                       | 2026-05-18 | —        | ✅ Done    |
 | 044 | Land M10 — F34 brand assets + icon matrix + NavPane/HelpModal/About wiring, F35 local crash log (Rust panic hook + JS boundary + redactor + Diagnostics panel), F33 Updates panel scaffold + `tauri-plugin-updater` dep; carve F36 out of F35 for remote opt-in | 2026-05-19 | pending  | ✅ Done    |
+| 045 | Re-enable F26 GitHub HTTPS sync with repo-scoped fine-grained PAT credentials, add second-device clone flow, and keep SSH Deploy Key fallback                                                                                                                   | 2026-05-22 | pending  | ✅ Done    |
+| 046 | Fix triage daily/Todos modal flow, untitled Inbox deletion, stale note switching buffers, and Pinned naming/list consistency                                                                                                                                    | 2026-05-22 | pending  | ✅ Done    |
+| 047 | Increase the default app window width and start note views with the right inspector sidebar collapsed                                                                                                                                                          | 2026-05-22 | pending  | ✅ Done    |
+| 048 | Replace Focus-mode overlay drawers with full-page Search/Folders/Pinned/Tags/Recent sidebar views while keeping triage behavior intact                                                                                                                        | 2026-05-22 | pending  | ✅ Done    |
 
 ---
 
@@ -442,7 +481,7 @@ _None._
 - **AD-017**: Wikilink rename propagation defaults ON; toggle via `appSettingsStore.autoRewriteLinksOnRename`. Resolver pass always updates `target_id` in the index regardless. (F09-T08)
 - **AD-018**: Asset access in preview uses Tauri 2 `asset://localhost/<abs>` protocol with a runtime-updated scope (`assets.set_scope` IPC) constrained to the active vault. Static `tauri.conf.json` scope is empty; Rust expands per vault. New `assets` SQLite table (migration 003) is populated by extending the F02 walker to known media extensions. (F11)
 - **AD-019**: Folder operations live in a dedicated `folders.*` IPC namespace (`create/rename/move/trash`); deletes go to OS trash via the same path as `notes.trash`. Bulk note operations (`notes.bulkMove/bulkTrash/bulkSetFrontmatter`) report `{ ok[], failed[] }` so partial failures don't abort the batch. Drag-and-drop powered by `@dnd-kit/core` with keyboard-accessible "Move to…" fallback. (F12)
-- **AD-020**: Settings is implemented as a modal panel (not a separate route) with sections General/Editor/Files & Vaults/Markdown/Daily Notes/Advanced. Per-vault overrides written to `<vault>/.noxe/config.json`; global settings via `tauri-plugin-store`. `settingsBridge` resolves per-vault → global → default. In-note find/replace via `@codemirror/search`. Native menus via Tauri 2 menu API; `tauri-plugin-window-state` for window persistence. (F13)
+- **AD-020**: Settings is implemented as a modal panel (not a separate route) with sections General/Editor/Files & Vaults/Markdown/Daily Notes/Advanced. Per-vault overrides written to `<vault>/.cork/config.json`; global settings via `tauri-plugin-store`. `settingsBridge` resolves per-vault → global → default. In-note find/replace via `@codemirror/search`. Native menus via Tauri 2 menu API; `tauri-plugin-window-state` for window persistence. (F13)
 - **AD-021**: Markdown extensions (callouts, footnotes, highlight) shipped as opt-in flags consumed by both the unified pipeline (custom remark plugins) and pulldown-cmark (event-stream adapters). Parity gate (F08) extended with new fixtures; both pipelines must produce byte-identical (after whitespace normalization) HTML. Definition lists, math, mermaid deferred to v2. (F14)
 - **AD-022**: F26 GitHub sync — PAT-via-extraHeader path is functional for plain environments but **does not work reliably on macOS** when the user has Apple Command Line Tools git + osxkeychain + gh credential helpers installed (libcurl appears to short-circuit auth via Keychain at a layer below `GIT_CONFIG_NOSYSTEM`/isolated `$HOME`). Symptom: PAT shows as "never used" on GitHub, push fails with `RPC failed; HTTP 403 ... send-pack: unexpected disconnect`. Hotfix attempts exhausted. Decision: keep PAT path as best-effort + ship an alternative auth mechanism in a follow-up feature. Recommended: GitHub Contents API (REST) with OAuth Device Flow, since auth is then in our HTTP client and bypasses git transport entirely. SSH Deploy Key is a viable fallback. Track as F27 in roadmap.
 

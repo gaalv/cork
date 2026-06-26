@@ -6,9 +6,9 @@
 
 ## Overview
 
-Today the `release.yml` workflow builds Noxe on macOS / Windows / Ubuntu and
+Today the `release.yml` workflow builds Cork on macOS / Windows / Ubuntu and
 drafts a GitHub release, but every artifact is **unsigned**. macOS users see
-Gatekeeper's "Noxe.app is damaged and can't be opened" dialog; Windows users
+Gatekeeper's "Cork.app is damaged and can't be opened" dialog; Windows users
 see SmartScreen "unrecognised app"; nothing has an updater path so v0.2 has
 no upgrade story besides "download manually again".
 
@@ -48,7 +48,7 @@ F33 closes that gap so a `git tag v0.x.y && git push --tags` produces:
 
 - **R3** Document and commit a `scripts/generate-updater-keys.md` runbook
   describing one-time generation via
-  `pnpm tauri signer generate -w ~/.tauri/noxe-updater.key`. The private
+  `pnpm tauri signer generate -w ~/.tauri/cork-updater.key`. The private
   key never enters the repo; only the public key (base64) is committed
   via the `tauri.conf.json` pubkey field (a public string).
 - **R4** Add a `scripts/release.md` runbook covering: bumping

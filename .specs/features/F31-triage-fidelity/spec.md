@@ -35,7 +35,7 @@ keeps coming back to. The user's complaints:
 
 ### NavPane (column 1) — match prototype
 
-- **R3** Brand row at the top: "Noxe" wordmark + neutral "vault" chip
+- **R3** Brand row at the top: "Cork" wordmark + neutral "vault" chip
   - sync indicator (re-using existing `SyncIndicator` if present, else
     a small clock icon stub). **No logo glyph** — the project doesn't
     have a logo yet; revisit when one exists.
@@ -56,7 +56,7 @@ keeps coming back to. The user's complaints:
 - **R8** Note rows are **enriched cards** with:
   - Title (semibold) + HH:mm time on the right
   - 2-line excerpt (first non-frontmatter line of the body)
-  - Up to 3 tag pills (`#tag` style, `--color-noxe-tag*`)
+  - Up to 3 tag pills (`#tag` style, `--color-cork-tag*`)
   - Active row uses left accent border (4px) + soft accent bg
 - **R9** Notes are enriched via the same helper used by Home (extract
   `enrichNotes` to a shared module so we don't refetch on every render).

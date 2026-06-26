@@ -2,7 +2,7 @@
 
 ## Overview
 
-Noxe today ships a single Linear-style 2-column shell (Rail + ViewRouter, with
+Cork today ships a single Linear-style 2-column shell (Rail + ViewRouter, with
 transient drawers). The user values the focus this gives note-writing but
 keeps gravitating to the prototype's 3-column "Inkdrop" layout (sidebar +
 notes list + editor) for browsing/triage workflows.

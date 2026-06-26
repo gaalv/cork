@@ -6,7 +6,7 @@
 
 ## Overview
 
-Noxe is local-first (PROJECT.md vision) — we do **not** send telemetry
+Cork is local-first (PROJECT.md vision) — we do **not** send telemetry
 by default. But once it ships publicly, we still need a way for users
 who hit a bug to give us reproducible signal without scraping logs by
 hand. F35 adds:

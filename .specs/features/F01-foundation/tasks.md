@@ -74,7 +74,7 @@ pnpm install && cat package.json | jq '.dependencies | keys' | grep '@tauri-apps
 **Done when:**
 - [ ] `vite.config.ts` calls `tailwindcss()` after `react()`
 - [ ] `src/index.css` is imported in `src/main.tsx`
-- [ ] `pnpm dev` renders a page using a `bg-noxe-bg` class without errors
+- [ ] `pnpm dev` renders a page using a `bg-cork-bg` class without errors
 
 **Verify:** `pnpm dev` and inspect a styled element in DevTools.
 
@@ -137,7 +137,7 @@ pnpm install && cat package.json | jq '.dependencies | keys' | grep '@tauri-apps
 
 ### T06: Playwright smoke harness [P]
 
-**What:** Install `@playwright/test`, run `pnpm exec playwright install chromium`. Add `playwright.config.ts` (against `pnpm preview` :4173). Add `tests/e2e/smoke/launch.spec.ts` that visits `/`, asserts the page title is "Noxe" and at least one `[data-testid="rail"]` element exists. Add `pnpm test:e2e` script.
+**What:** Install `@playwright/test`, run `pnpm exec playwright install chromium`. Add `playwright.config.ts` (against `pnpm preview` :4173). Add `tests/e2e/smoke/launch.spec.ts` that visits `/`, asserts the page title is "Cork" and at least one `[data-testid="rail"]` element exists. Add `pnpm test:e2e` script.
 **Where:** `playwright.config.ts`, `tests/e2e/smoke/launch.spec.ts`, `package.json`
 **Depends on:** T04
 **Requirement:** FOUND-08
@@ -220,7 +220,7 @@ pnpm install && cat package.json | jq '.dependencies | keys' | grep '@tauri-apps
 
 ### T11: Index.html + main.tsx + Providers [P-leader]
 
-**What:** Author `index.html`, `src/main.tsx`, `src/app/Providers.tsx` (empty for now), `src/app/App.tsx` rendering "Noxe" placeholder. Replace Tauri template's default code.
+**What:** Author `index.html`, `src/main.tsx`, `src/app/Providers.tsx` (empty for now), `src/app/App.tsx` rendering "Cork" placeholder. Replace Tauri template's default code.
 **Where:** `index.html`, `src/main.tsx`, `src/app/{App,Providers}.tsx`
 **Depends on:** T03
 **Requirement:** FOUND-01

@@ -1,185 +1,104 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+/**
+ * Generate note from topic modal — powered by AI skills.
+ *
+ * @see F21 — AI Infrastructure (generate-note skill)
+ */
+
+import { useState } from "react";
 import { Sparkle, X } from "@phosphor-icons/react";
+import { toast } from "sonner";
 
-import { useGenerateNoteStore } from "@/features/ai/state/generateNoteStore";
-import { useFolderTree } from "@/features/drawers/hooks/useFolderTree";
-import { useDrawersStore } from "@/features/drawers/state/drawersStore";
-import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
-import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
-import { Select } from "@/shared/ui/Select";
-
-import type { FolderTreeNode } from "@/features/drawers/hooks/useFolderTree";
-
-function flatten(nodes: FolderTreeNode[], acc: string[] = []): string[] {
-  for (const node of nodes) {
-    acc.push(node.path);
-    if (node.children.length > 0) flatten(node.children, acc);
-  }
-  return acc;
-}
+import { useShellStore } from "@/features/shell/state/shellStore";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { client } from "@/shared/ipc/client";
 
 export function GenerateNoteModal() {
-  const open = useGenerateNoteStore((s) => s.open);
-  if (!open) return null;
-  return <GenerateNoteModalInner />;
-}
-
-function GenerateNoteModalInner() {
-  const error = useGenerateNoteStore((s) => s.error);
-  const closeModal = useGenerateNoteStore((s) => s.closeModal);
-  const generate = useGenerateNoteStore((s) => s.generate);
-  const provider = useAppSettingsStore((s) => s.settings.ai?.provider ?? "disabled");
-  const openSettings = useSettingsUiStore((s) => s.openSettings);
-  const tree = useFolderTree();
-  const folderOptions = useMemo(
-    () =>
-      ["", ...flatten(tree)]
-        .sort()
-        .map((path) => ({ value: path, label: path === "" ? "Inbox (root)" : path })),
-    [tree],
-  );
-  const defaultFolder = useDrawersStore.getState().selectedFolder ?? "";
+  const open = useShellStore((s) => s.generateModalOpen);
+  const close = useShellStore((s) => s.setGenerateModalOpen);
+  const loadNotes = useVaultStore((s) => s.loadNotes);
 
   const [topic, setTopic] = useState("");
-  const [folder, setFolder] = useState(defaultFolder);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  if (!open) return null;
+
+  const handleGenerate = () => {
+    const value = topic.trim();
+    if (!value) return;
+
+    // Close modal immediately and run in background
+    close(false);
     setTopic("");
-    setFolder(useDrawersStore.getState().selectedFolder ?? "");
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
+    toast("Generating note...", { id: "ai-generate", duration: Infinity });
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeModal();
+    (async () => {
+      try {
+        const result = await client.ai.runSkill("generate-note", { topic: value });
+        const output = (result as { output: string }).output;
+
+        const created = await client.notes.create({ folder: "", title: value });
+        const noteResult = created as { id: string; path: string };
+        await client.notes.save({ path: noteResult.path, body: output, frontmatter: {} });
+
+        await loadNotes();
+        toast.success("Note generated", { id: "ai-generate" });
+      } catch {
+        toast.error("Failed to generate note — check your AI provider settings", {
+          id: "ai-generate",
+        });
       }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [closeModal]);
-
-  const disabled = provider === "disabled";
-
-  function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (disabled) return;
-    void generate({ topic, folder });
-  }
+    })();
+  };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-[12vh]"
-      onMouseDown={() => closeModal()}
+      className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--color-cork-ink)]/30"
+      onClick={() => close(false)}
     >
-      <form
-        role="dialog"
-        aria-modal="true"
-        aria-label="Generate note with AI"
-        className="w-[min(520px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] shadow-2xl"
-        onMouseDown={(event) => event.stopPropagation()}
-        onSubmit={onSubmit}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[480px] overflow-hidden rounded-2xl border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] shadow-2xl"
       >
-        <header className="flex items-center justify-between border-b border-[var(--color-noxe-border)] px-4 py-3">
+        <div className="flex items-center justify-between border-b border-[var(--color-cork-border)] px-5 py-3">
           <div className="flex items-center gap-2">
-            <Sparkle size={14} weight="fill" className="text-[var(--color-noxe-muted)]" />
-            <h2 className="text-sm font-semibold text-[var(--color-noxe-ink)]">
-              Generate note with AI
-            </h2>
+            <Sparkle size={16} weight="fill" className="text-[var(--color-cork-accent)]" />
+            <h2 className="text-[14px] font-semibold">Generate note from topic</h2>
           </div>
           <button
-            type="button"
-            aria-label="Close"
-            onClick={() => closeModal()}
-            className="rounded-full p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-hover)] hover:text-[var(--color-noxe-ink)]"
+            onClick={() => close(false)}
+            className="rounded p-1 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
           >
             <X size={14} />
           </button>
-        </header>
-
-        <div className="space-y-3 p-4">
-          {disabled ? (
-            <div className="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)] p-3 text-xs">
-              <p className="text-[var(--color-noxe-ink)]">
-                AI provider is disabled. Configure a provider in Settings → AI to use this feature.
-              </p>
-              <button
-                type="button"
-                className="mt-2 rounded-md border border-[var(--color-noxe-border)] px-2 py-1 text-xs hover:bg-[var(--color-noxe-hover)]"
-                onClick={() => {
-                  closeModal();
-                  openSettings("ai");
-                }}
-              >
-                Open AI settings
-              </button>
-            </div>
-          ) : (
-            <>
-              <label className="block">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-noxe-muted)]">
-                  Topic
-                </span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={topic}
-                  onChange={(event) => setTopic(event.currentTarget.value)}
-                  placeholder="E.g. SQLite WAL mode pros and cons"
-                  className="mt-1 w-full rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-bg)] px-2 py-1.5 text-sm outline-none focus:border-[var(--color-noxe-border-strong)]"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-noxe-muted)]">
-                  Folder
-                </span>
-                <div className="mt-1">
-                  <Select<string>
-                    ariaLabel="Folder"
-                    value={folder}
-                    options={folderOptions}
-                    onChange={(next) => setFolder(next)}
-                    className="w-full"
-                  />
-                </div>
-              </label>
-
-              <p className="text-[11px] text-[var(--color-noxe-muted)]">
-                The note will be generated in the background. You'll get a notification when it's ready.
-              </p>
-
-              {error ? (
-                <p className="text-xs text-[var(--color-noxe-danger,#dc2626)]" role="alert">
-                  {error}
-                </p>
-              ) : null}
-            </>
-          )}
         </div>
-
-        {!disabled ? (
-          <footer className="flex items-center justify-end gap-2 border-t border-[var(--color-noxe-border)] px-4 py-3">
-            <button
-              type="button"
-              onClick={() => closeModal()}
-              className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1 text-xs hover:bg-[var(--color-noxe-hover)]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!topic.trim()}
-              className="flex items-center gap-1.5 rounded-md border border-[var(--color-noxe-border-strong)] bg-[var(--color-noxe-ink)] px-3 py-1 text-xs text-[var(--color-noxe-bg)] hover:opacity-90 disabled:opacity-50"
-            >
-              <Sparkle size={12} weight="fill" />
-              Generate
-            </button>
-          </footer>
-        ) : null}
-      </form>
+        <div className="px-5 py-4">
+          <label className="mb-1 block text-[12px] font-medium text-[var(--color-cork-muted)]">
+            Topic or question
+          </label>
+          <input
+            autoFocus
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleGenerate();
+            }}
+            placeholder="e.g. How to structure a Rust CLI project"
+            className="w-full rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-3 py-2 text-[14px] outline-none placeholder:text-[var(--color-cork-subtle)] focus:border-[var(--color-cork-accent)]"
+          />
+          <p className="mt-2 text-[12px] text-[var(--color-cork-subtle)]">
+            AI will create a new note with structured content about this topic.
+          </p>
+        </div>
+        <div className="flex justify-end border-t border-[var(--color-cork-border)] px-5 py-3">
+          <button
+            onClick={handleGenerate}
+            disabled={!topic.trim()}
+            className="flex items-center gap-1.5 rounded-full bg-[var(--color-cork-ink)] px-4 py-1.5 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            <Sparkle size={12} weight="fill" />
+            Generate
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

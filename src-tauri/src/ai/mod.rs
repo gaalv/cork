@@ -195,7 +195,7 @@ pub fn ai_cache_clear(
     })
 }
 
-/// Reload skills from `~/.noxe/skills/` (bundled defaults are also re-read).
+/// Reload skills from `~/.cork/skills/` (bundled defaults are also re-read).
 #[tauri::command]
 pub fn ai_skills_reload(state: State<'_, AiState>) -> Result<usize, AiError> {
     state.with_runtime(|runtime| {
@@ -239,6 +239,22 @@ pub fn ai_telemetry_clear(state: State<'_, AiState>) -> Result<usize, AiError> {
         telemetry::clear_calls(&conn)
             .map_err(|e| AiError::internal(format!("clear telemetry: {e}")))
     })
+}
+
+/// Check which AI provider CLIs are available on PATH.
+#[tauri::command]
+pub fn ai_providers_available() -> ProvidersAvailable {
+    ProvidersAvailable {
+        claude: binary_for_provider("claude").map_or(false, binary_available),
+        copilot: binary_for_provider("copilot").map_or(false, binary_available),
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvidersAvailable {
+    pub claude: bool,
+    pub copilot: bool,
 }
 
 /// List the currently loaded skills (id + name + source).

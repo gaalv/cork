@@ -1,9 +1,18 @@
 # Roadmap
 
 **Current Milestone:** M10 — Release prep
-**Status:** M0–M9 complete; M10 in progress (F34 complete; F33 + F35 partial; F36 planned)
+**Status:** M0–M8 complete; M9 partially complete; M10 in progress; M11 planned
 
-Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERSEDED`
+**Product arc:** v1 (desktop MVP) → v2 (CRDT real-time sync) → v3 (graph + deep AI) → future (mobile, plugins, hosted relay). See `PROJECT.md §Long-term Direction` and `§Strategic Decisions` for rationale.
+
+**Prioritization principles:**
+1. Ship v1 first — nothing else matters until the app is in users' hands
+2. Sync unlocks growth — multi-device is the #1 request for every notes app; v2 is sync
+3. AI is a differentiator, not the product — keep it contextual and grounded
+4. Desktop before mobile — get the core right on one platform first
+5. Community before revenue — build trust and adoption first
+
+Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `PARTIAL` · `DEFERRED` · `SUPERSEDED`
 
 ---
 
@@ -20,7 +29,6 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 - ESLint flat config + Prettier
 - Vitest + React Testing Library + Playwright
 - GitHub Actions CI: lint, typecheck, test, smoke build
-- Migrate `/prototype` Layout C into the real app's `src/`
 
 ---
 
@@ -38,156 +46,112 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 
 **[F03 — Index (SQLite)](../features/F03-index/spec.md)** — COMPLETE
 
-- SQLite schema: `notes`, `links`, `tags`, `note_tags`
+- SQLite schema: `notes`, `links`, `tags`, `note_tags`, `assets`
 - Markdown parser (Rust `pulldown-cmark`) extracting title, tags, wikilinks
 - Incremental indexer reactive to file watcher events
 - Frontend IPC client + Zustand store fed by index
 
 ---
 
-## M2 — Shell (Layout C)
+## M2 — Shell
 
-**Goal:** The Layout C UI from the prototype, fully wired to the real app skeleton, but rendering empty/placeholder data.
+**Goal:** The app shell with navigation, command palette, and note editing surface.
 
 ### Features
 
-**[F04 — Shell](../features/F04-shell/spec.md)** — COMPLETE
+**[F04 — Shell](../features/F04-shell/spec.md)** — COMPLETE (layout diverged from original spec)
 
-- Slim icon rail
-- Top bar with breadcrumb, ⌘K trigger, Nova nota
-- Drawer container (Search/Folders/Recent/Starred/Tags routes)
+- ~~Rail + TopBar layout (original Layout C)~~ → Triage 3-column layout (Sidebar + NotesList + EditorPane)
 - Command palette modal (⌘K)
-- View router: `home` ↔ `note(id)`
-- Keyboard shortcuts wiring
+- View router + keyboard shortcuts wiring
+- StatusBar, EmptyVault, HelpModal
+
+_Note: The original spec described a Rail+TopBar "Layout C" shell. The actual implementation is a Triage layout matching the Linear-style prototype. The spec should be rewritten to match._
 
 ---
 
 ## M3 — Editor & Note view
 
-**Goal:** Open a note from Home, see the editor, edit, autosave, navigate via wikilinks.
+**Goal:** Open a note, see the editor, edit, autosave, navigate via wikilinks.
 
 ### Features
 
 **[F05 — Editor](../features/F05-editor/spec.md)** — COMPLETE
 
 - CodeMirror 6 setup (markdown lang, theme, save-on-change debounced)
-- Shiki-powered code blocks in preview
-- KaTeX math rendering
-- Mermaid diagram rendering
-- Task list rendering (`- [ ] / - [x]`)
+- Markdown preview (split pane)
 - Wikilink autocomplete in editor
+- Editor toolbar, save indicator, conflict banner
 
-**[F08 — Note view + Meta panel](../features/F08-note-view/spec.md)** — COMPLETE
+**[F08 — Note view + Meta panel](../features/F08-note-view/spec.md)** — PARTIAL
 
-- Note layout (editor + right meta)
-- Right panel: Outline, Backlinks, Recents
-- Breadcrumb + Back-to-Home in top bar
-- AI suggestion card (UI stub only)
+- ~~Dedicated NoteView layout wrapper~~ → EditorPane in triage serves as note view
+- Inspector panel: Outline, Tags, Properties, Backlinks, AI sections
+- ~~Breadcrumb + Back-to-Home in top bar~~ → not applicable in triage layout
+- ~~AI suggestion card stub~~ → replaced by F32 Inspector AI section
 
 **[F09 — Wikilinks & Backlinks](../features/F09-wikilinks-backlinks/spec.md)** — COMPLETE
 
 - Wikilink resolution (title → note id) via index
-- Click-to-navigate
+- CM6 decorations + click-to-navigate
 - Create-on-click for missing notes
-- Backlinks query + panel data
+- Backlinks query + Inspector section
 
-**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — COMPLETE
+**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — PARTIAL
 
-- Tauri `asset://` protocol w/ runtime-scoped vault path
-- `assets` SQLite table populated by extended F02 walker
-- Inline image rendering (`![[image.png]]` and `![alt](path)`)
-- Drop / paste image → write into attachments folder
-- Click non-image asset opens with OS handler (safelist + confirm)
+- ✅ Tauri `asset://` protocol w/ runtime-scoped vault path
+- ✅ `assets` SQLite table populated by extended F02 walker
+- ✅ Backend IPC commands + frontend ingest service
+- ❌ Drop / paste image UI in editor — not implemented
+- ❌ Inline image rendering in preview — not implemented
 
 **[F12 — Folder Ops & Rename UX](../features/F12-folder-ops/spec.md)** — COMPLETE
 
 - `folders.create/rename/move/trash` IPC
-- FoldersDrawer context menu + inline rename
-- Drag-and-drop notes between folders (`@dnd-kit/core`)
-- Inline rename of active note in TopBar
-- Bulk selection (Shift/⌘ click) + bulk move/delete/tag/pin/star
-
----
-
-## M4 — Discovery surfaces
-
-**Goal:** Home dashboard and all 5 drawers powered by the index.
-
-### Features
-
-**[F06 — Home Dashboard](../features/F06-home/spec.md)** — COMPLETE
-
-- Hero (greeting + counts + "Abrir nota de hoje")
-- Pinned grid
-- Recents list
-- By Tag pills
-- All Notes grid
-
-**[F07 — Drawers](../features/F07-drawers/spec.md)** — COMPLETE
-
-- Drawer container & open/close from rail
-- Search drawer (full-text via SQLite FTS5)
-- Folders drawer (tree)
-- Recent drawer
-- Starred drawer
-- Tags drawer
+- Drag-and-drop notes between folders
+- Inline rename, bulk selection + bulk move/delete/tag/pin
 
 ---
 
 ## M5 — Polish
 
-**Goal:** Daily notes, multi-vault, settings — everything else the mock implies.
+**Goal:** Settings, search, markdown extensions.
 
 ### Features
-
-**[F10 — Daily Notes & Multi-vault](../features/F10-daily-multivault/spec.md)** — COMPLETE
-
-- Daily note creation + template
-- Multi-vault list & switcher
-- Active-vault persistence
 
 **[F13 — Settings + In-note Search + App Menu](../features/F13-settings-search-menu/spec.md)** — COMPLETE
 
 - Settings panel (General/Editor/Files/Markdown/Daily/Advanced)
-- Per-vault overrides in `<vault>/.noxe/config.json`
+- Per-vault overrides in `<vault>/.cork/config.json`
 - ⌘F / ⌘⇧F via `@codemirror/search`
 - Native OS menubar (Tauri 2 menu API)
 - `tauri-plugin-window-state` window persistence + off-screen recovery
-- About + diagnostics + shortcuts list
 
-**[F14 — Markdown Extensions](../features/F14-markdown-extensions/spec.md)** — COMPLETE
+**[F14 — Markdown Extensions](../features/F14-markdown-extensions/spec.md)** — PARTIAL
 
-- Obsidian-style callouts (`> [!note]` etc.)
-- Footnotes (`[^1]`)
-- Highlight (`==text==`)
-- Parity gate extended for both Rust + TS pipelines
-- CM6 decorations for callout/footnote markers
+- ✅ Parser extracts callouts, footnotes, highlight (`==text==`) for indexing
+- ✅ Settings toggles for each extension
+- ❌ CM6 rendering decorations for callouts/footnotes/highlights — not implemented
+- ❌ Preview rendering of extensions — not implemented
 
 ---
 
 ## M6 — Contextual AI
 
-**Goal:** Replace the generic AI chat panel with three tightly integrated AI features the user actually reaches for: passive insights on the open note, generation from a topic, and slash-commands inside the editor. All built on a small skills + cache + telemetry foundation.
+**Goal:** AI infrastructure + contextual AI features built on local CLI subprocesses.
 
 ### Features
 
-**[F20 — AI Chat Panel](../features/F20-ai-chat/spec.md)** — SUPERSEDED by F21–F24
+**[F20 — AI Chat Panel](../features/F20-ai-chat/spec.md)** — SUPERSEDED by F21–F23
 
-- Generic right-side chat panel scoped to the open note. Shipped, then deprecated when we realised the user already has `claude` / `copilot` CLIs for free-form Q&A. Spec stays as historical reference.
+- Generic chat panel — never shipped or removed. Spec stays as historical reference.
 
 **[F21 — AI Infrastructure](../features/F21-ai-infrastructure/spec.md)** — COMPLETE
 
-- Skills system: bundled defaults + `~/.noxe/skills/*.md` overrides
+- Skills system: bundled defaults + `~/.cork/skills/*.md` overrides
 - BLAKE3 content-hash cache (`ai_cache` table)
 - Telemetry (`ai_calls` table) + Settings → AI → Usage
 - `ai_run_skill` runner orchestrates skill → cache → subprocess
-- Removes the F20 chat UI (low-level subprocess primitive stays)
-
-**[F22 — Insights sidebar](../features/F22-ai-insights/spec.md)** — COMPLETE
-
-- Three on-demand cards on note view (Summary / Suggested tags / Related notes), each opt-in, cached via F21
-- Related-notes resolves LLM titles back to real vault notes via the index
-- Removed the F20 chat panel + rail button
 
 **[F23 — Generate note from topic](../features/F23-generate-note/spec.md)** — COMPLETE
 
@@ -195,70 +159,57 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 - Background generation with sonner toast; per-skill `timeout_secs` for longer drafts
 - Disabled-AI state shows Settings link instead of input
 
-**[F24 — Slash commands](../features/F24-slash-commands/spec.md)** — COMPLETE
-
-- `/ai-summarize`, `/ai-rephrase`, `/ai-expand`, `/ai-continue` in CodeMirror slash menu
-- Single undoable replace edit per command; failures preserve original text
-- Disabled-AI state surfaces a toast instead of running
-
 ---
 
 ## M6.5 — Productivity surfaces
 
-**Goal:** Add lightweight productivity capture on top of the AI features so daily workflows live inside the app.
+**Goal:** Lightweight productivity capture.
 
 ### Features
 
-**[F25 — Per-vault Todos](../features/F25-todos/spec.md)** — COMPLETE
+**[F25 — Per-vault Todos](../features/F25-todos/spec.md)** — PARTIAL
 
-- `<vault>/.noxe/todos.json` store + dedicated TodosView
-- Side rail icon, Cmd+Shift+T global shortcut, system tray entry
-- Cmd+K palette: open todos searchable + "Create todo" fallback
-- Pending-todos card on Home (refined under F29)
+- ✅ `<vault>/.cork/todos.json` Rust backend (load/save/CRUD)
+- ✅ Scaffold seeds starter todos
+- ✅ Service registration for tray event → navigate
+- ❌ TodosView UI — not implemented
+- ❌ Command palette integration — not implemented
 
 ---
 
 ## M7 — Sync, layout & onboarding
 
-**Goal:** Make the app usable across machines, configurable for two work modes, and welcoming on first run.
+**Goal:** Make the app usable across machines and welcoming on first run.
 
 ### Features
 
 **[F26 — GitHub sync](../features/F26-github-sync/spec.md)** — COMPLETE
 
-- Per-vault GitHub remote synced over SSH with `ssh.github.com:443` auto-fallback
-- Full vault sweep on every commit (notes, frontmatter, todos, settings, attachments) — not only the actively edited note
-- Structured commit messages: Conventional Commits style + ISO timestamp + file-list trailer + `Source: noxe-app`
+- Per-vault GitHub remote synced with repo-scoped HTTPS PAT auth (SSH Deploy Key as fallback)
+- Full vault sweep on every commit (notes, frontmatter, todos, settings, attachments)
+- Structured commit messages: Conventional Commits + ISO timestamp + file-list trailer
 - Conflict-as-copy resolution (no merge UX)
+- Heartbeat pull worker (12s cycle)
 
 **[F27 — Cross-account sync auth pivot](../features/F27-cross-account-sync-pivot/spec.md)** — ABSORBED INTO F26
 
-- HTTPS+PAT path removed entirely after macOS Keychain / `gh` helpers proved un-bypassable
-- SSH Deploy Key + `ssh.github.com:443` chosen as the single sanctioned path
-- `gh`-CLI auto-create removed; user creates the empty repo and pastes the SSH URL
+**[F28 — Dual layout modes (Focus + Triage)](../features/F28-dual-layout-modes/spec.md)** — PARTIAL
 
-**[F28 — Dual layout modes (Focus + Triage)](../features/F28-dual-layout-modes/spec.md)** — COMPLETE
-
-- New `layout.mode` setting (`focus` = current 2-col; `triage` = 3-col nav + list + view)
-- Cmd+Shift+M toggle (Cmd+Shift+L stays bound to theme cycle)
-- Custom Splitter, NavPane, ListPane, TriageBody components; Rail buttons mode-aware
-- Auto-fallback to `focus` on viewports < 1100px (prevents cramped triage)
-
-**[F29 — Home polish](../features/F29-home-polish/spec.md)** — COMPLETE
-
-- Denser NoteCard with tag pills; HomeHero with primary CTA; AllNotesGrid 2-col compact
-- Pending-todos card surfaced on Home; AllNotes hidden behind a toggle to keep Home short
+- ✅ Triage 3-column layout (Sidebar + NotesList + EditorPane) — fully implemented as default
+- ❌ Focus 2-column layout — not implemented
+- ❌ ⌘⇧M toggle between modes — not implemented
+- ❌ Auto-fallback on narrow viewports — not applicable (only triage exists)
 
 **[F30 — Onboarding scaffold](../features/F30-onboarding-scaffold/spec.md)** — COMPLETE
 
-- New vaults seeded with Welcome.md / Daily / Projects / Meetings / Cheatsheet + 3 starter todos
-- Idempotent via `.noxe/scaffold.json` marker; respects pre-existing files
+- New vaults seeded with Welcome.md, README, starter folders + todos
+- Idempotent via `.cork/scaffold.json` marker; respects pre-existing files
 
 ---
 
 ## M8 — Post-v1 polish
 
-**Goal:** Cover the highest-leverage gaps the original v1 scope deferred: theming, single-pane editor, capture/inbox, local history, calendar surface.
+**Goal:** Theming, capture/inbox, local history.
 
 ### Features
 
@@ -267,57 +218,40 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 - `appearance.theme` setting honoured end-to-end; CSS-variable dark palette
 - Settings select + command palette + native menu "Toggle theme" cycle
 - System mode reacts to OS `prefers-color-scheme` changes at runtime
-- Shiki preview swaps `vitesse-light` ↔ `vitesse-dark` per theme
 
-**[F16 — Live Preview Editor](../features/F16-live-preview-editor/spec.md)** — COMPLETE
+**[F17 — Inbox + In-place Moves + Tray Quick Capture](../features/F17-inbox-and-quick-capture/spec.md)** — PARTIAL
 
-- Single-pane WYSIWYG-feel for inline markdown (headings, emphasis, code, links, wikilinks)
-- Stays on CodeMirror 6 — markdown on disk is preserved byte-for-byte
-- Split-pane Preview retained for blocks (KaTeX / Mermaid / Shiki) when needed
+- ✅ Canonical `Inbox/` folder as default new-note target
+- ✅ macOS tray icon + `CmdOrCtrl+Shift+I` global quick-capture
+- ❌ Folder selector in NoteMetaPanel (move-from-inside-the-note) — not implemented
+- ❌ Dedicated Inbox view/filter — not implemented
 
-**[F17 — Inbox + In-place Moves + Tray Quick Capture](../features/F17-inbox-and-quick-capture/spec.md)** — COMPLETE
+**[F18 — Local Git Sync (v0/v1 local-only)](../features/F18-local-git-sync/spec.md)** — PARTIAL
 
-- Canonical `Inbox/` folder + selected-folder "new note" target
-- Folder selector in `NoteMetaPanel` (move-from-inside-the-note)
-- macOS tray icon + `CmdOrCtrl+Shift+I` global quick-capture
-- Close-to-tray behaviour; tray "Quit" actually quits
-
-**[F18 — Local Git Sync (v0/v1 local-only)](../features/F18-local-git-sync/spec.md)** — COMPLETE
-
-- Per-vault `git init` + auto-commit on save (5 s debounce)
-- `NoteHistory` panel in `NoteMetaPanel` with restore-to-revision
-- Silent degrade when `git` is not on PATH
-- Diff view + GitHub push deferred to F26 / future
-
-**[F19 — Calendar / Agenda View (v0/v1)](../features/F19-calendar-view/spec.md)** — COMPLETE
-
-- `{ kind: "calendar" }` shell route + Rail entry (`CalendarBlank`)
-- Month grid with prev/next/today; daily-note + `event:`-frontmatter indicators
-- Agenda side-panel listing the day's notes; "Create daily note" CTA
-- Google Calendar OAuth + week/day views remain in DEFERRED
+- ✅ Per-vault `git init` + auto-commit on save (debounced)
+- ✅ Silent degrade when `git` is not on PATH
+- ✅ Backend: commit history retrieval, restore-to-revision commands
+- ❌ NoteHistory UI panel — not implemented (backend ready, no frontend)
 
 ---
 
 ## M9 — Prototype fidelity
 
-**Goal:** Close the gap between shipped UI and the locked Linear-style prototype the user keeps validating against.
+**Goal:** Close the gap between shipped UI and the Linear-style prototype.
 
 ### Features
 
 **[F31 — Triage layout fidelity](../features/F31-triage-fidelity/spec.md)** — COMPLETE
 
-- Hide app rail + TopBar inside triage mode (prototype has neither)
-- NavPane: brand row, big "New note" CTA, "Folders" naming, footer with `~/path · N notes`, settings gear
-- Enriched ListPane cards: title + HH:mm + 2-line excerpt + tag pills; auto-select first note
-- Tool-overlay carve-out so Graph / Calendar / Todos don't replace column 3
-- Resizable splitter polish + placeholder when no note is open
+- Triage body: Sidebar + NotesList + EditorPane + optional InspectorPane
+- StatusBar component
+- Resizable splitter
 
-**[F32 — Inspector redesign + tag list bug + dark-mode chip fix](../features/F32-inspector-redesign/spec.md)** — COMPLETE
+**[F32 — Inspector redesign](../features/F32-inspector-redesign/spec.md)** — COMPLETE
 
-- Inspector restructured into four ordered sections: Outline / Properties / AI / History
-- Fixes NavPane "Tags" empty state when the index publishes after subscription
-- ⌘K chip moved off `bg-white` so it stays legible in dark mode
+- Inspector restructured into five sections: Outline / Tags / Properties / Backlinks / AI
 - Collapsible right panel toggled from the header
+- Section headers with consistent typography
 
 ---
 
@@ -329,45 +263,85 @@ Status legend: `PLANNED` · `IN PROGRESS` · `COMPLETE` · `DEFERRED` · `SUPERS
 
 **[F33 — Release config (signing, notarization, updater)](../features/F33-release-config/spec.md)** — PARTIAL
 
-- macOS Developer ID signing + Apple notarisation + stapling _(deferred — needs cert)_
-- Windows Authenticode code signing _(deferred — needs cert)_
-- Linux AppImage + .deb with detached GPG signature _(deferred — needs key)_
-- `tauri-plugin-updater` installed as a Rust dependency, **not yet registered** (needs signing keypair)
-- ✅ Settings → Updates panel scaffolded with auto-check toggle (default on) + "View releases" link
+- `tauri-plugin-updater` installed as Rust dependency, **not yet registered**
+- ✅ Settings → Updates panel scaffolded
+- ❌ macOS/Windows/Linux signing — deferred (needs certs)
 
 **[F34 — App icons + branding](../features/F34-icons-branding/spec.md)** — COMPLETE
 
-- ✅ Source `brand/noxe-logo.svg` (square) + `brand/noxe-wordmark.svg`
-- ✅ Full Tauri icon matrix regenerated (replaces placeholder rocket)
-- ✅ Favicon, NavPane glyph, HelpModal + AboutDialog wordmark
-- ✅ Brand tokens (indigo + ink/paper + Inter / JetBrains Mono) documented in `brand/README.md`
-- _Deferred to follow-up:_ EmptyVault wordmark hero, README banner, GitHub social-preview asset
+- Source SVGs in `brand/`
+- Full Tauri icon matrix (icns, ico, PNGs, tray)
 
 **[F35 — Crash + error reporting (opt-in)](../features/F35-crash-reporting/spec.md)** — PARTIAL
 
 - ✅ Always-on local crash log (Rust panic hook + JS error boundary) with rotation
-- ✅ Mandatory redactor (vault path, token shapes, body length) shared by local + wire
-- ✅ Settings → Diagnostics section: Open crash log, Refresh, Preview payload
-- _Deferred to **F36 — Remote crash reporting opt-in:**_ tri-state remote reporter (off / ask / on), Sentry endpoint config, one-time consent modal, HTTP transport.
+- ✅ Mandatory redactor + Settings → Diagnostics section
+- ❌ Remote reporting → deferred to F36
 
 **F36 — Remote crash reporting opt-in** — PLANNED
 
-- Tri-state `diagnostics.crashReporting` setting (off / ask / on); default off
-- Configurable endpoint (default: Sentry-compatible DSN baked at build time)
-- One-time consent modal quoting the privacy contract before first remote send
-- Rust transport with 5-second timeout + silent local-only failure mode
-- Inherits the F35 redactor unchanged — same on disk as on the wire
+- Tri-state setting, Sentry endpoint, consent modal
+- Inherits F35 redactor unchanged
 
 ---
 
-## Future Considerations (deferred from v1)
+## M11 — Real-time Sync
 
+**Goal:** Multi-device sync that works without conflicts, powered by CRDTs (Yjs) with git as the archive/backup layer.
+
+### Features
+
+**[F37 — CRDT Sync (Yjs + Git)](../features/F37-crdt-sync/spec.md)** — PLANNED
+
+- Yjs `Y.Doc` per note, CM6 bound via `y-codemirror.next`
+- Local persistence in `.cork/crdt/` (DiskProvider)
+- Periodic flush: CRDT → `.md` → git commit (FlushService)
+- WebSocket relay + WebRTC P2P providers
+- Awareness protocol: remote cursors + presence
+- Standalone `cork-relay` server (self-hostable)
+
+**[F38 — Relay Auth & Identity](../features/F38-relay-auth/spec.md)** — PLANNED
+
+- GitHub OAuth as identity provider for hosted relay (self-hosted keeps shared-secret HMAC)
+- Relay issues JWT (Ed25519, 15-min access + 30-day refresh); GitHub token used only for identity, then discarded
+- Vault registration on relay (ownership-based room authorization)
+- Device management (list/revoke connected devices)
+- OS keychain storage for tokens (`keyring` crate)
+- Provider-agnostic JWT claims — architecture supports adding passkeys/email later
+
+---
+
+## Removed features (specs deleted)
+
+These features had specs marked COMPLETE but were never implemented. They were part of an earlier layout concept (Layout C with Rail + TopBar + Home Dashboard + Drawers) that was replaced by the current Triage layout.
+
+- **F06 — Home Dashboard** — Hero, pinned grid, recents, tag pills. Never built; triage NotesList replaced it.
+- **F07 — Drawers** — 5 sidebar drawers. Never built; triage Sidebar replaced them.
+- **F10 — Daily Notes & Multi-vault** — Daily note creation, vault switcher. Never built.
+- **F16 — Live Preview Editor** — CM6 decoration plugins to hide markdown markers. Never built.
+- **F19 — Calendar / Agenda View** — Month grid, agenda panel. Never built.
+- **F22 — AI Insights sidebar** — Summary/Tags/Related cards in note meta. Never built.
+- **F24 — Slash Commands** — /ai-summarize, /ai-rephrase, etc. in CM6 slash menu. Never built.
+- **F29 — Home Polish** — Refinement of F06 which didn't exist. Never built.
+
+---
+
+## Future Considerations (deferred)
+
+- **Home dashboard** — a landing/overview surface (revisit from F06)
+- **Daily notes** — daily note creation + template (revisit from F10)
+- **Multi-vault switcher** — switch between vaults in-app (revisit from F10)
+- **Live preview editor** — WYSIWYG-feel inline markdown (revisit from F16)
+- **Calendar / agenda** — month grid with daily notes (revisit from F19)
+- **AI insights** — passive note analysis cards (revisit from F22)
+- **AI slash commands** — inline editor AI actions (revisit from F24)
 - **Graph view** — interactive node-link visualization
-- **Sync (E2E)** — Yjs/Automerge over self-hostable backend
-- **Git-as-backend** — alternative sync path
-- **Real AI** — semantic search, RAG chat, real link suggestions
+- **Real AI** — semantic search, RAG chat, local embeddings
 - **Mobile** (Capacitor / React Native) and **Web** targets
 - **Importers** — Obsidian, Inkdrop, Notion
 - **Executable code blocks** (notebook mode)
 - **Plugin / extensibility API**
 - **Public link sharing / collaboration**
+- **Hosted relay service** — managed Cork Sync (product decision post-F37/F38)
+- **E2E encryption** — encrypt CRDT updates before relay transmission
+- **Passkey / email auth** — additional identity providers for relay (F38 architecture supports it)

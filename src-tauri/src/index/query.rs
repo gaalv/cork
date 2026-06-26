@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 
+use crate::error::sql_error;
 use crate::vault::NoteEntry;
 use crate::IpcError;
 
@@ -15,6 +16,13 @@ pub struct TagCount {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct NoteTagPair {
+    pub note_id: String,
+    pub tag: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LinkRow {
     pub src_note_id: String,
     pub target_text: String,
@@ -22,26 +30,6 @@ pub struct LinkRow {
     pub position: i64,
     pub alias: Option<String>,
     pub ambiguous: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchResult {
-    #[serde(flatten)]
-    pub note: NoteEntry,
-    pub snippet: String,
-    pub rank: f64,
-}
-
-pub fn recent(conn: &Connection, limit: Option<usize>) -> Result<Vec<NoteEntry>, IpcError> {
-    let limit = limit.unwrap_or(20).min(200) as i64;
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, path, folder, title, size, mtime FROM notes ORDER BY mtime DESC LIMIT ?1",
-        )
-        .map_err(sql_error)?;
-    let rows = stmt.query_map([limit], note_from_row).map_err(sql_error)?;
-    collect_notes(rows)
 }
 
 pub fn all_paged(
@@ -112,18 +100,86 @@ pub fn by_id(conn: &Connection, id: &str) -> Result<Option<NoteEntry>, IpcError>
     .map_err(sql_error)
 }
 
-pub fn starred(conn: &Connection) -> Result<Vec<NoteEntry>, IpcError> {
+pub fn pinned(conn: &Connection) -> Result<Vec<NoteEntry>, IpcError> {
     let mut stmt = conn
         .prepare(
             "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime
              FROM notes n
              JOIN frontmatter fm ON fm.note_id = n.id
-             WHERE fm.key = 'starred' AND fm.value = 'true'
+             WHERE fm.key = 'pinned' AND fm.value = 'true'
              ORDER BY n.mtime DESC",
         )
         .map_err(sql_error)?;
     let rows = stmt.query_map([], note_from_row).map_err(sql_error)?;
     collect_notes(rows)
+}
+
+pub fn tags_create(conn: &Connection, tag: &str) -> Result<(), IpcError> {
+    conn.execute("INSERT OR IGNORE INTO tags (tag) VALUES (?1)", [tag])
+        .map_err(sql_error)?;
+    Ok(())
+}
+
+pub fn tags_rename(conn: &Connection, old_tag: &str, new_tag: &str) -> Result<Vec<PathBuf>, IpcError> {
+    // Get all note paths that have this tag
+    let mut stmt = conn
+        .prepare(
+            "SELECT n.path FROM notes n
+             JOIN note_tags nt ON nt.note_id = n.id
+             WHERE nt.tag = ?1",
+        )
+        .map_err(sql_error)?;
+    let note_paths: Vec<PathBuf> = stmt
+        .query_map([old_tag], |row| {
+            Ok(PathBuf::from(row.get::<_, String>(0)?))
+        })
+        .map_err(sql_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(sql_error)?;
+
+    // Ensure new tag exists
+    conn.execute("INSERT OR IGNORE INTO tags (tag) VALUES (?1)", [new_tag])
+        .map_err(sql_error)?;
+    // Update note_tags references
+    conn.execute(
+        "UPDATE OR IGNORE note_tags SET tag = ?2 WHERE tag = ?1",
+        [old_tag, new_tag],
+    )
+    .map_err(sql_error)?;
+    // Clean up any remaining old references (duplicates from OR IGNORE)
+    conn.execute("DELETE FROM note_tags WHERE tag = ?1", [old_tag])
+        .map_err(sql_error)?;
+    // Delete old tag
+    conn.execute("DELETE FROM tags WHERE tag = ?1", [old_tag])
+        .map_err(sql_error)?;
+
+    Ok(note_paths)
+}
+
+pub fn tags_delete(conn: &Connection, tag: &str) -> Result<Vec<PathBuf>, IpcError> {
+    // Get all note paths that have this tag
+    let mut stmt = conn
+        .prepare(
+            "SELECT n.path FROM notes n
+             JOIN note_tags nt ON nt.note_id = n.id
+             WHERE nt.tag = ?1",
+        )
+        .map_err(sql_error)?;
+    let note_paths: Vec<PathBuf> = stmt
+        .query_map([tag], |row| {
+            Ok(PathBuf::from(row.get::<_, String>(0)?))
+        })
+        .map_err(sql_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(sql_error)?;
+
+    // Delete from note_tags and tags
+    conn.execute("DELETE FROM note_tags WHERE tag = ?1", [tag])
+        .map_err(sql_error)?;
+    conn.execute("DELETE FROM tags WHERE tag = ?1", [tag])
+        .map_err(sql_error)?;
+
+    Ok(note_paths)
 }
 
 pub fn tags_list(conn: &Connection) -> Result<Vec<TagCount>, IpcError> {
@@ -141,6 +197,21 @@ pub fn tags_list(conn: &Connection) -> Result<Vec<TagCount>, IpcError> {
             Ok(TagCount {
                 tag: row.get(0)?,
                 count: row.get(1)?,
+            })
+        })
+        .map_err(sql_error)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)
+}
+
+pub fn tags_note_map(conn: &Connection) -> Result<Vec<NoteTagPair>, IpcError> {
+    let mut stmt = conn
+        .prepare("SELECT note_id, tag FROM note_tags ORDER BY tag ASC")
+        .map_err(sql_error)?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(NoteTagPair {
+                note_id: row.get(0)?,
+                tag: row.get(1)?,
             })
         })
         .map_err(sql_error)?;
@@ -233,36 +304,6 @@ pub fn graph(conn: &Connection) -> Result<GraphData, IpcError> {
     Ok(GraphData { nodes, edges })
 }
 
-pub fn search(
-    conn: &Connection,
-    query: &str,
-    limit: Option<usize>,
-) -> Result<Vec<SearchResult>, IpcError> {
-    let limit = limit.unwrap_or(20).min(200) as i64;
-    let mut stmt = conn
-        .prepare(
-            "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime,
-                    snippet(notes_fts, 2, '<mark>', '</mark>', '…', 12) AS snippet,
-                    bm25(notes_fts) AS rank
-             FROM notes_fts
-             JOIN notes n ON n.id = notes_fts.id
-             WHERE notes_fts MATCH ?1
-             ORDER BY rank
-             LIMIT ?2",
-        )
-        .map_err(sql_error)?;
-    let rows = stmt
-        .query_map(params![query, limit], |row| {
-            Ok(SearchResult {
-                note: note_from_row(row)?,
-                snippet: row.get(6)?,
-                rank: row.get(7)?,
-            })
-        })
-        .map_err(sql_error)?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)
-}
-
 fn collect_notes(
     rows: impl Iterator<Item = rusqlite::Result<NoteEntry>>,
 ) -> Result<Vec<NoteEntry>, IpcError> {
@@ -293,13 +334,10 @@ fn note_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NoteEntry> {
         path: PathBuf::from(row.get::<_, String>(1)?),
         folder: row.get(2)?,
         title: row.get(3)?,
+        snippet: String::new(),
         size: size as u64,
         mtime: row.get(5)?,
     })
-}
-
-fn sql_error(error: rusqlite::Error) -> IpcError {
-    IpcError::Other(error.to_string())
 }
 
 #[cfg(test)]
@@ -314,7 +352,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let conn = seeded_db(&dir.path().join("index.sqlite"));
 
-        assert_eq!(recent(&conn, Some(1)).unwrap()[0].id, "n2");
+        assert_eq!(all_paged(&conn, 0, 1).unwrap()[0].id, "n2");
         assert_eq!(
             all_paged(&conn, 1, 2)
                 .unwrap()
@@ -328,7 +366,7 @@ mod tests {
         assert_eq!(by_folder(&conn, "work").unwrap().len(), 2);
         assert_eq!(by_id(&conn, "n1").unwrap().unwrap().title, "Alpha");
         assert!(by_id(&conn, "missing").unwrap().is_none());
-        assert_eq!(starred(&conn).unwrap()[0].id, "n2");
+        assert_eq!(pinned(&conn).unwrap()[0].id, "n2");
     }
 
     #[test]
@@ -361,17 +399,6 @@ mod tests {
         assert_eq!(incoming[0].src_note_id, "n1");
     }
 
-    #[test]
-    fn searches_title_and_body_with_fts() {
-        let dir = tempdir().unwrap();
-        let conn = seeded_db(&dir.path().join("index.sqlite"));
-
-        let results = search(&conn, "rust", Some(10)).unwrap();
-
-        assert_eq!(results[0].note.id, "n2");
-        assert!(results[0].snippet.contains("rust"));
-    }
-
     fn seeded_db(path: &std::path::Path) -> Connection {
         let conn = open_index_at(path).unwrap();
         conn.execute(
@@ -400,7 +427,7 @@ mod tests {
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO frontmatter (note_id, key, value) VALUES ('n2', 'starred', 'true'), ('n3', 'starred', 'false')",
+            "INSERT INTO frontmatter (note_id, key, value) VALUES ('n2', 'pinned', 'true'), ('n3', 'pinned', 'false')",
             [],
         )
         .unwrap();

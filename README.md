@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./.github/assets/noxe-banner.png" alt="Noxe" width="640" />
+  <img src="./.github/assets/cork-banner.png" alt="Cork" width="640" />
 </p>
 
 <p align="center">
@@ -18,13 +18,13 @@ Built with **Tauri 2 + React 19 + Vite 7 + TypeScript 5 + Tailwind v4 + CodeMirr
 
 ### macOS
 
-After downloading the `.dmg`, drag Noxe into `/Applications`, then run **once**:
+After downloading the `.dmg`, drag Cork into `/Applications`, then run **once**:
 
 ```bash
-xattr -d com.apple.quarantine /Applications/Noxe.app
+xattr -d com.apple.quarantine /Applications/Cork.app
 ```
 
-Or right-click → **Open** the first time and confirm the Gatekeeper prompt. After that, Noxe launches normally.
+Or right-click → **Open** the first time and confirm the Gatekeeper prompt. After that, Cork launches normally.
 
 ### Windows
 
@@ -32,13 +32,13 @@ Double-click the `.msi`. SmartScreen will warn _"Windows protected your PC"_. Cl
 
 ### Linux
 
-Download the `.AppImage`, `chmod +x Noxe-*.AppImage`, and run it. The bundle is unsigned; verify the SHA-256 against the release notes if you want extra confidence.
+Download the `.AppImage`, `chmod +x Cork-*.AppImage`, and run it. The bundle is unsigned; verify the SHA-256 against the release notes if you want extra confidence.
 
 > Once we publish v1.0 with signed binaries, this section will collapse to a single sentence. Track progress at [F33 — Release config](./.specs/features/F33-release-config/spec.md).
 
 ## Reporting bugs
 
-Noxe is local-first and **does not** send crash reports automatically. If you hit one:
+Cork is local-first and **does not** send crash reports automatically. If you hit one:
 
 1. Open **Settings → Diagnostics → Open crash log**.
 2. Copy the last few JSON lines (vault paths and credentials are already redacted on disk).

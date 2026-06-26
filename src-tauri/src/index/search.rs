@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection};
 use serde::Serialize;
 
+use crate::error::sql_error;
 use crate::vault::NoteEntry;
 use crate::IpcError;
 
@@ -82,13 +83,10 @@ fn note_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NoteEntry> {
         path: PathBuf::from(row.get::<_, String>(1)?),
         folder: row.get(2)?,
         title: row.get(3)?,
+        snippet: String::new(),
         size: size as u64,
         mtime: row.get(5)?,
     })
-}
-
-fn sql_error(error: rusqlite::Error) -> IpcError {
-    IpcError::Other(error.to_string())
 }
 
 #[cfg(test)]

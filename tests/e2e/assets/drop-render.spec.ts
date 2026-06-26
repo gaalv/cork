@@ -10,7 +10,7 @@ type WriteAttachmentInput = {
 };
 
 type TestWindow = Window & {
-  __noxeNodeWriteAttachment?: (input: WriteAttachmentInput) => Promise<{ path: string; relativePath: string }>;
+  __corkNodeWriteAttachment?: (input: WriteAttachmentInput) => Promise<{ path: string; relativePath: string }>;
 };
 
 const vaultPath = path.resolve("test-results/f11-assets-vault");
@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
   fs.rmSync(vaultPath, { recursive: true, force: true });
   fs.mkdirSync(vaultPath, { recursive: true });
 
-  await page.exposeFunction("__noxeNodeWriteAttachment", async (input: WriteAttachmentInput) => {
+  await page.exposeFunction("__corkNodeWriteAttachment", async (input: WriteAttachmentInput) => {
     const relativeDir = input.vaultRelDir ?? "_attachments";
     const destinationDir = path.join(vaultPath, relativeDir);
     fs.mkdirSync(destinationDir, { recursive: true });
@@ -37,10 +37,10 @@ test("drops an image into the editor and renders it in preview", async ({ page }
   await page.goto("/");
   await page.evaluate(
     ({ note, vault }) => {
-      window.__noxe_test_writeAttachment = (input) =>
-        (window as TestWindow).__noxeNodeWriteAttachment?.(input) ?? Promise.reject(new Error("missing test writer"));
-      window.__noxe_test_setVault?.(vault, [
-        { id: "drop-render", path: note, title: "Drop Render", folder: "", size: 1, mtime: 1 },
+      window.__cork_test_writeAttachment = (input) =>
+        (window as TestWindow).__corkNodeWriteAttachment?.(input) ?? Promise.reject(new Error("missing test writer"));
+      window.__cork_test_setVault?.(vault, [
+        { id: "drop-render", path: note, title: "Drop Render", folder: "", snippet: "", size: 1, mtime: 1 },
       ]);
     },
     { note: notePath, vault: vaultPath },

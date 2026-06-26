@@ -7,8 +7,9 @@ const sampleNotes = [
   {
     id: "sample-welcome",
     path: path.join(fixturePath, "Welcome.md"),
-    title: "Welcome to Noxe",
+    title: "Welcome to Cork",
     folder: "",
+    snippet: "",
     size: 56,
     mtime: Date.UTC(2026, 4, 6, 12, 0),
   },
@@ -17,6 +18,7 @@ const sampleNotes = [
     path: path.join(fixturePath, "projects/Roadmap.md"),
     title: "Roadmap Notes",
     folder: "projects",
+    snippet: "",
     size: 43,
     mtime: Date.UTC(2026, 4, 6, 11, 0),
   },
@@ -25,7 +27,7 @@ const sampleNotes = [
 test("opens palette and routes from note back to home", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(
-    ({ vaultPath, notes }) => window.__noxe_test_setVault?.(vaultPath, notes),
+    ({ vaultPath, notes }) => window.__cork_test_setVault?.(vaultPath, notes),
     { vaultPath: fixturePath, notes: sampleNotes },
   );
 

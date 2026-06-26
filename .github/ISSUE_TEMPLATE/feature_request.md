@@ -7,7 +7,7 @@ labels: ["enhancement", "triage"]
 
 ## What's the problem?
 
-<!-- What are you trying to do that Noxe currently can't or makes hard? -->
+<!-- What are you trying to do that Cork currently can't or makes hard? -->
 
 ## Proposed solution
 

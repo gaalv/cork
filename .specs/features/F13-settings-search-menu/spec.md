@@ -33,7 +33,7 @@ Several settings (auto-rewrite links, attachments folder, daily path, theme stub
 
 1. WHEN user presses ⌘, OR triggers "Open Settings" from palette THEN system SHALL open Settings as a modal/panel with sections: General, Editor, Files & Vaults, Markdown, Daily Notes, Advanced.
 2. WHEN user changes a setting THEN it SHALL persist via `tauri-plugin-store` and apply immediately (no restart).
-3. WHEN setting is per-vault THEN UI SHALL show a "Per-vault" badge and write to `<vault>/.noxe/config.json`.
+3. WHEN setting is per-vault THEN UI SHALL show a "Per-vault" badge and write to `<vault>/.cork/config.json`.
 4. WHEN setting is global THEN write to app store.
 
 #### Settings inventory (v1)
@@ -67,7 +67,7 @@ Several settings (auto-rewrite links, attachments folder, daily path, theme stub
 ### P1: Native app menu ⭐ MVP
 
 1. WHEN app boots THEN system SHALL register an OS menu with:
-   - **Noxe / File** — New Note (⌘N), Open Vault… (⌘O), Recent Vaults (submenu), Close (⌘W on macOS only).
+   - **Cork / File** — New Note (⌘N), Open Vault… (⌘O), Recent Vaults (submenu), Close (⌘W on macOS only).
    - **Edit** — Undo/Redo, Cut/Copy/Paste, Find (⌘F), Replace (⌘⇧F), Select All.
    - **View** — Toggle Preview (⌘.), Command Palette (⌘K), Toggle Drawer (⌘\\).
    - **Notes** — Today's Daily (⌘D), Star (⌘S), Pin.

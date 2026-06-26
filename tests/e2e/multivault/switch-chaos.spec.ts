@@ -9,8 +9,8 @@ test("preserves unsaved edits through failed and rapid vault switches", async ({
   await page.goto("/");
   await page.evaluate(
     ({ aPath, bPath, alpha }) => {
-      window.__noxe_test_setVault?.(aPath, [{ id: "alpha", path: alpha, title: "Alpha", folder: "", size: 1, mtime: 1 }]);
-      window.__noxe_test_setRecentVaults?.([
+      window.__cork_test_setVault?.(aPath, [{ id: "alpha", path: alpha, title: "Alpha", folder: "", snippet: "", size: 1, mtime: 1 }]);
+      window.__cork_test_setRecentVaults?.([
         { path: aPath, name: "vault-a", missing: false },
         { path: bPath, name: "vault-b", missing: false },
       ]);
@@ -33,7 +33,7 @@ test("preserves unsaved edits through failed and rapid vault switches", async ({
 
   await page.evaluate(
     ({ bPath, beta }) => {
-      window.__noxe_test_setVault?.(bPath, [{ id: "beta", path: beta, title: "Beta", folder: "", size: 1, mtime: 1 }]);
+      window.__cork_test_setVault?.(bPath, [{ id: "beta", path: beta, title: "Beta", folder: "", snippet: "", size: 1, mtime: 1 }]);
     },
     { bPath: vaultB, beta: betaPath },
   );
@@ -41,9 +41,9 @@ test("preserves unsaved edits through failed and rapid vault switches", async ({
 
   await page.evaluate(
     ({ aPath, alpha, body }) => {
-      type FixtureNote = { id: string; path: string; title: string; folder: string; size: number; mtime: number; body?: string };
-      const note: FixtureNote = { id: "alpha", path: alpha, title: "Alpha", folder: "", size: body.length, mtime: 2, body };
-      window.__noxe_test_setVault?.(aPath, [note]);
+      type FixtureNote = { id: string; path: string; title: string; folder: string; snippet: string; size: number; mtime: number; body?: string };
+      const note: FixtureNote = { id: "alpha", path: alpha, title: "Alpha", folder: "", snippet: "", size: body.length, mtime: 2, body };
+      window.__cork_test_setVault?.(aPath, [note]);
     },
     { aPath: vaultA, alpha: alphaPath, body: typed },
   );

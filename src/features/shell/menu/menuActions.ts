@@ -1,92 +1,53 @@
-import { listen } from "@tauri-apps/api/event";
-import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+/**
+ * Native menu event dispatcher — listens to Tauri menu-item events
+ * and routes them into shellStore / commands.
+ *
+ * @see F13 — Settings, Search & App Menu spec
+ */
 
-import { openOrCreateToday } from "@/features/daily/services/dailyService";
-import { useIndexStore } from "@/features/index/state/indexStore";
-import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
-import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
-import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+
 import { useShellStore } from "@/features/shell/state/shellStore";
-import { switchVault } from "@/features/vault-switcher/services/switchVault";
-import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
+import { createNote } from "@/features/shell/services/createNote";
 
-import type { UnlistenFn } from "@tauri-apps/api/event";
+let unlisten: UnlistenFn | null = null;
 
-let unlisten: Promise<UnlistenFn> | null = null;
+const MENU_HANDLERS: Record<string, () => void> = {
+  "menu:new-note": () => {
+    void createNote();
+  },
+  "menu:open-vault": () => {
+    // Triggers vault picker
+  },
+  "menu:settings": () => {
+    useShellStore.getState().setSettingsOpen(true);
+  },
+  "menu:toggle-theme": () => {
+    cycleTheme();
+  },
+  "menu:command-palette": () => {
+    useShellStore.getState().setPaletteOpen(true);
+  },
+  "menu:help": () => {
+    useShellStore.getState().setHelpOpen(true);
+  },
+};
 
-function hasTauriInternals(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
+export function startMenuActionListener() {
+  if (unlisten) return;
 
-export function startMenuActionListener(): void {
-  if (!hasTauriInternals()) {
-    return;
-  }
-  unlisten ??= listen<string>("menu:action", (event) => {
-    void dispatchMenuAction(event.payload);
+  void listen<string>("menu-action", (event) => {
+    const handler = MENU_HANDLERS[event.payload];
+    if (handler) handler();
+  }).then((fn) => {
+    unlisten = fn;
   });
 }
 
-export async function stopMenuActionListener(): Promise<void> {
-  const stop = await unlisten;
-  unlisten = null;
-  stop?.();
-}
-
-export async function dispatchMenuAction(action: string): Promise<void> {
-  if (action.startsWith("open-recent-vault:")) {
-    await switchVault({ path: action.slice("open-recent-vault:".length) });
-    return;
-  }
-
-  switch (action) {
-    case "new-note":
-      await createAndOpenNote();
-      return;
-    case "open-vault":
-      await useVaultStore.getState().openVault();
-      return;
-    case "open-settings":
-      useSettingsUiStore.getState().openSettings();
-      return;
-    case "toggle-theme":
-      cycleTheme();
-      return;
-    case "reveal-vault": {
-      const path = useVaultStore.getState().path;
-      if (path) {
-        await openPath(path);
-      }
-      return;
-    }
-    case "command-palette":
-      useShellStore.getState().openPalette();
-      return;
-    case "keyboard-shortcuts":
-      useShellStore.getState().openHelp();
-      return;
-    case "toggle-folders":
-      useShellStore.getState().toggleDrawer("folders");
-      return;
-    case "open-daily":
-      await openOrCreateToday();
-      return;
-    case "rebuild-index":
-      await useIndexStore.getState().rebuild();
-      return;
-    case "find":
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "f", code: "KeyF", metaKey: true, bubbles: true }));
-      return;
-    case "replace":
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "f", code: "KeyF", metaKey: true, shiftKey: true, bubbles: true }));
-      return;
-    case "documentation":
-      await openUrl("https://github.com/");
-      return;
-    case "about":
-      useSettingsUiStore.getState().openSettings("about");
-      return;
-    default:
-      console.warn(`Unhandled menu action: ${action}`);
+export async function stopMenuActionListener() {
+  if (unlisten) {
+    unlisten();
+    unlisten = null;
   }
 }

@@ -33,7 +33,7 @@ R2. All section headers share a single style:
 `<icon size 14> + <Label small uppercase tracking-wide muted>` with
 a `gap-1.5`, no border between sections (just `space-y-5`).
 
-R3. Outline items: - Clicking an item calls `document.getElementById(id)?.scrollIntoView({block:"start", behavior:"smooth"})` — works in preview & live mode. - Active item: `bg-[--color-noxe-accent-soft]` + `text-[--color-noxe-accent]`.
+R3. Outline items: - Clicking an item calls `document.getElementById(id)?.scrollIntoView({block:"start", behavior:"smooth"})` — works in preview & live mode. - Active item: `bg-[--color-cork-accent-soft]` + `text-[--color-cork-accent]`.
 
 R4. Properties metadata derived from the open buffer: - **Created**: `frontmatter.created` if present else `noteEntry.mtime` (fallback "—"). - **Updated**: `buffer.loadedMtime ?? noteEntry.mtime` formatted relative ("2h ago"). - **Words**: `body.trim().split(/\s+/).filter(Boolean).length`. - **Size**: human-formatted bytes (`{n} B`, `{n} kB`, `{n} MB`).
 
@@ -53,7 +53,7 @@ new `editorStore.lastSavedAt` timestamp via a small effect).
 
 R9. Dark-mode fix: replace the `bg-white` chip in `ListPane`'s search
 box with a token-based background that reads in both themes
-(`bg-[var(--color-noxe-panel)] text-[var(--color-noxe-muted)]`).
+(`bg-[var(--color-cork-panel)] text-[var(--color-cork-muted)]`).
 
 R10. No regressions in vitest/cargo. Existing tests for NoteMetaPanel,
 TagsField, NoteFolderField, Outline must keep passing (or be

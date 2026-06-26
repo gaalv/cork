@@ -11,6 +11,7 @@ pub mod vcs;
 
 pub use error::IpcError;
 
+use tauri::image::Image;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, WebviewWindow, WindowEvent};
@@ -90,19 +91,18 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
         .accelerator("CmdOrCtrl+Shift+T")
         .build(app)?;
     let sync = MenuItemBuilder::with_id("tray:sync-now", "Sync now").build(app)?;
-    let show = MenuItemBuilder::with_id("tray:show", "Show Noxe").build(app)?;
+    let show = MenuItemBuilder::with_id("tray:show", "Show Cork").build(app)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItemBuilder::with_id("tray:quit", "Quit Noxe").build(app)?;
+    let quit = MenuItemBuilder::with_id("tray:quit", "Quit Cork").build(app)?;
 
     let menu = MenuBuilder::new(app).items(&[&quick, &todos, &sync, &show, &separator, &quit]).build()?;
 
-    let icon = app
-        .default_window_icon()
-        .cloned()
-        .ok_or_else(|| tauri::Error::AssetNotFound("tray icon".into()))?;
+    let icon = Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
+        .map_err(|_| tauri::Error::AssetNotFound("tray icon".into()))?;
 
-    TrayIconBuilder::with_id("noxe-tray")
+    TrayIconBuilder::with_id("cork-tray")
         .icon(icon)
+        .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -187,10 +187,10 @@ pub fn run() {
             }
             build_tray(app.handle())?;
             if let Err(err) = register_quick_capture_shortcut(app.handle()) {
-                eprintln!("noxe: failed to register global shortcut: {err}");
+                eprintln!("cork: failed to register global shortcut: {err}");
             }
             if let Err(err) = register_open_todos_shortcut(app.handle()) {
-                eprintln!("noxe: failed to register open-todos shortcut: {err}");
+                eprintln!("cork: failed to register open-todos shortcut: {err}");
             }
             Ok(())
         })
@@ -231,15 +231,18 @@ pub fn run() {
             vault::bulk::notes_bulk_move,
             vault::bulk::notes_bulk_trash,
             vault::bulk::notes_bulk_set_frontmatter,
-            index::notes_recent,
             index::notes_all_paged,
             index::notes_by_tag,
             index::notes_by_folder,
             index::notes_by_id,
             // === F07 Drawers ===
-            index::notes_starred,
+            index::notes_pinned,
             index::notes_search,
+            index::tags_create,
+            index::tags_rename,
+            index::tags_delete,
             index::tags_list,
+            index::tags_note_map,
             index::links_outgoing,
             index::links_incoming,
             index::links_graph,
@@ -251,6 +254,7 @@ pub fn run() {
             vcs::vcs_history,
             vcs::vcs_restore,
             vcs::remote::vcs_remote_enable,
+            vcs::remote::vcs_remote_clone,
             vcs::remote::vcs_remote_disable,
             vcs::remote::vcs_remote_sync_now,
             vcs::remote::vcs_generate_deploy_key,
@@ -261,6 +265,7 @@ pub fn run() {
             ai::ai_skills_list,
             ai::ai_stats,
             ai::ai_telemetry_clear,
+            ai::ai_providers_available,
             // === F25 Todos ===
             todos::todos_load,
             todos::todos_save,

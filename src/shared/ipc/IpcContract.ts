@@ -34,6 +34,11 @@ export type TagCount = {
   count: number;
 };
 
+export type NoteTagPair = {
+  noteId: string;
+  tag: string;
+};
+
 export type LinkRow = {
   srcNoteId: string;
   targetText: string;
@@ -222,10 +227,6 @@ export type IpcCommandMap = {
     args: { offset: number; limit: number };
     result: NoteEntry[];
   };
-  "notes.recent": {
-    args: { limit?: number };
-    result: NoteEntry[];
-  };
   "notes.byTag": {
     args: { tag: string };
     result: NoteEntry[];
@@ -239,17 +240,29 @@ export type IpcCommandMap = {
     result: NoteEntry | null;
   };
   // === F07 Drawers ===
-  "notes.starred": {
+  "notes.pinned": {
     args: undefined;
     result: NoteEntry[];
   };
-  "notes.search": {
-    args: { query: string; limit?: number };
-    result: SearchResult[];
+  "tags.create": {
+    args: { tag: string };
+    result: null;
   };
   "tags.list": {
     args: undefined;
     result: TagCount[];
+  };
+  "tags.noteMap": {
+    args: undefined;
+    result: NoteTagPair[];
+  };
+  "tags.rename": {
+    args: { oldTag: string; newTag: string };
+    result: null;
+  };
+  "tags.delete": {
+    args: { tag: string };
+    result: null;
   };
   "links.outgoing": {
     args: { noteId: string };
@@ -292,6 +305,10 @@ export type IpcCommandMap = {
     args: { url?: string; token?: string };
     result: RemoteInfo;
   };
+  "vcs.remoteClone": {
+    args: { url: string; token: string; parentPath?: string };
+    result: VaultPath;
+  };
   "vcs.remoteDisable": {
     args: undefined;
     result: RemoteInfo;
@@ -328,6 +345,10 @@ export type IpcCommandMap = {
   "ai.telemetryClear": {
     args: undefined;
     result: number;
+  };
+  "ai.providersAvailable": {
+    args: undefined;
+    result: ProvidersAvailable;
   };
   // === F25 Todos ===
   "todos.load": {
@@ -404,6 +425,11 @@ export type AiStats = {
   bySkill: Array<{ skillId: string; calls: number; tokens: number }>;
   cacheRows: number;
   cacheBytes: number;
+};
+
+export type ProvidersAvailable = {
+  claude: boolean;
+  copilot: boolean;
 };
 
 export type AiSkillError = {

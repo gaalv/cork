@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Noxe",
+  "productName": "Cork",
   "version": "0.1.0",
-  "identifier": "com.noxe.app",
+  "identifier": "com.cork.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -13,13 +13,15 @@
     "windows": [
       {
         "label": "main",
-        "title": "Noxe",
-        "width": 1280,
+        "title": "Cork",
+        "width": 1440,
         "height": 800,
         "minWidth": 960,
         "minHeight": 600,
         "theme": "Light",
-        "titleBarStyle": "Visible"
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 18, "y": 18 }
       }
     ],
     "security": {

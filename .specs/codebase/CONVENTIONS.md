@@ -1,6 +1,6 @@
 # Code Conventions
 
-These are the rules every agent (human or AI) must follow when writing code in Noxe.
+These are the rules every agent (human or AI) must follow when writing code in Cork.
 
 ## Naming
 
@@ -73,7 +73,7 @@ Keep components < 200 lines. If bigger, split into subcomponents in the same fol
 
 - All design tokens go in `@theme` inside `src/index.css`. Do not hardcode hex values in components.
 - Use `clsx` + `tailwind-merge` (`cn(...)`) helper from `@/shared/ui/cn.ts` for conditional classes.
-- Avoid arbitrary values when a token exists. `text-[var(--color-noxe-ink)]` is allowed and preferred over `text-stone-900`.
+- Avoid arbitrary values when a token exists. `text-[var(--color-cork-ink)]` is allowed and preferred over `text-stone-900`.
 - No CSS Modules, no styled-components, no Emotion. Tailwind only.
 
 ## State management
@@ -82,6 +82,53 @@ Keep components < 200 lines. If bigger, split into subcomponents in the same fol
 - Cross-feature state → Zustand store in `shared/stores/`.
 - Server-ish state (notes, index queries) → custom hooks in the feature that call IPC and cache locally; no React Query in v1 (keeps deps lean).
 - No prop-drilling deeper than 2 levels — lift to a store.
+
+## Optimistic mutations
+
+All data mutations (tags, pins, notes, folders) follow ONE consistent pattern. Mutations live in Zustand stores — components never call IPC directly for writes.
+
+**Pattern (store side):**
+
+```ts
+mutationMethod: async (args) => {
+  // 1. Snapshot previous state
+  const prev = get().someState;
+
+  // 2. Optimistic update (synchronous — UI reflects immediately)
+  set((state) => ({ someState: applyChange(state.someState, args) }));
+
+  // 3. Persist via IPC (async)
+  try {
+    await client.namespace.command(args);
+  } catch (err) {
+    // 4. Rollback on error and re-throw
+    set({ someState: prev });
+    throw err;
+  }
+}
+```
+
+**Pattern (component side):**
+
+```tsx
+try {
+  await store.mutationMethod(args);
+  toast.success("Done");
+} catch {
+  toast.error("Failed"); // store already rolled back
+}
+```
+
+**Exception — tag-on-note mutations:** `addTagToNote` / `removeTagFromNote` are synchronous (no IPC persist) because persistence is handled by the editor's auto-save of frontmatter. The optimistic update still applies immediately so counters and lists reflect the change.
+
+**Where mutations live:**
+- `indexStore`: `toggleNotePin`, `addTagToNote`, `removeTagFromNote`, `createTag`, `renameTag`, `deleteTag`
+- `vaultStore`: `trashNote`, `moveNote`
+
+**Rules:**
+- Components MUST NOT call `client.*` for writes — use store mutation methods.
+- Components handle toast feedback only; stores handle state + persistence + rollback.
+- The `index:updated` event from the Rust indexer triggers `refreshIndex()` which reconciles optimistic state with the truth in SQLite. This is the background consistency mechanism.
 
 ## Error handling
 

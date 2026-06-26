@@ -41,16 +41,14 @@ type Watcher = Debouncer<notify_debouncer_mini::notify::RecommendedWatcher>;
 pub type VaultEventSink = Arc<dyn Fn(VaultFileChangedEvent) + Send + Sync + 'static>;
 
 pub struct WatcherHandle {
+    /// Held for its `Drop` — stops the filesystem watcher when released.
+    #[allow(dead_code)]
     debouncer: Watcher,
 }
 
 impl WatcherHandle {
     fn new(debouncer: Watcher) -> Self {
         Self { debouncer }
-    }
-
-    pub fn keepalive(&self) {
-        let _ = &self.debouncer;
     }
 }
 

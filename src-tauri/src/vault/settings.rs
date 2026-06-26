@@ -31,7 +31,7 @@ pub struct GitRemoteSettings {
 }
 
 pub fn load_vault_settings(vault_root: &Path) -> Result<VaultSettings, IpcError> {
-    let config_path = vault_root.join(".noxe").join("config.json");
+    let config_path = vault_root.join(".cork").join("config.json");
     if !config_path.exists() {
         return Ok(VaultSettings::default());
     }
@@ -40,7 +40,7 @@ pub fn load_vault_settings(vault_root: &Path) -> Result<VaultSettings, IpcError>
 }
 
 pub fn save_vault_settings(vault_root: &Path, settings: &VaultSettings) -> Result<(), IpcError> {
-    let config_dir = vault_root.join(".noxe");
+    let config_dir = vault_root.join(".cork");
     fs::create_dir_all(&config_dir)?;
     let text = serde_json::to_string_pretty(settings).map_err(|err| IpcError::Parse(err.to_string()))?;
     fs::write(config_dir.join("config.json"), text)?;
@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn loads_camel_case_vault_config() {
         let dir = tempdir().unwrap();
-        let config_dir = dir.path().join(".noxe");
+        let config_dir = dir.path().join(".cork");
         fs::create_dir(&config_dir).unwrap();
         fs::write(
             config_dir.join("config.json"),

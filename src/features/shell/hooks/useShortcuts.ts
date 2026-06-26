@@ -1,155 +1,68 @@
+/**
+ * Global keyboard shortcuts — wired via tinykeys.
+ *
+ * @see F13 — Settings (⌘,)
+ * @see F15 — Theme toggle (⌘⇧L)
+ */
+
 import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
 
-import { openOrCreateToday } from "@/features/daily/services/dailyService";
-import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
-import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
-import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
-import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
-import { openToolView } from "@/features/shell/services/openToolView";
 import { useShellStore } from "@/features/shell/state/shellStore";
-import { useVaultStore } from "@/features/vault/state/vaultStore";
+import { useEditorStore } from "@/features/editor/state/editorStore";
+import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
+import { createNote } from "@/features/shell/services/createNote";
 
 export function useShortcuts() {
-  const openPalette = useShellStore((state) => state.openPalette);
-  const back = useShellStore((state) => state.back);
-  const forward = useShellStore((state) => state.forward);
-  const toggleDrawer = useShellStore((state) => state.toggleDrawer);
-  const lastDrawer = useShellStore((state) => state.lastDrawer);
-  const openHelp = useShellStore((state) => state.openHelp);
-  const openSettings = useSettingsUiStore((state) => state.openSettings);
-  const openVault = useVaultStore((state) => state.openVault);
-  const navigate = useShellStore((state) => state.navigate);
-
   useEffect(() => {
-    const onPaletteShortcut = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        openPalette();
-      }
-    };
-    window.addEventListener("keydown", onPaletteShortcut);
-
-    const onQuestionMark = (event: KeyboardEvent) => {
-      if (event.key !== "?" || isEditableTarget(event.target)) {
-        return;
-      }
-      event.preventDefault();
-      openHelp();
-    };
-    window.addEventListener("keydown", onQuestionMark);
-
     const unsubscribe = tinykeys(window, {
-      "$mod+k": (event) => {
+      // ⌘K — Command palette
+      "$mod+KeyK": (event) => {
         event.preventDefault();
-        openPalette();
+        useShellStore.getState().setPaletteOpen(true);
       },
-      "$mod+n": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
+      // ⌘, — Settings
+      "$mod+Comma": (event) => {
         event.preventDefault();
-        void createAndOpenNote();
+        useShellStore.getState().setSettingsOpen(true);
       },
-      "$mod+o": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
+      // ⌘N — New note
+      "$mod+KeyN": (event) => {
         event.preventDefault();
-        void openVault();
+        void createNote();
       },
-      "$mod+,": (event) => {
+      // ⌘S — Save note
+      "$mod+KeyS": (event) => {
         event.preventDefault();
-        openSettings();
+        void useEditorStore.getState().forceSave();
       },
-      "$mod+Shift+l": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
+      // ⌘. — Toggle inspector
+      "$mod+Period": (event) => {
+        event.preventDefault();
+        useShellStore.getState().toggleInspector();
+      },
+      // ⌘⇧L — Cycle theme
+      "$mod+Shift+KeyL": (event) => {
         event.preventDefault();
         cycleTheme();
       },
-      "$mod+d": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
+      // Escape — Close topmost overlay
+      "Escape": () => {
+        const shell = useShellStore.getState();
+        if (shell.paletteOpen) {
+          shell.setPaletteOpen(false);
+        } else if (shell.settingsOpen) {
+          shell.setSettingsOpen(false);
+        } else if (shell.helpOpen) {
+          shell.setHelpOpen(false);
+        } else if (shell.generateModalOpen) {
+          shell.setGenerateModalOpen(false);
+        } else if (shell.drawer) {
+          shell.setDrawer(null);
         }
-        event.preventDefault();
-        void openOrCreateToday();
-      },
-      "$mod+\\": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
-        event.preventDefault();
-        toggleDrawer(lastDrawer);
-      },
-      "$mod+[": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
-        event.preventDefault();
-        back();
-      },
-      "$mod+]": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
-        event.preventDefault();
-        forward();
-      },
-      "$mod+Shift+g": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
-        event.preventDefault();
-        openToolView("graph");
-      },
-      "$mod+Shift+c": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
-        event.preventDefault();
-        openToolView("calendar");
-      },
-      "$mod+Shift+m": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
-        event.preventDefault();
-        const store = useAppSettingsStore.getState();
-        void store.setLayoutMode(store.settings.layout.mode === "focus" ? "triage" : "focus");
-      },
-      "(\\?)": (event) => {
-        if (isEditableTarget(event.target)) {
-          return;
-        }
-        event.preventDefault();
-        openHelp();
       },
     });
 
-    return () => {
-      unsubscribe();
-      window.removeEventListener("keydown", onPaletteShortcut);
-      window.removeEventListener("keydown", onQuestionMark);
-    };
-  }, [
-    back,
-    forward,
-    lastDrawer,
-    navigate,
-    openHelp,
-    openPalette,
-    openSettings,
-    openVault,
-    toggleDrawer,
-  ]);
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  const tagName = target.tagName.toLowerCase();
-  return tagName === "input" || tagName === "textarea" || target.isContentEditable;
+    return unsubscribe;
+  }, []);
 }

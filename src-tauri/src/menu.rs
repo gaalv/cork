@@ -5,11 +5,11 @@ use crate::vault::VaultState;
 use crate::IpcError;
 
 pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, IpcError> {
-    let app_menu = SubmenuBuilder::new(app, "Noxe")
-        .item(&item(app, "about", "About Noxe", None)?)
+    let app_menu = SubmenuBuilder::new(app, "Cork")
+        .item(&item(app, "about", "About Cork", None)?)
         .item(&item(app, "open-settings", "Settings…", Some("CmdOrControl+,"))?)
         .separator()
-        .item(&PredefinedMenuItem::quit(app, Some("Quit Noxe")).map_err(menu_error)?)
+        .item(&PredefinedMenuItem::quit(app, Some("Quit Cork")).map_err(menu_error)?)
         .build()
         .map_err(menu_error)?;
 
@@ -40,13 +40,13 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, IpcErro
     let view = SubmenuBuilder::new(app, "View")
         .item(&item(app, "toggle-folders", "Toggle Folders", Some("CmdOrControl+\\"))?)
         .item(&item(app, "command-palette", "Command Palette", Some("CmdOrControl+K"))?)
-        .item(&item(app, "keyboard-shortcuts", "Keyboard Shortcuts", Some("?"))?)
+        .item(&item(app, "view:keyboard-shortcuts", "Keyboard Shortcuts", Some("?"))?)
         .build()
         .map_err(menu_error)?;
 
     let help = SubmenuBuilder::new(app, "Help")
         .item(&item(app, "documentation", "Documentation", None)?)
-        .item(&item(app, "keyboard-shortcuts", "Keyboard Shortcuts", None)?)
+        .item(&item(app, "help:keyboard-shortcuts", "Keyboard Shortcuts", None)?)
         .item(&item(app, "about", "About", None)?)
         .build()
         .map_err(menu_error)?;

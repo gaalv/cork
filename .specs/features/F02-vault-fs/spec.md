@@ -33,12 +33,12 @@ Notes live as plain `.md` files in a user-chosen folder ("vault"). The app must 
 
 ### P1: Open a vault ⭐ MVP
 
-**User Story:** As a user, I want to point Noxe at a folder of `.md` files, so I can start using it as my notes app.
+**User Story:** As a user, I want to point Cork at a folder of `.md` files, so I can start using it as my notes app.
 
 **Acceptance Criteria:**
 1. WHEN the user clicks "Open Vault" THEN the system SHALL open the OS native folder picker.
 2. WHEN the user picks a folder THEN the system SHALL persist its path in the app config and emit `vault.opened` to the frontend.
-3. WHEN Noxe starts and a vault is configured THEN the system SHALL auto-open it.
+3. WHEN Cork starts and a vault is configured THEN the system SHALL auto-open it.
 4. WHEN the chosen folder doesn't exist or is unreadable THEN the system SHALL show a toast and clear the configured vault.
 
 ---
@@ -81,7 +81,7 @@ Notes live as plain `.md` files in a user-chosen folder ("vault"). The app must 
 
 ### P1: Watch the vault ⭐ MVP
 
-**User Story:** As a user, I want changes I make in another app (Obsidian, VS Code) to show up in Noxe immediately.
+**User Story:** As a user, I want changes I make in another app (Obsidian, VS Code) to show up in Cork immediately.
 
 **Acceptance Criteria:**
 1. WHEN a vault is open THEN a Rust watcher (`notify` crate) SHALL run for that root.
@@ -148,5 +148,5 @@ Notes live as plain `.md` files in a user-chosen folder ("vault"). The app must 
 
 - [x] Opening a 5 000-note vault lists in < 1 s (walker remains O(n); benchmark gate deferred to F03 large-vault harness).
 - [x] Saving a note while VS Code edits the same file does not produce two competing events to the frontend.
-- [x] Killing Noxe mid-save leaves the original file intact (atomic).
+- [x] Killing Cork mid-save leaves the original file intact (atomic).
 - [x] Watcher remains responsive after 1 hr of running with 100 saves/min (debounce/echo unit coverage added; long soak deferred to CI performance harness).

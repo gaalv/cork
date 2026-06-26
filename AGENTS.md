@@ -2,16 +2,16 @@
 
 Welcome, agent. This file is your launchpad. Read it top-to-bottom before doing anything else.
 
-## What is Noxe
+## What is Cork
 
-A local-first Markdown notes app for developers — Tauri 2 + React 19 + SQLite. Pure `.md` vault on disk, dev-grade editor, wikilinks, backlinks, command-driven UI. UI direction is **Layout C** (Minimal + Command). Stack mirrors [Tolaria](https://github.com/refactoringhq/tolaria).
+A local-first Markdown notes app for developers — Tauri 2 + React 19 + SQLite. Pure `.md` vault on disk, dev-grade editor, wikilinks, backlinks, command-driven UI. The layout is a **Triage 3-column layout** (Sidebar + NotesList + EditorPane) inspired by Linear. Stack mirrors [Tolaria](https://github.com/refactoringhq/tolaria).
 
 Full vision: `.specs/project/PROJECT.md`.
 
 ## Where to start
 
-1. Read `.specs/project/PROJECT.md` — vision, goals, scope.
-2. Read `.specs/project/ROADMAP.md` — find which milestone is current.
+1. Read `.specs/project/PROJECT.md` — vision, goals, scope, strategic decisions.
+2. Read `.specs/project/ROADMAP.md` — find which milestone is current. **Important:** check feature statuses carefully — some specs are PARTIAL (not fully implemented) and some were removed (never implemented).
 3. Read `.specs/project/STATE.md` — most recent decisions, blockers, deferred ideas. Treat decisions (`AD-NNN`) as **locked**; if you need to change one, update STATE.md first and explain why.
 4. Read `.specs/codebase/CONVENTIONS.md` — non-negotiable code rules.
 5. Read the spec for the feature you've been assigned: `.specs/features/Fxx-*/{spec.md,design.md,tasks.md}`.
@@ -33,10 +33,6 @@ Every feature is broken into atomic, traceable tasks. Multiple agents can work i
 - **Do not invent dependencies.** If a library isn't in `package.json` or `Cargo.toml`, your task must include adding it AND the spec must allow it. Otherwise stop and flag.
 - **Do not change conventions** (`CONVENTIONS.md`, `STRUCTURE.md`). If you think a rule should change, write a STATE.md entry and stop.
 - **Never commit secrets** or call external services. v1 is offline-first.
-- **Use the agent commit trailer:** every commit ends with
-  ```
-  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-  ```
 
 ### Workflow per task
 
@@ -70,7 +66,7 @@ If you need to make a decision the spec doesn't cover:
 - **React 19** + **Vite 7** in `src/`.
 - **Tailwind v4** with `@theme` tokens. No `tailwind.config.js`.
 - **CodeMirror 6** is the editor. Not BlockNote (AD-006).
-- **SQLite via rusqlite** in `src-tauri`. WAL mode (R-003).
+- **SQLite via rusqlite** in `src-tauri`. WAL mode.
 - **Zustand** for cross-feature state.
 - **Phosphor icons** + **Lucide** as fallback.
 - **Vitest + RTL** for unit/component, **Playwright** for E2E.
@@ -95,13 +91,39 @@ cd src-tauri && cargo test
 ```
 .specs/                  # source of truth — read first
   project/               # PROJECT, ROADMAP, STATE
-  codebase/              # STACK, ARCHITECTURE, CONVENTIONS, STRUCTURE, TESTING, CONCERNS
+  codebase/              # STACK, ARCHITECTURE, CONVENTIONS, STRUCTURE, TESTING
   features/Fxx-*/        # spec.md + design.md + tasks.md
-src/                     # frontend (one folder per feature)
-src-tauri/               # rust backend
-prototype/               # layout playground (read-only reference)
-tests/e2e/               # playwright specs
+src/                     # frontend
+  features/
+    ai/                  # AI infrastructure + generate note modal (F21, F23)
+    assets/              # Asset ingest service (F11 — backend only, no UI)
+    editor/              # CodeMirror 6 editor + Inspector panel (F05, F08, F32)
+    folder-ops/          # Folder CRUD, drag-drop, bulk ops (F12)
+    home/                # Empty — not yet implemented
+    index/               # SQLite index frontend hooks (F03)
+    quick-capture/       # Inbox + tray capture service (F17)
+    settings/            # Settings panel + theme runtime (F13, F15)
+    shell/               # Triage layout, command palette, view router (F04, F31)
+    sync/                # GitHub sync service (F26)
+    todos/               # Todos service registration (F25 — backend only, no UI)
+    vault/               # Vault store, lifecycle, hooks (F02)
+  shared/                # Cross-feature: stores, IPC, UI primitives, types
+src-tauri/               # Rust backend
+  src/
+    ai/                  # Skills, cache, runner, telemetry
+    assets/              # Asset protocol + DB
+    diagnostics.rs       # Crash logging + redactor
+    error.rs             # IpcError type
+    index/               # SQLite schema, worker, parser, FTS5
+    menu.rs              # Native OS menu
+    settings.rs          # App + vault settings bridge
+    todos/               # Todo CRUD on .cork/todos.json
+    vault/               # FS ops, watcher, scaffold, folders, bulk
+    vcs/                 # Git local + remote sync
+brand/                   # Logo SVGs, icon source
+tests/e2e/               # Playwright specs
 AGENTS.md                # this file
+CLAUDE.md                # Claude Code guidance
 ```
 
 ## Knowledge verification chain
@@ -117,7 +139,7 @@ Before introducing any technical claim:
 ## When you finish a feature
 
 1. All tasks in its `tasks.md` are `done`.
-2. The feature's spec.md "Requirement Traceability" table shows every requirement as `Verified`.
+2. The feature's spec.md requirements are verified.
 3. The feature folder has a passing E2E spec under `tests/e2e/`.
 4. Update `ROADMAP.md` status from `IN PROGRESS` → `COMPLETE`.
 5. Add a one-line `L-NNN` Lesson Learned to STATE.md if anything surprising happened.

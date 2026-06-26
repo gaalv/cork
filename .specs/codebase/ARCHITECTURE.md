@@ -58,7 +58,7 @@ flowchart LR
 
 ### Tauri IPC contract
 
-**Location:** `src/shared/ipc/IpcContract.ts` + `src-tauri/src/ipc/mod.rs`
+**Location:** `src/shared/ipc/IpcContract.ts` + `src-tauri/src/<module>/mod.rs` (each Rust module registers its own `#[tauri::command]` handlers; there is no nested `ipc/` aggregator folder).
 **Purpose:** Single source of truth for every command's name, payload, and result.
 **Implementation:** TS file lists `type Commands = { 'vault.open': { input: …; output: … } … }`. Rust handlers use `serde` types with matching field names. A small `cargo test` in `src-tauri/tests/` deserializes a fixture per command to verify shape.
 **Example:** `'vault.open' → { path: string } → { id: string; recents: Vault[] }`.
@@ -68,6 +68,30 @@ flowchart LR
 **Location:** `src-tauri/src/index/`
 **Purpose:** Keep SQLite in sync with the vault filesystem.
 **Implementation:** `notify` watcher emits FS events → debouncer (200 ms) → indexer applies a diff (insert/update/delete rows for changed files). On boot, full scan if the index is empty or stale.
+
+## CRDT Sync Layer (v2 — F37)
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                     Frontend (WebView)                         │
+│                                                               │
+│  CodeMirror 6 ←→ y-codemirror.next ←→ Y.Doc (Y.Text + Y.Map)│
+│                                          │                    │
+│                    ┌─────────────────────┼──────────────┐     │
+│                    ▼                     ▼              ▼     │
+│              DiskProvider          RelayProvider    P2PProvider│
+│           (.cork/crdt/*.yjs)      (y-websocket)    (y-webrtc) │
+│                    │                     │              │     │
+│              FlushService                │              │     │
+│           (CRDT → .md, 5s)              │              │     │
+│                    ▼                     ▼              ▼     │
+│              notes/*.md           cork-relay        WebRTC    │
+│                    │              (ws server)       (LAN/P2P) │
+│              git commit (F26)                                 │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Key principle:** Yjs runs entirely in the WebView (JS). Rust handles only binary `.yjs` file I/O via IPC — no per-keystroke IPC crossing. The `.md` file remains the human-readable source of truth; the `.yjs` is recoverable operational history.
 
 ## Data Flow
 
@@ -100,5 +124,5 @@ flowchart LR
 **Approach:** Feature-based on the frontend, module-based on the backend. No layered architecture (no `controllers/`/`services/`/`repositories/`); we group by what they DO, not what kind of code they ARE.
 
 **Module boundaries:**
-- A feature folder MAY import from `shared/*`. It MUST NOT import from another feature folder. Cross-feature collaboration goes through Zustand stores or shared types.
-- `src-tauri/src/ipc/` is the only module that defines public commands. `vault`, `index`, `watcher` are internal — they expose Rust functions but no Tauri commands directly.
+- A feature folder MAY import from `shared/*`. It MUST NOT import from another feature folder. Cross-feature collaboration goes through Zustand stores or shared types. The `_legacy/` and `_mock/` folders are exempt: they are internal staging areas, not features.
+- On the Rust side, each top-level module (`vault/`, `index/`, `assets/`, `ai/`, `todos/`, `vcs/`, plus `settings.rs` and `menu.rs`) registers its own Tauri commands; there is no central `ipc/` module. Internal Rust APIs between modules go through plain functions, not commands.

@@ -45,22 +45,22 @@ export class RootErrorBoundary extends Component<Props, State> {
             margin: "2rem auto",
             maxWidth: 560,
             borderRadius: 12,
-            border: "1px solid var(--color-noxe-border, #e4e4e7)",
-            background: "var(--color-noxe-panel, #fff)",
-            color: "var(--color-noxe-ink, #0F172A)",
+            border: "1px solid var(--color-cork-border, #e4e4e7)",
+            background: "var(--color-cork-panel, #fff)",
+            color: "var(--color-cork-ink, #0F172A)",
             fontFamily: "system-ui, sans-serif",
           }}
         >
           <h1 style={{ fontSize: 18, marginTop: 0 }}>Something went wrong.</h1>
-          <p style={{ color: "var(--color-noxe-muted, #6b7280)", fontSize: 14 }}>
-            Noxe caught an unexpected error and saved it locally. Your notes are safe.
+          <p style={{ color: "var(--color-cork-muted, #6b7280)", fontSize: 14 }}>
+            Cork caught an unexpected error and saved it locally. Your notes are safe.
           </p>
           <pre
             style={{
               fontSize: 12,
               padding: "0.75rem",
               borderRadius: 6,
-              background: "var(--color-noxe-panel-2, #f4f4f5)",
+              background: "var(--color-cork-panel-2, #f4f4f5)",
               overflow: "auto",
               maxHeight: 200,
             }}
@@ -74,8 +74,8 @@ export class RootErrorBoundary extends Component<Props, State> {
               marginTop: "0.75rem",
               padding: "0.5rem 1rem",
               borderRadius: 8,
-              border: "1px solid var(--color-noxe-border, #e4e4e7)",
-              background: "var(--color-noxe-accent, #3F3DFF)",
+              border: "1px solid var(--color-cork-border, #e4e4e7)",
+              background: "var(--color-cork-accent, #3F3DFF)",
               color: "white",
               cursor: "pointer",
             }}
@@ -111,10 +111,10 @@ export async function reportFrontendError(input: {
  */
 export function installGlobalErrorReporters(): void {
   if (typeof window === "undefined") return;
-  if ((window as { __noxeErrorReportersInstalled?: boolean }).__noxeErrorReportersInstalled) {
+  if ((window as { __corkErrorReportersInstalled?: boolean }).__corkErrorReportersInstalled) {
     return;
   }
-  (window as { __noxeErrorReportersInstalled?: boolean }).__noxeErrorReportersInstalled = true;
+  (window as { __corkErrorReportersInstalled?: boolean }).__corkErrorReportersInstalled = true;
 
   window.addEventListener("error", (event) => {
     void reportFrontendError({

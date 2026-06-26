@@ -13,10 +13,17 @@ const { scaffoldIfNeededMock, toastSuccessMock } = vi.hoisted(() => ({
   toastSuccessMock: vi.fn(),
 }));
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => undefined),
+}));
+
 vi.mock("@/shared/ipc/client", () => ({
   client: {
     vault: { scaffoldIfNeeded: scaffoldIfNeededMock },
     events: { on: vi.fn().mockResolvedValue(() => undefined) },
+    folders: { list: vi.fn().mockResolvedValue([]) },
+    notes: { pinned: vi.fn().mockResolvedValue([]) },
+    index: { search: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -36,7 +43,7 @@ beforeEach(() => {
   useShellStore.getState().reset();
   useVaultStore.setState({
     path: "/vault",
-    notes: [{ id: "n1", path: "/vault/A.md", title: "Alpha", folder: "", size: 1, mtime: 1 }],
+    notes: [{ id: "n1", path: "/vault/A.md", title: "Alpha", folder: "", snippet: "", size: 1, mtime: 1 }],
     isLoading: false,
     error: null,
     loadNotes: vi.fn().mockResolvedValue(undefined),
@@ -47,21 +54,19 @@ beforeEach(() => {
 });
 
 describe("Shell", () => {
-  it("composes the Layout C surfaces for an open vault", () => {
+  it("renders the triage layout for an open vault", () => {
     render(<Shell />);
 
-    expect(screen.getByTestId("rail")).toBeInTheDocument();
-    expect(screen.getByTestId("topbar")).toBeInTheDocument();
-    expect(screen.getByTestId("home-view")).toBeInTheDocument();
+    expect(screen.getByTestId("shell")).toBeInTheDocument();
+    expect(screen.getByText("Alpha")).toBeInTheDocument();
   });
 
-  it("hides shell chrome when no vault is open", () => {
+  it("shows empty vault state when no vault is open", () => {
     useVaultStore.setState({ path: null, notes: [] });
 
     render(<Shell />);
 
     expect(screen.getByRole("heading", { name: "Open a vault to begin" })).toBeInTheDocument();
-    expect(screen.queryByTestId("rail")).not.toBeInTheDocument();
   });
 
   it("toasts when an empty vault gets scaffolded", async () => {
@@ -73,6 +78,6 @@ describe("Shell", () => {
 
     await waitFor(() => expect(scaffoldIfNeededMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(loadNotes).toHaveBeenCalledTimes(2));
-    expect(toastSuccessMock).toHaveBeenCalledWith("Welcome to Noxe — example notes added");
+    expect(toastSuccessMock).toHaveBeenCalledWith("Welcome to Cork — example notes added");
   });
 });

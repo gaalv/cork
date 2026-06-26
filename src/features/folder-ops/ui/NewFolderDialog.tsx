@@ -1,80 +1,100 @@
-import { useState } from "react";
+/**
+ * NewFolderDialog — small modal to create a new folder.
+ *
+ * @see F08 — Folder Management spec
+ */
+
+import { useEffect, useRef, useState } from "react";
+import { X } from "@phosphor-icons/react";
 
 import { validateFolderName } from "@/features/folder-ops/services/folderOps";
 
-type NewFolderDialogProps = {
+export function NewFolderDialog({
+  parent,
+  open,
+  onClose,
+  onCreate,
+}: {
   parent: string;
   open: boolean;
-  onCreate: (parent: string, name: string) => Promise<void> | void;
   onClose: () => void;
-};
-
-export function NewFolderDialog({ parent, open, onCreate, onClose }: NewFolderDialogProps) {
+  onCreate: (parent: string, name: string) => Promise<void>;
+}) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  if (!open) {
-    return null;
-  }
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setError(null);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [open]);
 
-  async function submit() {
-    const validation = validateFolderName(name);
-    if (validation) {
-      setError(validation);
+  if (!open) return null;
+
+  const handleCreate = async () => {
+    const trimmed = name.trim();
+    const err = validateFolderName(trimmed);
+    if (err) {
+      setError(err);
       return;
     }
-    setIsSaving(true);
-    try {
-      await onCreate(parent, name.trim());
-      setName("");
-      onClose();
-    } catch (error) {
-      setError(errorMessage(error));
-    } finally {
-      setIsSaving(false);
-    }
-  }
+    await onCreate(parent, trimmed);
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-noxe-ink)]/25">
-      <form
-        aria-label="New folder"
-        className="w-[320px] rounded-2xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-4 shadow-xl"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-[var(--color-cork-ink)]/30"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[360px] rounded-2xl border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] shadow-2xl"
       >
-        <h2 className="text-[14px] font-semibold">New folder</h2>
-        <p className="mt-1 text-[12px] text-[var(--color-noxe-muted)]">Create inside {parent || "Vault"}</p>
-        <input
-          autoFocus
-          aria-label="Folder name"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            setError(null);
-          }}
-          className="mt-3 w-full rounded-lg border border-[var(--color-noxe-border)] px-3 py-2 text-[13px] outline-none focus-visible:border-[var(--color-noxe-border-strong)]"
-        />
-        {error && <p className="mt-2 text-[12px] text-red-600">{error}</p>}
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-full px-3 py-1.5 text-[12px] hover:bg-[var(--color-noxe-panel-2)]">
-            Cancel
+        <div className="flex items-center justify-between border-b border-[var(--color-cork-border)] px-4 py-3">
+          <h3 className="text-[14px] font-semibold">New folder</h3>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
+          >
+            <X size={14} />
           </button>
-          <button disabled={isSaving} className="rounded-full bg-[var(--color-noxe-primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-noxe-primary-foreground)] disabled:opacity-60">
+        </div>
+        <div className="px-4 py-3">
+          {parent && (
+            <p className="mb-2 text-[12px] text-[var(--color-cork-muted)]">
+              Inside <span className="font-medium">{parent}</span>
+            </p>
+          )}
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleCreate();
+              if (e.key === "Escape") onClose();
+            }}
+            placeholder="Folder name"
+            className="w-full rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-3 py-2 text-[14px] outline-none placeholder:text-[var(--color-cork-subtle)] focus:border-[var(--color-cork-accent)]"
+          />
+          {error && <p className="mt-1 text-[12px] text-red-500">{error}</p>}
+        </div>
+        <div className="flex justify-end border-t border-[var(--color-cork-border)] px-4 py-3">
+          <button
+            onClick={() => void handleCreate()}
+            disabled={!name.trim()}
+            className="rounded-full bg-[var(--color-cork-ink)] px-4 py-1.5 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
             Create
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "Could not create folder";
 }

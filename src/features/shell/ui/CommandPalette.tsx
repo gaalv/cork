@@ -1,389 +1,197 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Command } from "cmdk";
-import fuzzysort from "fuzzysort";
-import { toast } from "sonner";
+/**
+ * Command palette — ⌘K modal for note search and command execution.
+ *
+ * @see F13 — Settings, Search & App Menu spec
+ * @see F31 — Triage Fidelity (section ordering)
+ */
 
-import { openOrCreateToday } from "@/features/daily/services/dailyService";
-import { useGenerateNoteStore } from "@/features/ai/state/generateNoteStore";
-import { createAndOpenNote } from "@/features/note-ops/services/createAndOpenNote";
-import { cycleTheme } from "@/features/settings/runtime/themeRuntime";
-import { useSettingsUiStore } from "@/features/settings/state/settingsUiStore";
-import { commandsRegistry } from "@/features/shell/commands/registry";
-import { openToolView } from "@/features/shell/services/openToolView";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MagnifyingGlass, NotePencil, Plus, SidebarSimple, Sparkle } from "@phosphor-icons/react";
+
 import { useShellStore } from "@/features/shell/state/shellStore";
-import { useSyncStore } from "@/features/sync/state/syncStore";
-import { useIndexStore } from "@/features/index/state/indexStore";
-import { useTodosStore } from "@/features/todos/state/todosStore";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
 
-import type { CommandActionId, CommandRegistryItem } from "@/features/shell/commands/registry";
-import type { TagCount, Todo } from "@/shared/ipc/IpcContract";
-import type { NoteEntry } from "@/shared/ipc/types";
+const COMMANDS = [
+  { id: "new-note", label: "Create new note", hint: "\u2318 N", icon: <Plus size={14} /> },
+  {
+    id: "ai-generate",
+    label: "Generate note from topic",
+    hint: "AI",
+    icon: <Sparkle size={14} weight="fill" />,
+  },
+  {
+    id: "toggle-inspector",
+    label: "Toggle inspector",
+    hint: "\u2318 .",
+    icon: <SidebarSimple size={14} />,
+  },
+] as const;
 
-type PaletteItem =
-  | {
-      kind: "note";
-      id: string;
-      title: string;
-      folder: string;
-      section: "Recents" | "Pinned" | "Notes";
-    }
-  | { kind: "tag"; tag: string; count: number; section: "Tags" }
-  | { kind: "todo"; id: string; text: string; section: "Todos" }
-  | CommandRegistryItem;
+export function CommandPalette() {
+  const open = useShellStore((s) => s.paletteOpen);
+  const close = useShellStore((s) => s.setPaletteOpen);
+  const openNote = useShellStore((s) => s.openNote);
+  const notes = useVaultStore((s) => s.notes);
 
-type CommandPaletteProps = {
-  onCreateNote?: (title: string) => void;
-};
-
-export function CommandPalette({ onCreateNote }: CommandPaletteProps) {
-  const open = useShellStore((state) => state.paletteOpen);
-  const closePalette = useShellStore((state) => state.closePalette);
-  const navigate = useShellStore((state) => state.navigate);
-  const toggleDrawer = useShellStore((state) => state.toggleDrawer);
-  const notes = useVaultStore((state) => state.notes);
-  const recentNotes = useIndexStore((state) => state.recentNotes);
-  const tags = useIndexStore((state) => state.tags);
-  const rebuild = useIndexStore((state) => state.rebuild);
-  const openVault = useVaultStore((state) => state.openVault);
-  const openSettings = useSettingsUiStore((state) => state.openSettings);
-  const openTodosAll = useTodosStore((state) => state.todos);
-  const loadTodos = useTodosStore((state) => state.load);
-  const addTodo = useTodosStore((state) => state.add);
-  const toggleTodo = useTodosStore((state) => state.toggle);
   const [query, setQuery] = useState("");
-  const previousFocus = useRef<Element | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Reset state when palette opens
   useEffect(() => {
     if (open) {
-      previousFocus.current = document.activeElement;
       setQuery("");
-      void loadTodos();
-      return undefined;
+      setSelectedIndex(0);
+      // Focus input on next tick (after render)
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
-    if (previousFocus.current instanceof HTMLElement) {
-      previousFocus.current.focus();
-    }
-    return undefined;
-  }, [open, loadTodos]);
+  }, [open]);
 
-  const openTodos = useMemo(() => openTodosAll.filter((t) => !t.done), [openTodosAll]);
-  const items = useMemo(
-    () => buildPaletteItems(notes, recentNotes, tags, openTodos),
-    [notes, recentNotes, tags, openTodos],
+  const matches = useMemo(() => {
+    if (!query) return notes.slice(0, 8);
+    const q = query.toLowerCase();
+    return notes
+      .filter((n) => n.title.toLowerCase().includes(q) || n.path.toLowerCase().includes(q))
+      .slice(0, 10);
+  }, [notes, query]);
+
+  const totalItems = matches.length + COMMANDS.length;
+
+  const handleSelect = useCallback(
+    (index: number) => {
+      if (index < matches.length) {
+        openNote(matches[index].id);
+        close(false);
+      } else {
+        const cmd = COMMANDS[index - matches.length];
+        if (cmd.id === "ai-generate") {
+          useShellStore.getState().setGenerateModalOpen(true);
+        } else if (cmd.id === "toggle-inspector") {
+          useShellStore.getState().toggleInspector();
+        }
+        close(false);
+      }
+    },
+    [close, matches, openNote],
   );
-  const visibleItems = useMemo(() => filterPaletteItems(items, query), [items, query]);
 
-  if (!open) {
-    return null;
-  }
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((i) => (i + 1) % totalItems);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((i) => (i - 1 + totalItems) % totalItems);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        handleSelect(selectedIndex);
+      }
+    },
+    [handleSelect, selectedIndex, totalItems],
+  );
 
-  const sections = groupItems(visibleItems, query);
-  const hasResults = visibleItems.length > 0;
+  if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 pt-[12vh]"
-      onMouseDown={closePalette}
+      className="absolute inset-0 z-30 flex items-start justify-center bg-[var(--color-cork-ink)]/30 pt-[14vh]"
+      onClick={() => close(false)}
     >
-      <Command
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command palette"
-        className="w-[min(680px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] shadow-2xl"
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            closePalette();
-          }
-        }}
-        onMouseDown={(event) => event.stopPropagation()}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
+        className="w-[560px] overflow-hidden rounded-2xl border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] shadow-2xl"
       >
-        <Command.Input
-          autoFocus
-          aria-label="Command palette"
-          value={query}
-          onValueChange={setQuery}
-          placeholder="Go to note, command or search…"
-          className="w-full border-b border-[var(--color-noxe-border)] bg-transparent px-4 py-3 text-sm outline-none"
-        />
-        <Command.List className="max-h-[420px] overflow-y-auto p-2">
-          {!hasResults && (
-            <Command.Empty className="p-4 text-sm text-[var(--color-noxe-muted)]">
-              <p>No matches</p>
-              {query.trim() && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)]"
-                    onClick={() => {
-                      onCreateNote?.(query.trim());
-                      closePalette();
-                    }}
-                  >
-                    Create note “{query.trim()}”
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-md border border-[var(--color-noxe-border)] px-3 py-1.5 text-[12px] text-[var(--color-noxe-ink)] hover:border-[var(--color-noxe-border-strong)]"
-                    onClick={() => {
-                      const text = query.trim();
-                      void addTodo(text);
-                      toast.success("Todo added", { description: text, duration: 3000 });
-                      closePalette();
-                    }}
-                  >
-                    Create todo “{query.trim()}”
-                  </button>
-                </div>
-              )}
-            </Command.Empty>
-          )}
-          {sections.map(([section, sectionItems]) => (
-            <Command.Group
-              key={section}
-              heading={section}
-              className="p-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]"
-            >
-              {sectionItems.map((item) => (
+        <div className="flex items-center gap-2 border-b border-[var(--color-cork-border)] px-4 py-3">
+          <MagnifyingGlass size={16} className="text-[var(--color-cork-muted)]" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
+            placeholder="Go to note, run command, or search..."
+            className="w-full bg-transparent text-[14px] outline-none placeholder:text-[var(--color-cork-subtle)]"
+          />
+          <kbd className="rounded border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-cork-muted)]">
+            ESC
+          </kbd>
+        </div>
+
+        <div className="max-h-[360px] overflow-y-auto p-2 text-[13px]">
+          {matches.length > 0 && (
+            <PaletteSection title="Notes">
+              {matches.map((n, i) => (
                 <PaletteRow
-                  key={itemKey(item)}
-                  item={item}
-                  onSelect={() => {
-                    runPaletteItem(item, {
-                      closePalette,
-                      navigate,
-                      toggleDrawer,
-                      openVault,
-                      openSettings,
-                      rebuild,
-                      openDaily: openOrCreateToday,
-                      toggleTodo,
-                    });
-                  }}
+                  key={n.id}
+                  icon={<NotePencil size={14} />}
+                  title={n.title}
+                  hint={n.folder || "Inbox"}
+                  selected={selectedIndex === i}
+                  onClick={() => handleSelect(i)}
                 />
               ))}
-            </Command.Group>
-          ))}
-        </Command.List>
-      </Command>
+            </PaletteSection>
+          )}
+          {matches.length === 0 && query && (
+            <div className="px-2.5 py-4 text-center text-[12px] text-[var(--color-cork-subtle)]">
+              No notes found.
+            </div>
+          )}
+          <PaletteSection title="Commands">
+            {COMMANDS.map((cmd, i) => (
+              <PaletteRow
+                key={cmd.id}
+                icon={cmd.icon}
+                title={cmd.label}
+                hint={cmd.hint}
+                selected={selectedIndex === matches.length + i}
+                onClick={() => handleSelect(matches.length + i)}
+              />
+            ))}
+          </PaletteSection>
+        </div>
+      </div>
     </div>
   );
 }
 
-function PaletteRow({ item, onSelect }: { item: PaletteItem; onSelect: () => void }) {
+function PaletteSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Command.Item
-      value={itemSearchText(item)}
-      onSelect={onSelect}
-      className="flex cursor-default items-center justify-between rounded-lg px-3 py-2 text-sm normal-case text-[var(--color-noxe-ink)] aria-selected:bg-[var(--color-noxe-panel-2)]"
-    >
-      <span>{itemLabel(item)}</span>
-      <span className="text-[11px] text-[var(--color-noxe-muted)]">{itemHint(item)}</span>
-    </Command.Item>
+    <div className="mb-2">
+      <div className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-cork-subtle)]">
+        {title}
+      </div>
+      <div className="flex flex-col">{children}</div>
+    </div>
   );
 }
 
-function buildPaletteItems(
-  notes: NoteEntry[],
-  recentNotes: NoteEntry[],
-  tags: TagCount[],
-  todos: Todo[],
-): PaletteItem[] {
-  const recent = (recentNotes.length > 0 ? recentNotes : notes)
-    .slice(0, 5)
-    .map((note) => toNoteItem(note, "Recents"));
-  const pinned = notes.slice(0, 5).map((note) => toNoteItem(note, "Pinned"));
-  const allNotes = notes.map((note) => toNoteItem(note, "Notes"));
-  const todoItems: PaletteItem[] = todos
-    .slice(0, 8)
-    .map((t) => ({ kind: "todo", id: t.id, text: t.text, section: "Todos" }));
-  return [
-    ...todoItems,
-    ...recent,
-    ...pinned,
-    ...commandsRegistry,
-    ...tags.slice(0, 5).map(toTagItem),
-    ...allNotes,
-  ];
-}
-
-function filterPaletteItems(items: PaletteItem[], query: string): PaletteItem[] {
-  const trimmed = query.trim();
-  if (!trimmed) {
-    return dedupeItems(items.filter((item) => item.section !== "Notes"));
-  }
-  return fuzzysort
-    .go(trimmed, dedupeItems(items), { key: "search", limit: 30 })
-    .map((result) => result.obj);
-}
-
-function groupItems(items: PaletteItem[], query: string): Array<[string, PaletteItem[]]> {
-  const order = query.trim()
-    ? ["Todos", "Notes", "Commands", "Tools", "AI", "Tags", "Vault Actions", "Recents", "Pinned"]
-    : ["Todos", "Recents", "Pinned", "Commands", "Tools", "AI", "Tags", "Vault Actions"];
-  return order
-    .map(
-      (section) =>
-        [section, items.filter((item) => item.section === section)] as [string, PaletteItem[]],
-    )
-    .filter(([, sectionItems]) => sectionItems.length > 0);
-}
-
-function dedupeItems(items: PaletteItem[]): Array<PaletteItem & { search: string }> {
-  const seen = new Set<string>();
-  return items.flatMap((item) => {
-    const key = itemKey(item);
-    if (seen.has(key)) {
-      return [];
-    }
-    seen.add(key);
-    return [{ ...item, search: itemSearchText(item) }];
-  });
-}
-
-function toNoteItem(note: NoteEntry, section: "Recents" | "Pinned" | "Notes"): PaletteItem {
-  return { kind: "note", id: note.id, title: note.title, folder: note.folder, section };
-}
-
-function toTagItem(tag: TagCount): PaletteItem {
-  return { kind: "tag", tag: tag.tag, count: tag.count, section: "Tags" };
-}
-
-function itemKey(item: PaletteItem): string {
-  if (item.kind === "note") {
-    return `note:${item.id}`;
-  }
-  if (item.kind === "tag") {
-    return `tag:${item.tag}`;
-  }
-  if (item.kind === "todo") {
-    return `todo:${item.id}`;
-  }
-  return `command:${item.id}`;
-}
-
-function itemLabel(item: PaletteItem): string {
-  if (item.kind === "note") {
-    return item.title;
-  }
-  if (item.kind === "tag") {
-    return `#${item.tag}`;
-  }
-  if (item.kind === "todo") {
-    return `☐ ${item.text}`;
-  }
-  return item.label;
-}
-
-function itemHint(item: PaletteItem): string {
-  if (item.kind === "note") {
-    return item.folder || "Inbox";
-  }
-  if (item.kind === "tag") {
-    return `${item.count} notes`;
-  }
-  if (item.kind === "todo") {
-    return "Mark done";
-  }
-  return item.section;
-}
-
-function itemSearchText(item: PaletteItem): string {
-  if (item.kind === "note") {
-    return `${item.title} ${item.folder}`;
-  }
-  if (item.kind === "tag") {
-    return `${item.tag} tag`;
-  }
-  if (item.kind === "todo") {
-    return `${item.text} todo`;
-  }
-  return item.label;
-}
-
-function runPaletteItem(
-  item: PaletteItem,
-  actions: {
-    closePalette: () => void;
-    navigate: (
-      view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" },
-    ) => void;
-    toggleDrawer: (drawer: "search" | "folders" | "recent" | "starred" | "tags") => void;
-    openVault: () => Promise<void>;
-    openSettings: () => void;
-    rebuild: () => Promise<void>;
-    openDaily: () => Promise<void>;
-    toggleTodo: (id: string) => Promise<unknown>;
-  },
-) {
-  if (item.kind === "note") {
-    actions.navigate({ kind: "note", id: item.id });
-  } else if (item.kind === "tag") {
-    actions.toggleDrawer("tags");
-  } else if (item.kind === "todo") {
-    void actions.toggleTodo(item.id).then(() => {
-      toast.success("Todo completed", { description: item.text, duration: 2500 });
-    });
-  } else {
-    runCommand(item.id, actions);
-  }
-  actions.closePalette();
-}
-
-function runCommand(
-  id: CommandActionId,
-  actions: {
-    navigate: (
-      view: { kind: "home" } | { kind: "note"; id: string } | { kind: "graph" } | { kind: "todos" },
-    ) => void;
-    openVault: () => Promise<void>;
-    openSettings: () => void;
-    rebuild: () => Promise<void>;
-    openDaily: () => Promise<void>;
-  },
-) {
-  if (id === "go-home") {
-    actions.navigate({ kind: "home" });
-  }
-  if (id === "open-graph") {
-    openToolView("graph");
-  }
-  if (id === "open-calendar") {
-    openToolView("calendar");
-  }
-  if (id === "open-todos" || id === "new-todo") {
-    openToolView("todos");
-  }
-  if (id === "new-note") {
-    void createAndOpenNote();
-  }
-  if (id === "open-vault") {
-    void actions.openVault();
-  }
-  if (id === "open-daily") {
-    void actions.openDaily();
-  }
-  if (id === "open-settings") {
-    actions.openSettings();
-  }
-  if (id === "rebuild-index") {
-    void actions.rebuild();
-  }
-  if (id === "toggle-theme") {
-    cycleTheme();
-  }
-  if (id === "ai-generate-note") {
-    useGenerateNoteStore.getState().openModal();
-  }
-  if (id === "sync-now") {
-    void (async () => {
-      try {
-        await useSyncStore.getState().syncNow();
-        toast.success("Sync started");
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Sync failed");
-      }
-    })();
-  }
+function PaletteRow({
+  icon,
+  title,
+  hint,
+  selected,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  hint?: string;
+  selected?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left ${
+        selected ? "bg-[var(--color-cork-accent-soft)]" : "hover:bg-[var(--color-cork-panel-2)]"
+      }`}
+    >
+      <span className="text-[var(--color-cork-muted)]">{icon}</span>
+      <span className="flex-1 truncate text-[var(--color-cork-ink)]">{title}</span>
+      {hint && <span className="text-[11px] text-[var(--color-cork-subtle)]">{hint}</span>}
+    </button>
+  );
 }

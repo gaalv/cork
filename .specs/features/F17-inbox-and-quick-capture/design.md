@@ -89,7 +89,7 @@
 
 - Plugin: `.plugin(tauri_plugin_global_shortcut::Builder::new().build())`.
 - In `setup`:
-  - Build a 3-item menu: Quick capture, Show Noxe, Quit Noxe.
+  - Build a 3-item menu: Quick capture, Show Cork, Quit Cork.
   - Build a `TrayIconBuilder` with that menu, register click handler that toggles main window visibility.
   - Register `CmdOrControl+Shift+KeyI` global shortcut whose handler emits `quick-capture:new` to the main window AND ensures it's shown + focused.
   - Wire `WindowEvent::CloseRequested` on the main window: call `api.prevent_close()` and `window.hide()`.

@@ -1,71 +1,115 @@
+/**
+ * Assembles all CodeMirror extensions for the Cork editor.
+ *
+ * @see F05 — Editor spec
+ */
+
 import { autocompletion } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { markdown } from "@codemirror/lang-markdown";
-import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { EditorState } from "@codemirror/state";
-import { EditorView, highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
-
-import { calloutHintExtension } from "./calloutHint";
-import { concealedBrackets } from "./concealedBrackets";
-import { footnoteDefExtension } from "./footnoteDef";
-import { headingSizes } from "./headingSizes";
-import { highlightMarkExtension } from "./highlightMark";
-import { liveLinkClick } from "./liveLinkClick";
-import { liveMarkdownDecorations } from "./liveMarkdownDecorations";
-import { liveModeFacet } from "./liveModeFacet";
-import { searchExtension } from "./searchExtension";
-import { slashCompletionSource } from "./slashMenu";
-import { tagCompletionSource } from "./tagAutocomplete";
-import { noxeEditorTheme, noxeHighlightStyle } from "./theme";
-import { wikilinkCompletionSource } from "./wikilinkAutocomplete";
-
+import { bracketMatching, foldGutter, indentOnInput } from "@codemirror/language";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import {
+  EditorView,
+  crosshairCursor,
+  drawSelection,
+  dropCursor,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  keymap,
+  lineNumbers,
+  rectangularSelection,
+} from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
-import type { LiveMode } from "./liveModeFacet";
 
-export type EditorExtensionOptions = {
-  extraExtensions?: Extension[];
-  lineWrap?: boolean;
-  showLineNumbers?: boolean;
-  fontFamily?: string;
-  fontSize?: number;
-  tabSize?: number;
-  liveMode?: LiveMode;
+import { vim } from "@replit/codemirror-vim";
+
+import { markdownExtension } from "./markdown";
+import { corkEditorTheme, corkHighlighting } from "./theme";
+import { wikilinkCompletion } from "./autocomplete";
+import { wikilinkExtension } from "./wikilinks";
+import { checkboxExtension } from "./checkboxes";
+import { assetDropPaste } from "@/features/assets/cm/dropPaste";
+
+type EditorOptions = {
+  lineWrap: boolean;
+  showLineNumbers: boolean;
+  tabSize: number;
+  vimMode: boolean;
+  onUpdate: (body: string) => void;
 };
 
-export function createEditorExtensions(options: EditorExtensionOptions = {}): Extension[] {
-  const showLineNumbers = options.showLineNumbers ?? false;
-  const tabSize = options.tabSize ?? 2;
-  return [
-    liveModeFacet.of(options.liveMode ?? "live"),
-    ...(showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : []),
+export function createExtensions(options: EditorOptions): Extension[] {
+  const extensions: Extension[] = [
+    // Core editing
     history(),
+    drawSelection(),
+    dropCursor(),
+    indentOnInput(),
     bracketMatching(),
-    markdown(),
-    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-    noxeHighlightStyle,
-    headingSizes,
-    calloutHintExtension,
-    footnoteDefExtension,
-    highlightMarkExtension,
-    concealedBrackets,
-    liveMarkdownDecorations,
-    liveLinkClick,
-    searchExtension,
-    autocompletion({ override: [wikilinkCompletionSource, tagCompletionSource, slashCompletionSource] }),
-    keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
-    EditorState.tabSize.of(tabSize),
-    ...(options.lineWrap ?? true ? [EditorView.lineWrapping] : []),
-    editorFontTheme(options.fontFamily, options.fontSize),
-    noxeEditorTheme,
-    ...(options.extraExtensions ?? []),
-  ];
-}
+    rectangularSelection(),
+    crosshairCursor(),
+    highlightActiveLine(),
+    highlightActiveLineGutter(),
+    highlightSelectionMatches(),
 
-function editorFontTheme(fontFamily = "system-ui", fontSize = 14): Extension {
-  return EditorView.theme({
-    "& .cm-content": {
-      fontFamily,
-      fontSize: `${fontSize}px`,
-    },
-  });
+    // Markdown language
+    markdownExtension(),
+
+    // Theme
+    corkEditorTheme,
+    corkHighlighting,
+
+    // Autocomplete (wikilinks + tags)
+    autocompletion({
+      override: [wikilinkCompletion],
+      activateOnTyping: true,
+      maxRenderedOptions: 8,
+    }),
+
+    // Search
+    // (search panel is activated by ⌘F via keymap)
+
+    // Keymaps
+    keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+
+    // Wikilink decoration & click navigation
+    wikilinkExtension(),
+
+    // Interactive task checkboxes
+    checkboxExtension(),
+
+    // Asset drag-drop and clipboard paste
+    assetDropPaste(),
+
+    // Fold gutter
+    foldGutter(),
+
+    // Update listener — sends body changes to the store
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged) {
+        options.onUpdate(update.state.doc.toString());
+      }
+    }),
+  ];
+
+  if (options.vimMode) {
+    extensions.push(vim());
+  }
+
+  if (options.lineWrap) {
+    extensions.push(EditorView.lineWrapping);
+  }
+
+  if (options.showLineNumbers) {
+    extensions.push(lineNumbers());
+  }
+
+  // Tab size
+  extensions.push(
+    EditorView.editorAttributes.of({
+      style: `tab-size: ${options.tabSize}`,
+    }),
+  );
+
+  return extensions;
 }

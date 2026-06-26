@@ -8,13 +8,9 @@ import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { GenerateNoteModal } from "@/features/ai/ui/GenerateNoteModal";
 import { BulkActionsBar } from "@/features/folder-ops/ui/BulkActionsBar";
 import { CommandPalette } from "@/features/shell/ui/CommandPalette";
-import { DrawerHost } from "@/features/shell/ui/DrawerHost";
 import { EmptyVault } from "@/features/shell/ui/EmptyVault";
 import { HelpModal } from "@/features/shell/ui/HelpModal";
-import { Rail } from "@/features/shell/ui/Rail";
 import { Toaster } from "@/features/shell/ui/Toaster";
-import { TopBar } from "@/features/shell/ui/TopBar";
-import { ViewRouter } from "@/features/shell/ui/ViewRouter";
 import { TriageBody } from "@/features/shell/ui/triage/TriageBody";
 import { SettingsPanel } from "@/features/settings/ui/SettingsPanel";
 import { useVaultStore } from "@/features/vault/state/vaultStore";
@@ -37,25 +33,40 @@ export function Shell() {
   }, []);
 
   useEffect(() => {
-    void loadNotes()
-      .then(async () => {
-        const state = useVaultStore.getState();
-        if (state.path && state.notes.length === 0) {
-          const result = await client.vault.scaffoldIfNeeded();
-          if (result.created) {
-            toast.success("Welcome to Noxe — example notes added");
-            await loadNotes();
+    const init = async () => {
+      // Try to auto-open the most recent vault
+      const state = useVaultStore.getState();
+      if (!state.path) {
+        try {
+          const recent = await client.vault.recent();
+          if (recent.length > 0) {
+            await useVaultStore.getState().openVault(recent[0].path);
           }
+        } catch { /* no recent vaults — show EmptyVault */ }
+      }
+
+      await loadNotes();
+
+      const current = useVaultStore.getState();
+      if (current.path && current.notes.length === 0) {
+        const result = await client.vault.scaffoldIfNeeded();
+        if (result.created) {
+          toast.success("Welcome to Cork — example notes added");
+          await loadNotes();
         }
-      })
-      .then(() => (useVaultStore.getState().path ? loadVaultSettings() : undefined))
-      .then(() => Promise.all([startWatcherIntegration(), startIndexIntegration()]))
-      .catch(() => undefined);
+      }
+
+      if (useVaultStore.getState().path) {
+        await loadVaultSettings();
+      }
+      await Promise.all([startWatcherIntegration(), startIndexIntegration()]);
+    };
+    void init().catch(() => undefined);
   }, [loadNotes, loadVaultSettings, startIndexIntegration, startWatcherIntegration]);
 
   if (!vaultPath) {
     return (
-      <div data-testid="shell" className="h-full bg-[var(--color-noxe-bg)]">
+      <div data-testid="shell" className="h-full bg-[var(--color-cork-bg)]">
         <EmptyVault />
         <CommandPalette />
         <GenerateNoteModal />
@@ -69,9 +80,9 @@ export function Shell() {
   return (
     <div
       data-testid="shell"
-      className="relative flex h-full overflow-hidden bg-[var(--color-noxe-bg)]"
+      className="relative flex h-full overflow-hidden bg-[var(--color-cork-bg)]"
     >
-      <ShellChrome />
+      <TriageBody />
       <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
       <CommandPalette />
       <GenerateNoteModal />
@@ -79,35 +90,6 @@ export function Shell() {
       <SettingsPanel />
       <Toaster />
     </div>
-  );
-}
-
-function ShellChrome() {
-  const layoutMode = useAppSettingsStore((state) => state.settings.layout.mode);
-
-  if (layoutMode === "triage") {
-    return (
-      <div data-shell-mode="triage" className="relative flex h-full min-w-0 flex-1 overflow-hidden">
-        <TriageBody />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="h-full w-14 shrink-0">
-        <Rail />
-      </div>
-      <div className="relative flex h-full min-w-0 flex-1 flex-col">
-        <TopBar />
-        <div className="relative flex min-h-0 flex-1 overflow-hidden" data-shell-mode="focus">
-          <DrawerHost />
-          <div className="flex min-w-0 flex-1 overflow-hidden">
-            <ViewRouter />
-          </div>
-        </div>
-      </div>
-    </>
   );
 }
 

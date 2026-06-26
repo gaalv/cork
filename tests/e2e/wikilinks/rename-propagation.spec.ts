@@ -9,6 +9,7 @@ const notes = [
     path: path.join(fixturePath, "Source.md"),
     title: "Source",
     folder: "",
+    snippet: "",
     size: 1,
     mtime: Date.UTC(2026, 4, 6),
     body: "# Source\n\nSee [[Renamed]].",
@@ -18,6 +19,7 @@ const notes = [
     path: path.join(fixturePath, "Renamed.md"),
     title: "Renamed",
     folder: "",
+    snippet: "",
     size: 1,
     mtime: Date.UTC(2026, 4, 6),
     body: "# Renamed\n",
@@ -26,7 +28,7 @@ const notes = [
 
 test("renamed wikilink preview navigates to the new target", async ({ page }) => {
   await page.goto("/");
-  await page.evaluate(({ vaultPath, fixtureNotes }) => window.__noxe_test_setVault?.(vaultPath, fixtureNotes), {
+  await page.evaluate(({ vaultPath, fixtureNotes }) => window.__cork_test_setVault?.(vaultPath, fixtureNotes), {
     vaultPath: fixturePath,
     fixtureNotes: notes,
   });

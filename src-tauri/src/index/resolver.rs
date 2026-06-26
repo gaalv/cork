@@ -3,6 +3,7 @@ use std::path::Path;
 
 use rusqlite::{params, Connection};
 
+use crate::error::sql_error;
 use crate::IpcError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,10 +121,6 @@ fn filename_stem(path: &str) -> &str {
 
 fn normalize(value: &str) -> String {
     value.trim().to_lowercase()
-}
-
-fn sql_error(error: rusqlite::Error) -> IpcError {
-    IpcError::Other(error.to_string())
 }
 
 #[cfg(test)]

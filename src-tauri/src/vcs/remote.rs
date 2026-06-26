@@ -18,9 +18,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
+use tauri_plugin_dialog::DialogExt;
 
 use crate::vault::settings::{load_vault_settings, save_vault_settings, GitRemoteSettings};
-use crate::vault::VaultState;
+use crate::vault::{VaultPath, VaultState};
 use crate::IpcError;
 
 // ── Public types ─────────────────────────────────────────────────────────────
@@ -53,8 +55,24 @@ pub struct RemoteInfo {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnableRemoteInput {
-    /// SSH remote URL, e.g. `git@github.com:owner/repo.git`.
+    /// GitHub remote URL. Supports SSH (`git@github.com:owner/repo.git`) and
+    /// HTTPS (`https://github.com/owner/repo.git`).
     pub url: Option<String>,
+    /// Fine-grained GitHub PAT for HTTPS remotes. Stored only in the local
+    /// git credential store under `.git/`, never in vault settings.
+    pub token: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloneRemoteInput {
+    /// GitHub HTTPS remote URL, e.g. `https://github.com/owner/repo.git`.
+    pub url: String,
+    /// Fine-grained GitHub PAT scoped to this repository.
+    pub token: String,
+    /// Parent folder where Cork should create the cloned vault folder.
+    /// If omitted, the native folder picker asks the user.
+    pub parent_path: Option<PathBuf>,
 }
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -109,11 +127,7 @@ impl RemoteState {
                 inner.url = None;
             }
         }
-        inner.status = if inner.enabled {
-            SyncStatus::Idle
-        } else {
-            SyncStatus::Idle
-        };
+        inner.status = SyncStatus::Idle;
         inner.last_error = None;
     }
 
@@ -142,10 +156,7 @@ const PUSH_DEBOUNCE: Duration = Duration::from_secs(5);
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(12);
 
 pub fn start_workers(state: &RemoteState) {
-    if state
-        .workers_started
-        .swap(true, Ordering::SeqCst)
-    {
+    if state.workers_started.swap(true, Ordering::SeqCst) {
         return;
     }
     let push_inner = Arc::clone(&state.inner);
@@ -312,7 +323,12 @@ fn gh_active_account_uncached() -> Option<GhAccount> {
         // Lines like "✓ Logged in to github.com account <user> (...)"
         if let Some(idx) = trimmed.find("account ") {
             let rest = &trimmed[idx + "account ".len()..];
-            let user = rest.split_whitespace().next().unwrap_or("").trim().to_string();
+            let user = rest
+                .split_whitespace()
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string();
             // Try to recover host from the same line if present.
             let host = trimmed
                 .split_whitespace()
@@ -348,7 +364,7 @@ fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
     Command::new("git")
         .current_dir(vault_root)
         // Never let git prompt for credentials — without a TTY it would
-        // hang forever. We supply auth via http.extraHeader / SSH instead.
+        // hang forever. We supply auth via a repo-local credential store or SSH.
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_ASKPASS", "")
         .env("SSH_ASKPASS", "")
@@ -376,18 +392,18 @@ fn run_git_check(vault_root: &Path, args: &[&str]) -> Result<String, String> {
 
 // ── SSH deploy key support ───────────────────────────────────────────────────
 
-/// Per-vault SSH key paths. We keep the keypair under `.noxe/` so each
+/// Per-vault SSH key paths. We keep the keypair under `.cork/` so each
 /// vault has its own isolated identity that never touches `~/.ssh/`.
 fn deploy_key_priv_path(vault_root: &Path) -> PathBuf {
-    vault_root.join(".noxe").join("sync-key")
+    vault_root.join(".cork").join("sync-key")
 }
 
 fn deploy_key_pub_path(vault_root: &Path) -> PathBuf {
-    vault_root.join(".noxe").join("sync-key.pub")
+    vault_root.join(".cork").join("sync-key.pub")
 }
 
 fn deploy_known_hosts_path(vault_root: &Path) -> PathBuf {
-    vault_root.join(".noxe").join("known_hosts")
+    vault_root.join(".cork").join("known_hosts")
 }
 
 /// True if a deploy keypair has already been generated for this vault.
@@ -407,16 +423,10 @@ fn ensure_gitignore_excludes_deploy_key(vault_root: &Path) -> std::io::Result<()
             .open(&path)?
             .read_to_string(&mut existing)?;
     }
-    let needed = [
-        ".noxe/sync-key",
-        ".noxe/sync-key.pub",
-        ".noxe/known_hosts",
-    ];
+    let needed = [".cork/sync-key", ".cork/sync-key.pub", ".cork/known_hosts"];
     let mut added = false;
     for line in needed {
-        let present = existing
-            .lines()
-            .any(|l| l.trim() == line);
+        let present = existing.lines().any(|l| l.trim() == line);
         if !present {
             if !existing.is_empty() && !existing.ends_with('\n') {
                 existing.push('\n');
@@ -437,7 +447,7 @@ fn ensure_gitignore_excludes_deploy_key(vault_root: &Path) -> std::io::Result<()
     Ok(())
 }
 
-/// Generate a fresh ed25519 keypair under `.noxe/` if none exists.
+/// Generate a fresh ed25519 keypair under `.cork/` if none exists.
 /// Returns the path to the public key file.
 fn ensure_deploy_key(vault_root: &Path) -> Result<(), String> {
     let priv_path = deploy_key_priv_path(vault_root);
@@ -446,16 +456,16 @@ fn ensure_deploy_key(vault_root: &Path) -> Result<(), String> {
         return Ok(());
     }
 
-    // Make sure .noxe exists.
-    std::fs::create_dir_all(vault_root.join(".noxe"))
-        .map_err(|e| format!("could not create .noxe/: {e}"))?;
+    // Make sure .cork exists.
+    std::fs::create_dir_all(vault_root.join(".cork"))
+        .map_err(|e| format!("could not create .cork/: {e}"))?;
 
     // Stale half-state: clean up so ssh-keygen doesn't refuse to overwrite.
     let _ = std::fs::remove_file(&priv_path);
     let _ = std::fs::remove_file(&pub_path);
 
     let host = hostname();
-    let comment = format!("noxe-vault@{host}");
+    let comment = format!("cork-vault@{host}");
 
     let priv_str = priv_path
         .to_str()
@@ -463,9 +473,8 @@ fn ensure_deploy_key(vault_root: &Path) -> Result<(), String> {
 
     let out = Command::new("ssh-keygen")
         .args([
-            "-t", "ed25519",
-            "-f", priv_str,
-            "-N", "", // empty passphrase — we cannot prompt
+            "-t", "ed25519", "-f", priv_str, "-N",
+            "", // empty passphrase — we cannot prompt
             "-C", &comment,
         ])
         .output()
@@ -475,7 +484,11 @@ fn ensure_deploy_key(vault_root: &Path) -> Result<(), String> {
         let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
         return Err(format!(
             "ssh-keygen failed: {}",
-            if stderr.is_empty() { "non-zero exit".into() } else { stderr }
+            if stderr.is_empty() {
+                "non-zero exit".into()
+            } else {
+                stderr
+            }
         ));
     }
 
@@ -515,7 +528,7 @@ fn deploy_key_fingerprint(vault_root: &Path) -> Option<String> {
         return None;
     }
     let line = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    // Output looks like: "256 SHA256:abc... noxe@host (ED25519)"
+    // Output looks like: "256 SHA256:abc... cork@host (ED25519)"
     line.split_whitespace().nth(1).map(|s| s.to_string())
 }
 
@@ -524,6 +537,209 @@ fn deploy_key_fingerprint(vault_root: &Path) -> Option<String> {
 fn is_ssh_url(url: &str) -> bool {
     let u = url.trim();
     u.starts_with("git@") || u.starts_with("ssh://")
+}
+
+fn normalize_github_https_url(url: &str) -> Result<String, String> {
+    let trimmed = url.trim().trim_end_matches('/');
+    let rest = if let Some(rest) = trimmed.strip_prefix("https://github.com/") {
+        rest
+    } else if let Some(rest) = trimmed.strip_prefix("http://github.com/") {
+        rest
+    } else {
+        return Err(
+            "Use a GitHub HTTPS URL in the form https://github.com/owner/repo.git".to_string(),
+        );
+    };
+    let parts: Vec<&str> = rest.split('/').collect();
+    if parts.len() != 2 {
+        return Err(
+            "Use a GitHub HTTPS URL in the form https://github.com/owner/repo.git".to_string(),
+        );
+    }
+    let owner = parts[0];
+    let repo = parts[1].strip_suffix(".git").unwrap_or(parts[1]);
+    if !is_safe_github_path_part(owner) || !is_safe_github_path_part(repo) {
+        return Err("GitHub owner/repo contains unsupported characters".to_string());
+    }
+    Ok(format!("https://github.com/{owner}/{repo}.git"))
+}
+
+fn repo_name_from_github_https_url(url: &str) -> Result<String, String> {
+    let normalized = normalize_github_https_url(url)?;
+    let rest = normalized
+        .strip_prefix("https://github.com/")
+        .ok_or_else(|| "expected normalized GitHub HTTPS URL".to_string())?;
+    let repo = rest
+        .split('/')
+        .nth(1)
+        .and_then(|part| part.strip_suffix(".git"))
+        .ok_or_else(|| "could not derive repository name from GitHub URL".to_string())?;
+    Ok(repo.to_string())
+}
+
+fn is_safe_github_path_part(part: &str) -> bool {
+    !part.is_empty()
+        && !part
+            .chars()
+            .any(|c| c.is_whitespace() || matches!(c, '?' | '#' | ':' | '@' | '\\'))
+}
+
+fn https_credential_store_path(vault_root: &Path) -> PathBuf {
+    vault_root.join(".git").join("cork-credentials")
+}
+
+fn shell_single_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+fn percent_encode_userinfo(value: &str) -> String {
+    let mut encoded = String::new();
+    for b in value.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(b as char);
+            }
+            _ => encoded.push_str(&format!("%{b:02X}")),
+        }
+    }
+    encoded
+}
+
+fn github_https_credential_line(url: &str, token: &str) -> Result<String, String> {
+    let rest = url
+        .strip_prefix("https://github.com/")
+        .ok_or_else(|| "expected normalized GitHub HTTPS URL".to_string())?;
+    let encoded_token = percent_encode_userinfo(token);
+    Ok(format!(
+        "https://x-access-token:{encoded_token}@github.com/{rest}\n"
+    ))
+}
+
+fn clear_https_auth(vault_root: &Path) {
+    let _ = run_git(
+        vault_root,
+        &["config", "--local", "--unset-all", "credential.helper"],
+    );
+    let _ = run_git(
+        vault_root,
+        &[
+            "config",
+            "--local",
+            "--unset-all",
+            "credential.https://github.com.helper",
+        ],
+    );
+    let _ = run_git(
+        vault_root,
+        &["config", "--local", "--unset", "credential.useHttpPath"],
+    );
+    let _ = run_git(
+        vault_root,
+        &[
+            "config",
+            "--local",
+            "--remove-section",
+            "http.https://github.com/",
+        ],
+    );
+    let _ = std::fs::remove_file(https_credential_store_path(vault_root));
+}
+
+fn clear_ssh_auth(vault_root: &Path) {
+    let _ = run_git(
+        vault_root,
+        &["config", "--local", "--unset", "core.sshCommand"],
+    );
+}
+
+fn configure_https_auth(vault_root: &Path, url: &str, token: &str) -> Result<(), String> {
+    let token = token.trim();
+    if token.is_empty() {
+        return Err("HTTPS sync requires a fine-grained GitHub personal access token".to_string());
+    }
+    if token.chars().any(char::is_control) {
+        return Err("GitHub token contains unsupported control characters".to_string());
+    }
+
+    clear_https_auth(vault_root);
+    clear_ssh_auth(vault_root);
+
+    run_git_check(
+        vault_root,
+        &["config", "--local", "--add", "credential.helper", ""],
+    )?;
+    let credential_path = https_credential_store_path(vault_root);
+    let helper = format!(
+        "store --file {}",
+        shell_single_quote(&credential_path.to_string_lossy())
+    );
+    run_git_check(
+        vault_root,
+        &["config", "--local", "--add", "credential.helper", &helper],
+    )?;
+    run_git_check(
+        vault_root,
+        &["config", "--local", "credential.useHttpPath", "true"],
+    )?;
+
+    let line = github_https_credential_line(url, token)?;
+    std::fs::write(&credential_path, line)
+        .map_err(|e| format!("could not write local GitHub credentials: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = std::fs::metadata(&credential_path) {
+            let mut perms = meta.permissions();
+            perms.set_mode(0o600);
+            let _ = std::fs::set_permissions(&credential_path, perms);
+        }
+    }
+    Ok(())
+}
+
+fn write_https_credential_file(path: &Path, url: &str, token: &str) -> Result<(), String> {
+    let line = github_https_credential_line(url, token)?;
+    std::fs::write(path, line).map_err(|e| format!("could not write GitHub credentials: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = std::fs::metadata(path) {
+            let mut perms = meta.permissions();
+            perms.set_mode(0o600);
+            let _ = std::fs::set_permissions(path, perms);
+        }
+    }
+    Ok(())
+}
+
+fn ensure_local_git_identity(vault_root: &Path) -> Result<(), String> {
+    let has_name = run_git(vault_root, &["config", "--local", "user.name"])
+        .map(|o| o.status.success() && !o.stdout.is_empty())
+        .unwrap_or(false);
+    if !has_name {
+        run_git_check(vault_root, &["config", "--local", "user.name", "Cork"])?;
+    }
+
+    let has_email = run_git(vault_root, &["config", "--local", "user.email"])
+        .map(|o| o.status.success() && !o.stdout.is_empty())
+        .unwrap_or(false);
+    if !has_email {
+        run_git_check(
+            vault_root,
+            &["config", "--local", "user.email", "cork@local"],
+        )?;
+    }
+
+    Ok(())
+}
+
+fn redact_secret(message: &str, secret: &str) -> String {
+    if secret.is_empty() {
+        return message.to_string();
+    }
+    message
+        .replace(secret, "<redacted>")
+        .replace(&percent_encode_userinfo(secret), "<redacted>")
 }
 
 /// Build the value of `core.sshCommand` so that git uses ONLY our deploy
@@ -586,17 +802,16 @@ fn git_push(vault_root: &Path) -> Result<(), String> {
             &subject,
             "-m",
             &body,
-            "--author=Noxe <noxe@local>",
+            "--author=Cork <cork@local>",
         ],
     );
     let out = run_git(vault_root, &["push", "origin", "HEAD"]);
     let _ = append_log(
         vault_root,
         &match &out {
-            Ok(o) if o.status.success() => format!(
-                "[push] ok\n{}",
-                String::from_utf8_lossy(&o.stdout)
-            ),
+            Ok(o) if o.status.success() => {
+                format!("[push] ok\n{}", String::from_utf8_lossy(&o.stdout))
+            }
             Ok(o) => format!(
                 "[push] error: {}",
                 String::from_utf8_lossy(&o.stderr).trim()
@@ -624,14 +839,11 @@ fn git_push(vault_root: &Path) -> Result<(), String> {
 fn build_sweep_commit_message(vault_root: &Path) -> (String, String) {
     const MAX_LISTED: usize = 25;
 
-    let staged = run_git(
-        vault_root,
-        &["diff", "--cached", "--name-status", "-z"],
-    )
-    .ok()
-    .filter(|o| o.status.success())
-    .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
-    .unwrap_or_default();
+    let staged = run_git(vault_root, &["diff", "--cached", "--name-status", "-z"])
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
 
     let mut entries: Vec<(char, String)> = Vec::new();
     let mut iter = staged.split('\0').filter(|s| !s.is_empty());
@@ -664,7 +876,7 @@ fn build_sweep_commit_message(vault_root: &Path) -> (String, String) {
     if total == 0 {
         return (
             "sync(empty): no changes".to_string(),
-            format!("Timestamp: {timestamp}\n\nSource: noxe-app"),
+            format!("Timestamp: {timestamp}\n\nSource: cork-app"),
         );
     }
 
@@ -725,7 +937,7 @@ fn build_sweep_commit_message(vault_root: &Path) -> (String, String) {
     if total > MAX_LISTED {
         body.push_str(&format!("  … and {} more\n", total - MAX_LISTED));
     }
-    body.push_str("\nSource: noxe-app");
+    body.push_str("\nSource: cork-app");
 
     (subject, body)
 }
@@ -744,7 +956,9 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
     let _ = append_log(vault_root, "[pull] fetch");
     let fetch_out = run_git(vault_root, &["fetch", "origin"])?;
     if !fetch_out.status.success() {
-        return Err(String::from_utf8_lossy(&fetch_out.stderr).trim().to_string());
+        return Err(String::from_utf8_lossy(&fetch_out.stderr)
+            .trim()
+            .to_string());
     }
 
     // Determine upstream branch ref. If none, abort gracefully.
@@ -762,10 +976,7 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
     }
 
     // Collect conflicts
-    let conflicted_raw = run_git_check(
-        vault_root,
-        &["diff", "--name-only", "--diff-filter=U"],
-    )?;
+    let conflicted_raw = run_git_check(vault_root, &["diff", "--name-only", "--diff-filter=U"])?;
     let conflicted: Vec<PathBuf> = conflicted_raw
         .lines()
         .filter(|l| !l.is_empty())
@@ -807,7 +1018,7 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
             "commit",
             "-m",
             "Merge remote: kept local, saved remote conflicts as copies",
-            "--author=Noxe <noxe@local>",
+            "--author=Cork <cork@local>",
         ],
     )?;
     let _ = append_log(
@@ -818,12 +1029,9 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
 }
 
 fn local_is_ahead(vault_root: &Path) -> bool {
-    run_git_check(
-        vault_root,
-        &["rev-list", "--count", "@{u}..HEAD"],
-    )
-    .map(|s| s.trim().parse::<u32>().unwrap_or(0) > 0)
-    .unwrap_or(false)
+    run_git_check(vault_root, &["rev-list", "--count", "@{u}..HEAD"])
+        .map(|s| s.trim().parse::<u32>().unwrap_or(0) > 0)
+        .unwrap_or(false)
 }
 
 pub fn build_conflict_filename(path: &Path, host: &str, stamp: &str) -> String {
@@ -862,7 +1070,7 @@ const MAX_LOG_BYTES: u64 = 1_048_576;
 
 fn append_log(vault_root: &Path, line: &str) -> std::io::Result<()> {
     use std::io::Write;
-    let dir = vault_root.join(".noxe");
+    let dir = vault_root.join(".cork");
     std::fs::create_dir_all(&dir)?;
     let path = dir.join("sync.log");
     if let Ok(meta) = std::fs::metadata(&path) {
@@ -879,6 +1087,148 @@ fn append_log(vault_root: &Path, line: &str) -> std::io::Result<()> {
 }
 
 // ── IPC commands ─────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn vcs_remote_clone(
+    app: AppHandle,
+    input: CloneRemoteInput,
+) -> Result<VaultPath, IpcError> {
+    if !super::git_available() {
+        return Err(IpcError::Other("git is not available".into()));
+    }
+
+    let parent_path = match input.parent_path.clone() {
+        Some(path) => path,
+        None => {
+            let (tx, rx) = std::sync::mpsc::channel();
+            app.dialog().file().pick_folder(move |folder| {
+                let _ = tx.send(folder);
+            });
+            let folder = tauri::async_runtime::spawn_blocking(move || rx.recv())
+                .await
+                .map_err(|err| IpcError::Other(err.to_string()))?
+                .map_err(|err| IpcError::Other(err.to_string()))?
+                .ok_or_else(|| IpcError::Other("folder selection cancelled".to_string()))?;
+            folder
+                .into_path()
+                .map_err(|err| IpcError::Io(err.to_string()))?
+        }
+    };
+
+    let cloned_path =
+        tauri::async_runtime::spawn_blocking(move || clone_remote_blocking(&parent_path, input))
+            .await
+            .map_err(|e| IpcError::Other(format!("background task failed: {e}")))??;
+
+    Ok(VaultPath { path: cloned_path })
+}
+
+fn clone_remote_blocking(parent_path: &Path, input: CloneRemoteInput) -> Result<PathBuf, IpcError> {
+    let parent = parent_path
+        .canonicalize()
+        .map_err(|e| IpcError::Io(format!("clone parent folder is not available: {e}")))?;
+    if !parent.is_dir() {
+        return Err(IpcError::NotFound);
+    }
+
+    let url = normalize_github_https_url(&input.url).map_err(IpcError::Other)?;
+    let token = input.token.trim();
+    if token.is_empty() {
+        return Err(IpcError::Other(
+            "HTTPS clone requires a fine-grained GitHub personal access token".into(),
+        ));
+    }
+    if token.chars().any(char::is_control) {
+        return Err(IpcError::Other(
+            "GitHub token contains unsupported control characters".into(),
+        ));
+    }
+
+    let repo_name = repo_name_from_github_https_url(&url).map_err(IpcError::Other)?;
+    let destination = parent.join(repo_name);
+    if destination.exists() {
+        return Err(IpcError::Other(format!(
+            "destination already exists: {}",
+            destination.display()
+        )));
+    }
+
+    let credential_file = tempfile::NamedTempFile::new()
+        .map_err(|e| IpcError::Io(format!("could not create temporary credential file: {e}")))?;
+    write_https_credential_file(credential_file.path(), &url, token).map_err(IpcError::Other)?;
+    let helper = format!(
+        "store --file {}",
+        shell_single_quote(&credential_file.path().to_string_lossy())
+    );
+    let helper_config = format!("credential.helper={helper}");
+
+    let clone_out = Command::new("git")
+        .current_dir(&parent)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .arg("-c")
+        .arg("credential.helper=")
+        .arg("-c")
+        .arg(&helper_config)
+        .arg("-c")
+        .arg("credential.useHttpPath=true")
+        .arg("clone")
+        .arg("--origin")
+        .arg("origin")
+        .arg(&url)
+        .arg(&destination)
+        .output()
+        .map_err(|e| IpcError::Other(e.to_string()))?;
+
+    if !clone_out.status.success() {
+        let _ = std::fs::remove_dir_all(&destination);
+        let stderr = redact_secret(String::from_utf8_lossy(&clone_out.stderr).trim(), token);
+        let stdout = redact_secret(String::from_utf8_lossy(&clone_out.stdout).trim(), token);
+        let mut msg = "git clone (https) failed".to_string();
+        if !stderr.is_empty() {
+            msg.push_str(": ");
+            msg.push_str(&stderr);
+        }
+        if !stdout.is_empty() {
+            msg.push_str(" | ");
+            msg.push_str(&stdout);
+        }
+        let lower = format!("{stderr} {stdout}").to_lowercase();
+        if lower.contains("authentication failed")
+            || lower.contains("403")
+            || lower.contains("401")
+            || lower.contains("permission")
+        {
+            msg.push_str(
+                "\nHint: verify that the fine-grained PAT has Contents: Read and write \
+                 for this repository and that any organization approval is complete.",
+            );
+        } else if lower.contains("repository not found") || lower.contains("not found") {
+            msg.push_str(
+                "\nHint: check the repository URL and token access. Private repos return \
+                 \"not found\" when the token cannot see them.",
+            );
+        }
+        return Err(IpcError::Other(msg));
+    }
+
+    run_git_check(&destination, &["remote", "set-url", "origin", &url]).map_err(IpcError::Other)?;
+    configure_https_auth(&destination, &url, token).map_err(IpcError::Other)?;
+    ensure_local_git_identity(&destination).map_err(IpcError::Other)?;
+
+    let mut settings = load_vault_settings(&destination)?;
+    settings.git_remote = Some(GitRemoteSettings {
+        enabled: true,
+        url: Some(url),
+        provider: Some("github".to_string()),
+    });
+    save_vault_settings(&destination, &settings)?;
+
+    destination
+        .canonicalize()
+        .map_err(|e| IpcError::Io(format!("could not resolve cloned vault path: {e}")))
+}
 
 #[tauri::command]
 pub async fn vcs_remote_enable(
@@ -915,10 +1265,7 @@ pub async fn vcs_remote_enable(
     Ok(remote_state.snapshot())
 }
 
-fn enable_remote_blocking(
-    vault_root: &Path,
-    input: EnableRemoteInput,
-) -> Result<String, IpcError> {
+fn enable_remote_blocking(vault_root: &Path, input: EnableRemoteInput) -> Result<String, IpcError> {
     let url = input
         .url
         .as_deref()
@@ -926,21 +1273,100 @@ fn enable_remote_blocking(
         .filter(|s| !s.is_empty())
         .ok_or_else(|| {
             IpcError::Other(
-                "Missing repository URL. Use the SSH form: \
-                 git@github.com:owner/repo.git"
+                "Missing repository URL. Use https://github.com/owner/repo.git \
+                 or git@github.com:owner/repo.git"
                     .into(),
             )
         })?
         .to_string();
 
-    if !is_ssh_url(&url) {
-        return Err(IpcError::Other(
-            "Only SSH URLs are supported. Use the form \
-             git@github.com:owner/repo.git (no https://)."
-                .into(),
-        ));
+    if is_ssh_url(&url) {
+        enable_ssh_remote_blocking(vault_root, &url)?;
+        return Ok(url);
     }
 
+    let normalized_url = normalize_github_https_url(&url).map_err(IpcError::Other)?;
+    let token = input
+        .token
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| {
+            IpcError::Other(
+                "HTTPS sync requires a fine-grained GitHub personal access token".into(),
+            )
+        })?;
+    enable_https_remote_blocking(vault_root, &normalized_url, token)?;
+    Ok(normalized_url)
+}
+
+fn ensure_head_exists(vault_root: &Path) {
+    let has_head = run_git(vault_root, &["rev-parse", "HEAD"])
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if has_head {
+        return;
+    }
+    let _ = run_git(vault_root, &["add", "-A"]);
+    let _ = run_git(
+        vault_root,
+        &[
+            "commit",
+            "--allow-empty",
+            "-m",
+            "Initial commit",
+            "--author=Cork <cork@local>",
+        ],
+    );
+}
+
+fn enable_https_remote_blocking(vault_root: &Path, url: &str, token: &str) -> Result<(), IpcError> {
+    let _ = run_git(vault_root, &["remote", "remove", "origin"]);
+    run_git_check(vault_root, &["remote", "add", "origin", url]).map_err(IpcError::Other)?;
+    configure_https_auth(vault_root, url, token).map_err(|err| {
+        let _ = run_git(vault_root, &["remote", "remove", "origin"]);
+        IpcError::Other(err)
+    })?;
+    ensure_head_exists(vault_root);
+
+    let push_out =
+        run_git(vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
+    if !push_out.status.success() {
+        let stderr = redact_secret(String::from_utf8_lossy(&push_out.stderr).trim(), token);
+        let stdout = redact_secret(String::from_utf8_lossy(&push_out.stdout).trim(), token);
+        let mut msg = "git push (https) failed".to_string();
+        if !stderr.is_empty() {
+            msg.push_str(": ");
+            msg.push_str(&stderr);
+        }
+        if !stdout.is_empty() {
+            msg.push_str(" | ");
+            msg.push_str(&stdout);
+        }
+        let lower = format!("{stderr} {stdout}").to_lowercase();
+        if lower.contains("authentication failed")
+            || lower.contains("403")
+            || lower.contains("401")
+            || lower.contains("permission")
+        {
+            msg.push_str(
+                "\nHint: verify that the fine-grained PAT has Contents: Read and write \
+                 for this repository and that any organization approval is complete.",
+            );
+        } else if lower.contains("repository not found") || lower.contains("not found") {
+            msg.push_str(
+                "\nHint: check the repository URL and token access. Private repos return \
+                 \"not found\" when the token cannot see them.",
+            );
+        }
+        clear_https_auth(vault_root);
+        let _ = run_git(vault_root, &["remote", "remove", "origin"]);
+        return Err(IpcError::Other(msg));
+    }
+    Ok(())
+}
+
+fn enable_ssh_remote_blocking(vault_root: &Path, url: &str) -> Result<(), IpcError> {
     if !has_deploy_key(vault_root) {
         return Err(IpcError::Other(
             "Deploy key not generated yet. Click \"Generate deploy key\" first, \
@@ -951,23 +1377,11 @@ fn enable_remote_blocking(
     }
 
     let _ = run_git(vault_root, &["remote", "remove", "origin"]);
-    run_git_check(vault_root, &["remote", "add", "origin", &url])
-        .map_err(IpcError::Other)?;
+    run_git_check(vault_root, &["remote", "add", "origin", url]).map_err(IpcError::Other)?;
 
-    // Wipe any HTTPS auth state from a previous (legacy) attempt so
-    // nothing competes with our SSH command.
-    let _ = run_git(
-        vault_root,
-        &["config", "--local", "--remove-section", "http.https://github.com/"],
-    );
-    let _ = run_git(
-        vault_root,
-        &["config", "--local", "--unset-all", "credential.helper"],
-    );
-    let _ = run_git(
-        vault_root,
-        &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
-    );
+    // Wipe any HTTPS auth state from a previous attempt so nothing competes
+    // with our SSH command.
+    clear_https_auth(vault_root);
 
     // Pin core.sshCommand so git uses ONLY our deploy key. Start with
     // port 22; if push fails with a network-block signature we retry
@@ -979,26 +1393,10 @@ fn enable_remote_blocking(
     )
     .map_err(IpcError::Other)?;
 
-    // Make sure HEAD exists.
-    let has_head = run_git(vault_root, &["rev-parse", "HEAD"])
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !has_head {
-        let _ = run_git(vault_root, &["add", "-A"]);
-        let _ = run_git(
-            vault_root,
-            &[
-                "commit",
-                "--allow-empty",
-                "-m",
-                "Initial commit",
-                "--author=Noxe <noxe@local>",
-            ],
-        );
-    }
+    ensure_head_exists(vault_root);
 
-    let mut push_out = run_git(vault_root, &["push", "-u", "origin", "HEAD"])
-        .map_err(IpcError::Other)?;
+    let mut push_out =
+        run_git(vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
     let mut tried_443 = false;
     if !push_out.status.success() {
         let stderr = String::from_utf8_lossy(&push_out.stderr).to_string();
@@ -1010,8 +1408,8 @@ fn enable_remote_blocking(
                 &["config", "--local", "core.sshCommand", &ssh_cmd_443],
             )
             .map_err(IpcError::Other)?;
-            push_out = run_git(vault_root, &["push", "-u", "origin", "HEAD"])
-                .map_err(IpcError::Other)?;
+            push_out =
+                run_git(vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
             if !push_out.status.success() {
                 let _ = run_git(
                     vault_root,
@@ -1054,12 +1452,12 @@ fn enable_remote_blocking(
                 "\nHint: outbound SSH appears to be blocked from this machine \
                  (corporate firewall or VPN). We tried both port 22 and \
                  ssh.github.com:443 and neither connected. Try disconnecting \
-                 the VPN.",
+                 the VPN or switch to HTTPS + PAT.",
             );
         }
         return Err(IpcError::Other(msg));
     }
-    Ok(url)
+    Ok(())
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1104,22 +1502,8 @@ pub async fn vcs_remote_disable(
     let vault_root_for_blocking = vault_root.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let _ = run_git(&vault_root_for_blocking, &["remote", "remove", "origin"]);
-        let _ = run_git(
-            &vault_root_for_blocking,
-            &["config", "--local", "--unset-all", "credential.helper"],
-        );
-        let _ = run_git(
-            &vault_root_for_blocking,
-            &["config", "--local", "--unset-all", "credential.https://github.com.helper"],
-        );
-        let _ = run_git(
-            &vault_root_for_blocking,
-            &["config", "--local", "--remove-section", "http.https://github.com/"],
-        );
-        let _ = run_git(
-            &vault_root_for_blocking,
-            &["config", "--local", "--unset", "core.sshcommand"],
-        );
+        clear_https_auth(&vault_root_for_blocking);
+        clear_ssh_auth(&vault_root_for_blocking);
     })
     .await
     .map_err(|e| IpcError::Other(format!("background task failed: {e}")))?;
@@ -1211,6 +1595,47 @@ mod tests {
     }
 
     #[test]
+    fn normalize_github_https_url_canonicalizes_repo_urls() {
+        assert_eq!(
+            normalize_github_https_url("https://github.com/me/vault").unwrap(),
+            "https://github.com/me/vault.git"
+        );
+        assert_eq!(
+            normalize_github_https_url("http://github.com/me/vault.git/").unwrap(),
+            "https://github.com/me/vault.git"
+        );
+        assert!(normalize_github_https_url("https://example.com/me/vault.git").is_err());
+        assert!(normalize_github_https_url("https://github.com/me/vault/issues").is_err());
+    }
+
+    #[test]
+    fn repo_name_from_github_https_url_extracts_clone_folder() {
+        assert_eq!(
+            repo_name_from_github_https_url("https://github.com/me/work-vault.git").unwrap(),
+            "work-vault"
+        );
+    }
+
+    #[test]
+    fn github_https_credential_line_is_repo_scoped_and_escaped() {
+        let line =
+            github_https_credential_line("https://github.com/me/vault.git", "ghp_a:b@c").unwrap();
+        assert_eq!(
+            line,
+            "https://x-access-token:ghp_a%3Ab%40c@github.com/me/vault.git\n"
+        );
+    }
+
+    #[test]
+    fn redact_secret_hides_raw_and_encoded_forms() {
+        let msg = "raw ghp_a:b@c encoded ghp_a%3Ab%40c";
+        assert_eq!(
+            redact_secret(msg, "ghp_a:b@c"),
+            "raw <redacted> encoded <redacted>"
+        );
+    }
+
+    #[test]
     fn looks_like_port_22_block_recognizes_known_signatures() {
         assert!(looks_like_port_22_block(
             "ssh: connect to host github.com port 22: Bad file descriptor"
@@ -1222,19 +1647,15 @@ mod tests {
             "ssh: connect to host github.com port 22: Operation timed out"
         ));
         assert!(looks_like_port_22_block("Network is unreachable"));
-        assert!(!looks_like_port_22_block(
-            "Permission denied (publickey)."
-        ));
-        assert!(!looks_like_port_22_block(
-            "ERROR: Repository not found."
-        ));
+        assert!(!looks_like_port_22_block("Permission denied (publickey)."));
+        assert!(!looks_like_port_22_block("ERROR: Repository not found."));
     }
 
     #[test]
     fn build_ssh_command_toggles_port_443() {
         let v = PathBuf::from("/tmp/v");
         let c22 = build_ssh_command(&v, false);
-        assert!(c22.contains("-i '/tmp/v/.noxe/sync-key'"));
+        assert!(c22.contains("-i '/tmp/v/.cork/sync-key'"));
         assert!(c22.contains("IdentitiesOnly=yes"));
         assert!(c22.contains("IdentityAgent=none"));
         assert!(c22.contains("-F /dev/null"));
@@ -1329,12 +1750,9 @@ mod tests {
 
     fn init_repo(dir: &Path) {
         let _ = std::fs::create_dir_all(dir);
-        run(
-            dir,
-            &["-c", "init.defaultBranch=main", "init"],
-        );
-        run(dir, &["config", "user.email", "test@noxe.dev"]);
-        run(dir, &["config", "user.name", "Noxe Test"]);
+        run(dir, &["-c", "init.defaultBranch=main", "init"]);
+        run(dir, &["config", "user.email", "test@cork.dev"]);
+        run(dir, &["config", "user.name", "Cork Test"]);
     }
 
     #[test]
@@ -1368,14 +1786,10 @@ mod tests {
 
         // Bob clones, edits same line, pushes
         Command::new("git")
-            .args([
-                "clone",
-                &bare.to_string_lossy(),
-                &bob.to_string_lossy(),
-            ])
+            .args(["clone", &bare.to_string_lossy(), &bob.to_string_lossy()])
             .output()
             .unwrap();
-        run(&bob, &["config", "user.email", "bob@noxe.dev"]);
+        run(&bob, &["config", "user.email", "bob@cork.dev"]);
         run(&bob, &["config", "user.name", "Bob"]);
         std::fs::write(bob.join("Note.md"), "bob line\n").unwrap();
         run(&bob, &["add", "."]);
@@ -1408,8 +1822,7 @@ mod tests {
             .filter(|n| n.starts_with("Note (conflict from "))
             .collect();
         assert_eq!(entries.len(), 1, "expected one conflict copy");
-        let copy_content =
-            std::fs::read_to_string(alice.join(&entries[0])).unwrap();
+        let copy_content = std::fs::read_to_string(alice.join(&entries[0])).unwrap();
         assert_eq!(copy_content.trim(), "bob line");
     }
 
@@ -1438,11 +1851,7 @@ mod tests {
         run(&alice, &["push", "-u", "origin", "main"]);
 
         Command::new("git")
-            .args([
-                "clone",
-                &bare.to_string_lossy(),
-                &bob.to_string_lossy(),
-            ])
+            .args(["clone", &bare.to_string_lossy(), &bob.to_string_lossy()])
             .output()
             .unwrap();
         run(&bob, &["config", "user.email", "b@b"]);
@@ -1473,7 +1882,7 @@ mod tests {
 
         let (subject, body) = build_sweep_commit_message(root);
         assert_eq!(subject, "sync(empty): no changes");
-        assert!(body.contains("Source: noxe-app"));
+        assert!(body.contains("Source: cork-app"));
     }
 
     #[test]
@@ -1506,27 +1915,30 @@ mod tests {
         init_repo(root);
         std::fs::write(root.join("a.md"), "a\n").unwrap();
         std::fs::write(root.join("b.md"), "b\n").unwrap();
-        std::fs::create_dir_all(root.join(".noxe")).unwrap();
-        std::fs::write(root.join(".noxe/todos.json"), "[]").unwrap();
+        std::fs::create_dir_all(root.join(".cork")).unwrap();
+        std::fs::write(root.join(".cork/todos.json"), "[]").unwrap();
         run(root, &["add", "-A"]);
         run(root, &["commit", "-m", "seed"]);
 
         // Modify a, delete b, add settings, change todos
         std::fs::write(root.join("a.md"), "a updated\n").unwrap();
         std::fs::remove_file(root.join("b.md")).unwrap();
-        std::fs::write(root.join(".noxe/settings.json"), "{}").unwrap();
-        std::fs::write(root.join(".noxe/todos.json"), "[{}]").unwrap();
+        std::fs::write(root.join(".cork/settings.json"), "{}").unwrap();
+        std::fs::write(root.join(".cork/todos.json"), "[{}]").unwrap();
         run(root, &["add", "-A"]);
 
         let (subject, body) = build_sweep_commit_message(root);
-        assert!(subject.starts_with("sync(mixed): 4 change(s)"), "got: {subject}");
+        assert!(
+            subject.starts_with("sync(mixed): 4 change(s)"),
+            "got: {subject}"
+        );
         assert!(subject.contains("+1"));
         assert!(subject.contains("~2"));
         assert!(subject.contains("-1"));
         assert!(body.contains("a.md"));
         assert!(body.contains("b.md"));
-        assert!(body.contains(".noxe/settings.json"));
-        assert!(body.contains(".noxe/todos.json"));
+        assert!(body.contains(".cork/settings.json"));
+        assert!(body.contains(".cork/todos.json"));
     }
 
     #[test]
@@ -1546,6 +1958,9 @@ mod tests {
         run(root, &["add", "-A"]);
 
         let (subject, _body) = build_sweep_commit_message(root);
-        assert!(subject.starts_with("sync(notes): 2 change(s)"), "got: {subject}");
+        assert!(
+            subject.starts_with("sync(notes): 2 change(s)"),
+            "got: {subject}"
+        );
     }
 }

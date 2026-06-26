@@ -67,13 +67,13 @@ pub fn setup(app: &AppHandle) {
     let log_dir = match app.path().app_log_dir() {
         Ok(dir) => dir,
         Err(err) => {
-            eprintln!("noxe: failed to resolve app log dir: {err}");
+            eprintln!("cork: failed to resolve app log dir: {err}");
             return;
         }
     };
 
     if let Err(err) = fs::create_dir_all(&log_dir) {
-        eprintln!("noxe: failed to create app log dir {}: {err}", log_dir.display());
+        eprintln!("cork: failed to create app log dir {}: {err}", log_dir.display());
         return;
     }
 
@@ -222,7 +222,7 @@ pub fn diagnostics_report_error(input: ReportInput) -> Result<(), IpcError> {
     redact_event(&mut event);
     // Best-effort — disk errors do not propagate to the user.
     if let Err(err) = write_event(&event) {
-        eprintln!("noxe: failed to write crash event: {err}");
+        eprintln!("cork: failed to write crash event: {err}");
     }
     Ok(())
 }

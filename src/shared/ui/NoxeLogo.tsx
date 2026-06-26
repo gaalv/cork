@@ -5,44 +5,37 @@ type LogoProps = Omit<SVGProps<SVGSVGElement>, "viewBox" | "xmlns"> & {
   variant?: "color" | "mono";
 };
 
-export function NoxeLogo({ size = 20, variant = "color", ...rest }: LogoProps) {
-  const fillBg = variant === "color" ? "url(#noxe-logo-bg)" : "currentColor";
-  const strokeColor = variant === "color" ? "#FFFFFF" : "var(--color-noxe-panel)";
-  const accent = variant === "color" ? "#FF9A3C" : "currentColor";
+/**
+ * Cork app mark — open "C" arc with stopper dot.
+ * Derived from mark-black.svg / mark-white.svg in brand/.
+ */
+export function CorkLogo({ size = 20, variant = "color", ...rest }: LogoProps) {
+  const stroke = variant === "color" ? "#1d1b19" : "currentColor";
+  const fill = variant === "color" ? "#1d1b19" : "currentColor";
 
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 512 512"
+      viewBox="0 0 100 100"
       width={size}
       height={size}
+      fill="none"
       role="img"
-      aria-label="Noxe"
+      aria-label="Cork"
       {...rest}
     >
-      {variant === "color" ? (
-        <defs>
-          <linearGradient id="noxe-logo-bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#3F3DFF" />
-            <stop offset="1" stopColor="#1F1D5A" />
-          </linearGradient>
-        </defs>
-      ) : null}
-      <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill={fillBg} />
       <path
-        d="M132 372 V140 L380 372 V140"
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={48}
+        d="M72 33 A28 28 0 1 0 72 67"
+        stroke={stroke}
+        strokeWidth={7}
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
-      <circle cx="380" cy="140" r="22" fill={accent} />
+      <circle cx="74" cy="50" r="8.5" fill={fill} stroke="none" />
     </svg>
   );
 }
 
-export function NoxeWordmark({ height = 20, className }: { height?: number; className?: string }) {
+export function CorkWordmark({ height = 20, className }: { height?: number; className?: string }) {
   return (
     <span
       className={className}
@@ -53,17 +46,22 @@ export function NoxeWordmark({ height = 20, className }: { height?: number; clas
         lineHeight: 1,
       }}
     >
-      <NoxeLogo size={height} />
+      <CorkLogo size={height} />
       <span
         style={{
           fontWeight: 700,
           fontSize: Math.round(height * 0.85),
           letterSpacing: "-0.02em",
-          color: "var(--color-noxe-ink, #0F172A)",
+          color: "var(--color-cork-ink, #0F172A)",
         }}
       >
-        Noxe
+        Cork
       </span>
     </span>
   );
 }
+
+/** @deprecated Use CorkLogo instead */
+export const NoxeLogo = CorkLogo;
+/** @deprecated Use CorkWordmark instead */
+export const NoxeWordmark = CorkWordmark;

@@ -33,12 +33,12 @@ There's no app yet — only a layout prototype in `/prototype`. We need a real T
 
 ### P1: Boot the app ⭐ MVP
 
-**User Story:** As a developer, I want to clone the repo and run `pnpm tauri dev` to see Noxe's Layout C shell, so I can iterate on features.
+**User Story:** As a developer, I want to clone the repo and run `pnpm tauri dev` to see Cork's Layout C shell, so I can iterate on features.
 
 **Why P1:** Without a runnable shell, nothing else can be built or verified.
 
 **Acceptance Criteria:**
-1. WHEN a fresh clone runs `pnpm install && pnpm tauri dev` THEN the system SHALL open a native window titled "Noxe" rendering the Home view of Layout C.
+1. WHEN a fresh clone runs `pnpm install && pnpm tauri dev` THEN the system SHALL open a native window titled "Cork" rendering the Home view of Layout C.
 2. WHEN the user clicks the rail icons THEN the system SHALL toggle the corresponding drawers (using mock data; no real persistence).
 3. WHEN the user presses ⌘K (or Ctrl+K on Linux/Windows) THEN the system SHALL open the command palette modal with a focused input.
 4. WHEN there is no `pnpm-lock.yaml` THEN the system SHALL fail the install with a clear message and CI SHALL fail.

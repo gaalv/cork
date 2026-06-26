@@ -4,6 +4,7 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
 [
   {
     "file": "01-basic.md",
+    "frontmatter": {},
     "headings": [
       {
         "level": 1,
@@ -19,13 +20,16 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "markdownExtensions": [],
-    "tags": [
-      "dev",
-    ],
-    "title": "Basic Note",
+    "title": "01-basic",
   },
   {
     "file": "02-frontmatter-array.md",
+    "frontmatter": {
+      "tags": [
+        "project",
+        "#rust/lang",
+      ],
+    },
     "headings": [
       {
         "level": 1,
@@ -35,25 +39,21 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
     ],
     "links": [],
     "markdownExtensions": [],
-    "tags": [
-      "project",
-      "rust/lang",
-    ],
-    "title": "Frontmatter Array",
+    "title": "02-frontmatter-array",
   },
   {
     "file": "03-frontmatter-string.md",
+    "frontmatter": {
+      "tags": "dev, rust, bad tag",
+    },
     "headings": [],
     "links": [],
     "markdownExtensions": [],
-    "tags": [
-      "dev",
-      "rust",
-    ],
     "title": "03-frontmatter-string",
   },
   {
     "file": "04-tags-in-code.md",
+    "frontmatter": {},
     "headings": [
       {
         "level": 1,
@@ -69,13 +69,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "markdownExtensions": [],
-    "tags": [
-      "visible",
-    ],
-    "title": "Code Skip",
+    "title": "04-tags-in-code",
   },
   {
     "file": "05-inline-code.md",
+    "frontmatter": {},
     "headings": [
       {
         "level": 1,
@@ -85,13 +83,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
     ],
     "links": [],
     "markdownExtensions": [],
-    "tags": [
-      "visible",
-    ],
-    "title": "Inline Code",
+    "title": "05-inline-code",
   },
   {
     "file": "06-wikilink-alias.md",
+    "frontmatter": {},
     "headings": [
       {
         "level": 1,
@@ -112,11 +108,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "markdownExtensions": [],
-    "tags": [],
-    "title": "Links",
+    "title": "06-wikilink-alias",
   },
   {
     "file": "07-headings.md",
+    "frontmatter": {},
     "headings": [
       {
         "level": 1,
@@ -136,11 +132,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
     ],
     "links": [],
     "markdownExtensions": [],
-    "tags": [],
-    "title": "Top",
+    "title": "07-headings",
   },
   {
     "file": "08-unicode.md",
+    "frontmatter": {},
     "headings": [
       {
         "level": 1,
@@ -156,21 +152,23 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
       },
     ],
     "markdownExtensions": [],
-    "tags": [
-      "a",
-    ],
-    "title": "Olá mundo dev",
+    "title": "08-unicode",
   },
   {
     "file": "09-empty-frontmatter.md",
+    "frontmatter": {
+      "aliases": [
+        "Empty",
+      ],
+    },
     "headings": [],
     "links": [],
     "markdownExtensions": [],
-    "tags": [],
     "title": "09-empty-frontmatter",
   },
   {
     "file": "10-edge-tags.md",
+    "frontmatter": {},
     "headings": [
       {
         "level": 1,
@@ -180,15 +178,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
     ],
     "links": [],
     "markdownExtensions": [],
-    "tags": [
-      "bad",
-      "dev/rust",
-      "todo-list",
-    ],
-    "title": "Edge Tags",
+    "title": "10-edge-tags",
   },
   {
     "file": "11-callout-note.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [
@@ -198,11 +192,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "value": "note:Remember",
       },
     ],
-    "tags": [],
     "title": "11-callout-note",
   },
   {
     "file": "12-callout-warning.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [
@@ -212,11 +206,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "value": "warning:Heads up",
       },
     ],
-    "tags": [],
     "title": "12-callout-warning",
   },
   {
     "file": "13-callout-unknown.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [
@@ -226,11 +220,11 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "value": "note:Custom title",
       },
     ],
-    "tags": [],
     "title": "13-callout-unknown",
   },
   {
     "file": "14-footnote-basic.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [
@@ -245,19 +239,19 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "value": "1:Footnote text.",
       },
     ],
-    "tags": [],
     "title": "14-footnote-basic",
   },
   {
     "file": "15-footnote-orphan.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [],
-    "tags": [],
     "title": "15-footnote-orphan",
   },
   {
     "file": "16-highlight-basic.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [
@@ -267,19 +261,19 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "value": "important",
       },
     ],
-    "tags": [],
     "title": "16-highlight-basic",
   },
   {
     "file": "17-highlight-escape.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [],
-    "tags": [],
     "title": "17-highlight-escape",
   },
   {
     "file": "18-highlight-mixed.md",
+    "frontmatter": {},
     "headings": [],
     "links": [],
     "markdownExtensions": [
@@ -289,7 +283,6 @@ exports[`parser parity fixtures > matches the committed AST snapshot 1`] = `
         "value": "highlight",
       },
     ],
-    "tags": [],
     "title": "18-highlight-mixed",
   },
 ]

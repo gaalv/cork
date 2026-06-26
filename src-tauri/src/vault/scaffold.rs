@@ -9,11 +9,11 @@ use crate::vault::VaultState;
 use crate::IpcError;
 
 const SCAFFOLD_VERSION: u8 = 2;
-const MARKER_IGNORE_ENTRY: &str = ".noxe/scaffold.json";
+const MARKER_IGNORE_ENTRY: &str = ".cork/scaffold.json";
 const SEED_TODOS: [&str; 6] = [
     "Skim Welcome and Cheatsheet",
     "Open ⌘K and try `Generate note from topic`",
-    "Star the Engineering Patterns note",
+    "Pin the Engineering Patterns note",
     "Add today's first daily note",
     "Wire your first GitHub sync (Settings → Sync)",
     "Capture one idea in Inbox/Quick Capture",
@@ -22,11 +22,11 @@ const SCAFFOLD_FILES: &[(&str, &str)] = &[
     (
         "Welcome.md",
         r#"---
-tags: [onboarding, noxe]
-starred: true
+tags: [onboarding, cork]
+pinned: true
 ---
 
-# Welcome to Noxe
+# Welcome to Cork
 
 A fast, local-first workspace for engineers who write a lot of Markdown — notes, plans, designs, daily logs — and want them to stay yours.
 
@@ -50,7 +50,7 @@ A fast, local-first workspace for engineers who write a lot of Markdown — note
 - **Sync** — push your vault to a private GitHub repo when you're ready
 
 ```ts
-// Noxe is just Markdown + SQLite + git.
+// Cork is just Markdown + SQLite + git.
 // Open the vault in any other editor and nothing breaks.
 const value = "your notes, your files, forever";
 ```
@@ -64,7 +64,7 @@ tags: [onboarding, meta]
 
 # README — This Vault
 
-This vault was scaffolded by Noxe to show off every feature with realistic, dev-flavored content. Treat it like a playground:
+This vault was scaffolded by Cork to show off every feature with realistic, dev-flavored content. Treat it like a playground:
 
 - Edit, rename, or delete anything.
 - Empty a folder to start fresh in that area.
@@ -85,7 +85,7 @@ This vault was scaffolded by Noxe to show off every feature with realistic, dev-
 
 ## Conventions used
 
-- Frontmatter: `tags`, `starred`, `created`, `updated`
+- Frontmatter: `tags`, `pinned`, `created`, `updated`
 - Tasks: `- [ ]` open, `- [x]` done
 - Callouts: `> [!note]`, `> [!tip]`, `> [!warning]`
 - Wikilinks: `[[Engineering/Patterns]]`
@@ -104,7 +104,7 @@ Your dependable home for plans, log, and loose thoughts. Replace this template w
 ## Focus
 
 - [ ] One thing that, if shipped, makes today worth it
-- [ ] Review [[Projects/Noxe Roadmap]] follow-ups
+- [ ] Review [[Projects/Cork Roadmap]] follow-ups
 - [ ] Close at least one open todo
 
 ## Log
@@ -115,7 +115,7 @@ Your dependable home for plans, log, and loose thoughts. Replace this template w
 
 ## Done
 
-- [x] Opened Noxe and didn't immediately get lost
+- [x] Opened Cork and didn't immediately get lost
 - [ ] Wrote one note worth re-reading next week
 "#,
     ),
@@ -141,19 +141,19 @@ A second daily note so the calendar view has something to render. Keep, archive,
 ## Tomorrow
 
 - [ ] Land the cache fix
-- [ ] Write up the post-mortem in [[Projects/Noxe Roadmap]]
+- [ ] Write up the post-mortem in [[Projects/Cork Roadmap]]
 "#,
     ),
     (
-        "Projects/Noxe Roadmap.md",
+        "Projects/Cork Roadmap.md",
         r#"---
-tags: [project, noxe, planning]
-starred: true
+tags: [project, cork, planning]
+pinned: true
 ---
 
-# Noxe Roadmap
+# Cork Roadmap
 
-A living brief for the Noxe project itself. Use it as a template for your own active work.
+A living brief for the Cork project itself. Use it as a template for your own active work.
 
 > [!note]
 > One project note per active initiative. Archive when done. Link daily notes to it, not the other way around.
@@ -227,14 +227,14 @@ interface IpcContract {
 
 - [ ] Generate types from a single source of truth
 - [ ] Add per-method timing in dev only
-- [ ] Sunset the legacy `ai_send_prompt` command (see [[Projects/Noxe Roadmap]])
+- [ ] Sunset the legacy `ai_send_prompt` command (see [[Projects/Cork Roadmap]])
 "#,
     ),
     (
         "Engineering/Patterns.md",
         r#"---
 tags: [engineering, patterns, reference]
-starred: true
+pinned: true
 ---
 
 # Engineering Patterns
@@ -384,7 +384,7 @@ Pick one a week. Take notes.
         "References/Cheatsheet.md",
         r#"---
 tags: [reference, cheatsheet]
-starred: true
+pinned: true
 ---
 
 # Cheatsheet
@@ -431,7 +431,7 @@ tags: [reference, markdown]
 
 # Markdown Syntax
 
-A round-trip example that exercises most of what Noxe renders.
+A round-trip example that exercises most of what Cork renders.
 
 ## Inline
 
@@ -516,7 +516,7 @@ tags: [meeting, kickoff]
 
 - You
 - Future teammates
-- Noxe, quietly keeping context
+- Cork, quietly keeping context
 
 ## Agenda
 
@@ -527,7 +527,7 @@ tags: [meeting, kickoff]
 ## Notes
 
 - [[Welcome]] should be the front door, not a manual.
-- [[Projects/Noxe Roadmap]] becomes the running brief.
+- [[Projects/Cork Roadmap]] becomes the running brief.
 - Daily notes are best for motion; project notes are best for memory.
 
 ## Action items
@@ -581,7 +581,7 @@ Anything you don't know where to put yet. Triage weekly:
 
 - Promote to a project note → `Projects/`
 - Promote to a reference → `References/`
-- Convert to a todo (⌘K → `Add todo`)
+- Turn it into a task checkbox (`- [ ]`)
 - Delete if it's already stale
 "#,
     ),
@@ -595,7 +595,7 @@ tags: [zen, focus]
 
 > The shortest path to better work is fewer open browser tabs.
 
-A small reminder that ships in every Noxe vault. Edit it, delete it, replace it with your own.
+A small reminder that ships in every Cork vault. Edit it, delete it, replace it with your own.
 
 ## A practice
 
@@ -698,11 +698,11 @@ fn read_marker_version(marker: &Path) -> Option<u8> {
 }
 
 fn marker_path(vault_root: &Path) -> PathBuf {
-    vault_root.join(".noxe").join("scaffold.json")
+    vault_root.join(".cork").join("scaffold.json")
 }
 
 fn todos_path(vault_root: &Path) -> PathBuf {
-    vault_root.join(".noxe").join("todos.json")
+    vault_root.join(".cork").join("todos.json")
 }
 
 fn seed_todos_if_empty(vault_root: &Path, created_at: &str) -> Result<(), IpcError> {
@@ -786,7 +786,7 @@ mod tests {
         assert_eq!(first.files.len(), SCAFFOLD_FILES.len());
         assert!(root.join("Welcome.md").exists());
         assert!(root.join("Daily/Today.md").exists());
-        assert!(root.join(".noxe/scaffold.json").exists());
+        assert!(root.join(".cork/scaffold.json").exists());
         assert!(fs::read_to_string(root.join(".gitignore"))
             .unwrap()
             .contains(MARKER_IGNORE_ENTRY));
@@ -811,9 +811,9 @@ mod tests {
         let created_at = "2026-05-08T12:00:00Z";
 
         // Simulate an older scaffold marker (version 1).
-        fs::create_dir_all(root.join(".noxe")).unwrap();
+        fs::create_dir_all(root.join(".cork")).unwrap();
         fs::write(
-            root.join(".noxe/scaffold.json"),
+            root.join(".cork/scaffold.json"),
             "{\"version\":1,\"created_at\":\"2024-01-01T00:00:00Z\"}",
         )
         .unwrap();
@@ -823,7 +823,7 @@ mod tests {
         assert!(result.created);
         assert_eq!(result.files.len(), SCAFFOLD_FILES.len());
         let welcome = fs::read_to_string(root.join("Welcome.md")).unwrap();
-        assert!(welcome.contains("Welcome to Noxe"));
+        assert!(welcome.contains("Welcome to Cork"));
         assert_ne!(welcome, "stale welcome");
     }
 }

@@ -1,17 +1,10 @@
 # Deferred — ideas to revisit
 
-These features were proposed but deferred from the current sprint because each is large enough to deserve its own design pass. Saved here so we can pick them up cleanly.
+These features were proposed but deferred from the original v1 sprint. Items here either shipped under a follow-up Fxx (status noted inline) or remain genuinely outstanding.
 
 ## D1 — Calendar / agenda + Google Calendar integration
 
-**Status.** v0 (month grid with daily-note indicators) and v1 (right-side agenda panel) were implemented in **F19** — see `.specs/features/F19-calendar-view/`.
-
-**What was implemented in F19:**
-- `{ kind: "calendar" }` screen accessible from the Rail sidebar (`CalendarBlank` icon).
-- Month grid with 7-column DOW header, up to 6 rows of day cells, prev/next/today navigation, and month+year title.
-- Day cells highlight today, show a dot indicator when a daily note or `event:`-frontmatter note exists for that day.
-- Clicking a day with a daily note opens it; clicking a day without one opens the Agenda panel.
-- Agenda panel lists the daily note + event notes for the selected day, each clickable; shows "Create daily note" CTA when none exists; dismissable via close button or Escape.
+**Status.** v0 (month grid with daily-note indicators) and v1 (right-side agenda panel) **shipped in F19**. The Calendar surface is also routed through the F31 tool-overlay so triage mode keeps its third column. See `.specs/features/F19-calendar-view/` and AD-046.
 
 **Still deferred:**
 - Google Calendar OAuth / one-way sync (using `tauri-plugin-oauth` or a Rust OAuth flow, store `refresh_token` in OS keychain).
@@ -22,47 +15,29 @@ These features were proposed but deferred from the current sprint because each i
 
 ## D2 — GitHub sync (Obsidian-style) + per-note history sidebar
 
-**Idea.** With the user's permission, create a private GitHub repo and push the vault to it. Show per-note commit history in the right sidebar (similar to Tolaria) with rollback. Multi-device picks up the latest.
-
-**Why deferred.**
-- Two real subsystems: vault-level git repo management, and a UX for browsing/restoring history.
-- Conflict handling is the hard part (Obsidian Sync handles it well but they own the protocol — with vanilla git we have to solve merge UX).
-- GitHub OAuth + repo provisioning needs scopes the user must grant.
-- Need to decide: shell out to `git` CLI (small, robust) vs `git2` (libgit2 binding, heavy).
-
-**Sketch when picked up.**
-1. v0 — local git only: `git init` on the vault, autocommit on save with a debounce, show local history. ✅ **Implemented in F18** — see `.specs/features/F18-local-git-sync/`.
-2. v1 — GitHub: `gh auth status` integration to authorise; `gh repo create --private`; auto push on commit.
-3. v2 — multi-device: pull-on-open, per-file conflict resolver UI ("keep mine / keep theirs / 3-way merge").
-4. Sidebar: list commits touching the open note; clicking a commit shows a diff and a "Restore this version" button that writes the file at that revision. ✅ **Implemented in F18 (without diff view — diff is still deferred).**
+**Status.**
+- v0 — local git only: `git init` on the vault, autocommit on save with a debounce, per-note history with restore → **shipped in F18** (`.specs/features/F18-local-git-sync/`, AD-045).
+- v1 — GitHub remote push → **shipped in F26** with the SSH-only auth path locked in by AD-038 / F27. Sweep-on-sync (AD-039) commits the entire vault, not only the active note.
+- Inspector "History" section under F32 (AD-048) now owns the per-note commit list inside the four-section panel.
 
 **Still deferred (D2 remainder):**
-- GitHub OAuth / remote push (v1)
-- Multi-device pull-on-open + conflict resolution UI (v2–v3)
-- In-sidebar diff view
+- ~~Multi-device conflict resolution UI (current behaviour is conflict-as-copy).~~ → **Superseded by F37 — CRDT Sync.** Yjs CRDTs eliminate conflicts by construction; conflict-as-copy remains only as a git-level fallback for edge cases.
+- In-sidebar diff view.
+- Pull-on-open lifecycle hook (today sync is user-triggered + periodic background sweep).
+- **NEW → F37 (M11):** Real-time multi-device sync via Yjs CRDT + optional WebSocket relay + WebRTC P2P. Git stays as archive/backup layer. See `.specs/features/F37-crdt-sync/`.
 
 ## D3 — AI integration (Claude Code + Copilot CLI)
 
-**Status.** v1 (right-side chat panel scoped to open note) implemented in **F20** — see `.specs/features/F20-ai-chat/`.
-
-**What was implemented in F20:**
-- `AppSettings.ai.provider` setting (`disabled` | `claude` | `copilot`), default `disabled`.
-- Settings "AI" section with provider Select.
-- Rust `ai` module: `ai_send_prompt` Tauri command — binary discovery via `which`/`where`, stdin piping, 60s timeout, typed `AiError` with `kind` field.
-- IPC contract + client for `ai.sendPrompt`.
-- `useAiStore` Zustand store (in-memory messages, `sendPrompt`, `clearChat`, `togglePanel`).
-- `aiClient` service (context builder capped at 50 KB, IPC wrapper).
-- `ChatPanel` + `MessageBubble` components — assistant replies rendered as Markdown via `react-markdown`.
-- AI chat toggle button in TopBar (visible when a note is open).
+**Status.** Generic chat panel (F20) shipped, then **superseded by F21–F24** (AD-036): a skills/cache/telemetry foundation (F21) plus three contextual surfaces — Insights sidebar (F22), Generate-from-topic palette command (F23), and editor slash commands (F24). All run through local `claude` / `copilot` CLI subprocesses with no HTTP providers, no embeddings, no RAG.
 
 **Still deferred:**
-- Streaming output (SSE / chunked stdout).
+- Streaming output — non-interactive subprocesses buffer stdout (L-017); current pattern is background dispatch + sonner toasts (AD-037).
 - Multi-note context / pinned notes.
 - Vector search / RAG / embeddings.
-- AI-driven note editing (inline rewrites, insertions).
-- Conversation persistence across restarts.
+- AI-driven note editing beyond the four slash commands (e.g., agentic refactors).
+- Cancel-in-flight for long calls.
+- Conversation persistence (the F20 chat panel was removed under F22).
 - Tool calls / function calling.
-- Response caching keyed on note hash + prompt.
 
 ---
 

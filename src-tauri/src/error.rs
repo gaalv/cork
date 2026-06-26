@@ -60,6 +60,14 @@ impl From<std::io::Error> for IpcError {
     }
 }
 
+/// Convert a `rusqlite::Error` into [`IpcError::Other`].
+///
+/// Intended as a `.map_err` helper so call-sites can write
+/// `.map_err(sql_error)?` instead of duplicating the closure.
+pub fn sql_error(error: rusqlite::Error) -> IpcError {
+    IpcError::Other(error.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

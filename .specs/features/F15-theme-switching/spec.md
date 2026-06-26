@@ -6,7 +6,7 @@
 
 ## Problem Statement
 
-Noxe v1 ships with a hard-coded light theme. The Settings panel exposes a Theme select that is `disabled`, the type `AppearanceTheme` is `"light"` only, and the bridge silently rewrites any value back to `"light"`. There is no dark token palette, no runtime that applies a theme, and the Shiki preview highlighter is hard-pinned to `vitesse-light`. This feature lights up the existing UI knob end-to-end so users can switch between light, dark, and system-follow themes.
+Cork v1 ships with a hard-coded light theme. The Settings panel exposes a Theme select that is `disabled`, the type `AppearanceTheme` is `"light"` only, and the bridge silently rewrites any value back to `"light"`. There is no dark token palette, no runtime that applies a theme, and the Shiki preview highlighter is hard-pinned to `vitesse-light`. This feature lights up the existing UI knob end-to-end so users can switch between light, dark, and system-follow themes.
 
 ## Goals
 
@@ -38,7 +38,7 @@ Noxe v1 ships with a hard-coded light theme. The Settings panel exposes a Theme 
 
 - **FR1** — `AppearanceTheme = "light" | "dark" | "system"`.
 - **FR2** — A `themeRuntime` module sets `data-theme="light"|"dark"` on `<html>` whenever the resolved theme changes. When the stored choice is `"system"`, it resolves via `window.matchMedia("(prefers-color-scheme: dark)")` and listens for changes.
-- **FR3** — `index.css` exposes the existing palette as the default (light) and a `:root[data-theme="dark"]` override block with all `--color-noxe-*` tokens redefined for dark.
+- **FR3** — `index.css` exposes the existing palette as the default (light) and a `:root[data-theme="dark"]` override block with all `--color-cork-*` tokens redefined for dark.
 - **FR4** — `settingsBridge.set("appearance.theme", value, "global")` accepts `"light"`, `"dark"`, or `"system"` and persists the literal value (no silent rewrite).
 - **FR5** — `normalizeAppSettings` accepts the three valid values and falls back to `"system"` if the persisted value is unknown.
 - **FR6** — The Theme `<select>` in `SettingsPanel.tsx` is no longer disabled; offers three options: System (follow OS), Light, Dark.

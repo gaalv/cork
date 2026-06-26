@@ -37,6 +37,7 @@ pub struct NoteEntry {
     pub path: PathBuf,
     pub title: String,
     pub folder: String,
+    pub snippet: String,
     pub size: u64,
     pub mtime: i64,
 }
@@ -255,15 +256,12 @@ impl VaultState {
 }
 
 fn vault_display_name(path: &Path) -> String {
-    path.components()
-        .filter_map(|component| component.as_os_str().to_str())
-        .rev()
-        .take(2)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect::<Vec<_>>()
-        .join("/")
+    let parts: Vec<_> = path
+        .components()
+        .filter_map(|c| c.as_os_str().to_str())
+        .collect();
+    let start = parts.len().saturating_sub(2);
+    parts[start..].join("/")
 }
 
 pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -278,7 +276,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 let assets = app_handle.state::<crate::assets::AssetScopeState>();
                 crate::assets::set_scope_for_path(&app_handle, &assets, &path)?;
                 if let Err(e) = crate::vcs::git_init_if_needed(&path) {
-                    eprintln!("noxe vcs: git init skipped: {e}");
+                    eprintln!("cork vcs: git init skipped: {e}");
                 }
                 let remote = app_handle.state::<crate::vcs::remote::RemoteState>();
                 let settings = crate::vault::settings::load_vault_settings(&path).ok();
@@ -329,7 +327,7 @@ pub async fn vault_open(
         let assets = app.state::<crate::assets::AssetScopeState>();
         crate::assets::set_scope_for_path(&app, &assets, &path)?;
         if let Err(e) = crate::vcs::git_init_if_needed(&path) {
-            eprintln!("noxe vcs: git init skipped: {e}");
+            eprintln!("cork vcs: git init skipped: {e}");
         }
         let remote = app.state::<crate::vcs::remote::RemoteState>();
         let settings = crate::vault::settings::load_vault_settings(&path).ok();

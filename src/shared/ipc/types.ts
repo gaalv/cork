@@ -34,10 +34,9 @@ export type AppSettings = {
     fontSize: number;
     tabSize: number;
     showInvisibles: boolean;
+    vimMode: boolean;
   };
-  vault: {
-    recentLimit: number;
-  };
+  vault: Record<string, never>;
   markdown: {
     callouts: boolean;
     footnotes: boolean;
@@ -74,6 +73,7 @@ export type NoteEntry = {
   path: string;
   title: string;
   folder: string;
+  snippet: string;
   size: number;
   mtime: number;
 };

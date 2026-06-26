@@ -1,27 +1,20 @@
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+/**
+ * Todos runtime — listens for the tray/menu "open-todos" event.
+ *
+ * Routes to the todos view via shellStore navigation.
+ */
 
-import { openToolView } from "@/features/shell/services/openToolView";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
-export const OPEN_TODOS_EVENT = "todos:open";
+import { useShellStore } from "@/features/shell/state/shellStore";
 
-let unlisten: UnlistenFn | null = null;
+export async function installOpenTodosRuntime() {
+  await listen("tray:open-todos", async () => {
+    const win = getCurrentWindow();
+    await win.show();
+    await win.setFocus();
 
-export async function installOpenTodosRuntime(): Promise<void> {
-  if (unlisten) {
-    return;
-  }
-  try {
-    unlisten = await listen(OPEN_TODOS_EVENT, () => {
-      openToolView("todos");
-    });
-  } catch {
-    unlisten = null;
-  }
-}
-
-export function uninstallOpenTodosRuntime(): void {
-  if (unlisten) {
-    unlisten();
-    unlisten = null;
-  }
+    useShellStore.getState().navigate({ kind: "home" });
+  });
 }

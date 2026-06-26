@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
+use crate::vault::io::{map_not_found, same_path, to_slash_string};
 use crate::vault::watcher::FileChangeSource;
 use crate::vault::{VaultPath, VaultState};
 use crate::IpcError;
@@ -51,14 +52,7 @@ pub fn folders_list(state: tauri::State<'_, VaultState>) -> Result<Vec<String>, 
             Ok(rel) => rel,
             Err(_) => continue,
         };
-        let slash: String = rel
-            .components()
-            .filter_map(|c| match c {
-                std::path::Component::Normal(name) => name.to_str().map(|s| s.to_string()),
-                _ => None,
-            })
-            .collect::<Vec<_>>()
-            .join("/");
+        let slash = to_slash_string(rel);
         if !slash.is_empty() {
             folders.push(slash);
         }
@@ -146,13 +140,25 @@ pub fn rename_folder(old_path: &Path, new_name: &str) -> Result<PathBuf, IpcErro
         .parent()
         .ok_or_else(|| IpcError::Io("folder path has no parent directory".to_string()))?;
     let new_path = parent.join(new_name.trim());
-    if same_path(old_path, &new_path) {
+    let old_name = old_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+    let is_case_only = old_name.eq_ignore_ascii_case(new_name.trim()) && old_name != new_name.trim();
+    if !is_case_only && same_path(old_path, &new_path) {
         return Ok(old_path.to_path_buf());
     }
-    if new_path.exists() {
+    if !is_case_only && new_path.exists() {
         return Err(IpcError::Conflict { current_mtime: 0 });
     }
-    fs::rename(old_path, &new_path).map_err(map_move_error)?;
+    if is_case_only {
+        // Case-insensitive FS (macOS APFS): rename via temp to change casing
+        let tmp_path = parent.join(format!("{}__tmp_rename", new_name.trim()));
+        fs::rename(old_path, &tmp_path).map_err(map_not_found)?;
+        fs::rename(&tmp_path, &new_path).map_err(map_not_found)?;
+    } else {
+        fs::rename(old_path, &new_path).map_err(map_not_found)?;
+    }
     Ok(new_path)
 }
 
@@ -271,18 +277,6 @@ fn emit_folder_changed(
         },
     )
     .map_err(|err| IpcError::Other(err.to_string()))
-}
-
-fn same_path(left: &Path, right: &Path) -> bool {
-    left.canonicalize().ok() == right.canonicalize().ok()
-}
-
-fn map_move_error(err: std::io::Error) -> IpcError {
-    if err.kind() == std::io::ErrorKind::NotFound {
-        IpcError::NotFound
-    } else {
-        IpcError::Io(err.to_string())
-    }
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 const fixturePath = path.resolve("tests/fixtures/vaults/sample");
 const notePath = path.join(fixturePath, "Home Pin.md");
 const notes = [
-  { id: "pin-note", path: notePath, title: "Home Pin", folder: "", size: 1, mtime: Date.UTC(2026, 4, 6, 12, 0) },
+  { id: "pin-note", path: notePath, title: "Home Pin", folder: "", snippet: "", size: 1, mtime: Date.UTC(2026, 4, 6, 12, 0) },
 ];
 
 test("pins and unpins a note from Home", async ({ page }) => {
@@ -15,9 +15,9 @@ test("pins and unpins a note from Home", async ({ page }) => {
       const files = new Map<string, { path: string; frontmatter: Record<string, boolean>; body: string; mtime: number }>([
         [pathToNote, { path: pathToNote, frontmatter: {}, body: "# Home Pin\nPinned flow", mtime: 1 }],
       ]);
-      window.__noxe_test_setVault?.(vaultPath, fixtureNotes);
-      window.__noxe_test_readNote = (pathName) => files.get(pathName) ?? null;
-      window.__noxe_test_togglePin = (pathName) => {
+      window.__cork_test_setVault?.(vaultPath, fixtureNotes);
+      window.__cork_test_readNote = (pathName) => files.get(pathName) ?? null;
+      window.__cork_test_togglePin = (pathName) => {
         const file = files.get(pathName);
         if (!file) {
           return false;

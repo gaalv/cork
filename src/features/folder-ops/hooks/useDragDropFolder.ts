@@ -1,53 +1,56 @@
-import { useDraggable, useDroppable } from "@dnd-kit/core";
+/**
+ * Drag-and-drop hooks for folder tree — wraps @dnd-kit.
+ *
+ * @see F08 — Folder Management spec
+ */
 
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
 
-type DragData =
-  | { type: "note"; path: string }
-  | { type: "folder"; path: string };
-
-type UseDragDropFolderOptions = {
-  onMoveNote: (notePath: string, destFolder: string) => Promise<void> | void;
-  onMoveFolder: (srcPath: string, destParent: string) => Promise<void> | void;
+type DragDropOptions = {
+  onMoveNote?: (notePath: string, destFolder: string) => Promise<void>;
+  onMoveFolder?: (srcPath: string, destParent: string) => Promise<void>;
 };
 
-export function useDragDropFolder({ onMoveNote, onMoveFolder }: UseDragDropFolderOptions) {
-  async function onDragEnd(event: DragEndEvent) {
-    const active = event.active.data.current as DragData | undefined;
-    const over = event.over?.data.current as { folder: string } | undefined;
-    if (!active || !over) {
-      return;
+export function useDragDropFolder(options: DragDropOptions) {
+  const onDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeData = active.data.current as { type: string; path: string } | undefined;
+    const overData = over.data.current as { type: string; path: string } | undefined;
+    if (!activeData || !overData) return;
+
+    if (activeData.type === "note" && overData.type === "folder") {
+      await options.onMoveNote?.(activeData.path, overData.path);
+    } else if (activeData.type === "folder" && overData.type === "folder") {
+      await options.onMoveFolder?.(activeData.path, overData.path);
     }
-    if (active.type === "note") {
-      await onMoveNote(active.path, over.folder);
-      return;
-    }
-    if (active.path === over.folder || over.folder.startsWith(`${active.path}/`)) {
-      return;
-    }
-    await onMoveFolder(active.path, over.folder);
-  }
+  };
 
   return { onDragEnd };
 }
 
-export function useNoteDragSource(path: string): ReturnType<typeof useDraggable> {
-  return useDraggable({
-    id: `note:${path}`,
-    data: { type: "note", path } satisfies DragData,
+export function useFolderDragSource(folderPath: string) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `folder:${folderPath}`,
+    data: { type: "folder", path: folderPath },
   });
+  return { attributes, listeners, setNodeRef, isDragging };
 }
 
-export function useFolderDragSource(path: string): ReturnType<typeof useDraggable> {
-  return useDraggable({
-    id: `folder:${path}`,
-    data: { type: "folder", path } satisfies DragData,
+export function useFolderDropTarget(folderPath: string) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `drop:${folderPath}`,
+    data: { type: "folder", path: folderPath },
   });
+  return { setNodeRef, isOver };
 }
 
-export function useFolderDropTarget(folder: string): ReturnType<typeof useDroppable> {
-  return useDroppable({
-    id: `folder-drop:${folder}`,
-    data: { folder },
+export function useNoteDragSource(notePath: string) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `note:${notePath}`,
+    data: { type: "note", path: notePath },
   });
+  return { attributes, listeners, setNodeRef, isDragging };
 }

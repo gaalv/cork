@@ -42,25 +42,25 @@ Default block keeps current light palette (untouched names so consumers don't br
 
 ```css
 :root[data-theme="dark"] {
-  --color-noxe-bg: #0c0a09;
-  --color-noxe-panel: #1c1917;
-  --color-noxe-panel-2: #292524;
-  --color-noxe-border: #44403c;
-  --color-noxe-border-strong: #57534e;
-  --color-noxe-ink: #fafaf9;
-  --color-noxe-muted: #a8a29e;
-  --color-noxe-subtle: #78716c;
-  --color-noxe-accent: #818cf8;
-  --color-noxe-accent-soft: #1e1b4b;
-  --color-noxe-tag: #5eead4;
-  --color-noxe-tag-soft: #134e4a;
+  --color-cork-bg: #0c0a09;
+  --color-cork-panel: #1c1917;
+  --color-cork-panel-2: #292524;
+  --color-cork-border: #44403c;
+  --color-cork-border-strong: #57534e;
+  --color-cork-ink: #fafaf9;
+  --color-cork-muted: #a8a29e;
+  --color-cork-subtle: #78716c;
+  --color-cork-accent: #818cf8;
+  --color-cork-accent-soft: #1e1b4b;
+  --color-cork-tag: #5eead4;
+  --color-cork-tag-soft: #134e4a;
 }
 
 :root[data-theme="dark"] *::-webkit-scrollbar-thumb { background: #44403c; }
 :root[data-theme="dark"] *::-webkit-scrollbar-thumb:hover { background: #57534e; }
 ```
 
-Every existing component that reads `var(--color-noxe-*)` works automatically. CodeMirror already uses these vars, so no extension change.
+Every existing component that reads `var(--color-cork-*)` works automatically. CodeMirror already uses these vars, so no extension change.
 
 ### 2. Types (`src/features/settings/state/settingsTypes.ts`)
 

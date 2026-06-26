@@ -1,32 +1,93 @@
-import { useSelectionStore } from "@/features/folder-ops/state/selectionStore";
+/**
+ * Bulk selection hook — manages multi-select state for notes.
+ *
+ * Supports click (toggle), Shift+click (range), and Cmd+click (add).
+ *
+ * @see F08 — Folder Management spec
+ */
 
-export function useBulkSelection(orderedPaths: string[]) {
-  const selectedPaths = useSelectionStore((state) => state.selectedPaths);
-  const anchorPath = useSelectionStore((state) => state.anchorPath);
-  const setSelected = useSelectionStore((state) => state.setSelected);
-  const toggleOne = useSelectionStore((state) => state.toggleOne);
-  const clear = useSelectionStore((state) => state.clear);
+import { create } from "zustand";
 
-  function handleClick(event: Pick<MouseEvent, "metaKey" | "ctrlKey" | "shiftKey">, path: string): boolean {
-    if (event.shiftKey && anchorPath) {
-      const start = orderedPaths.indexOf(anchorPath);
-      const end = orderedPaths.indexOf(path);
-      if (start !== -1 && end !== -1) {
-        const [from, to] = start < end ? [start, end] : [end, start];
-        setSelected(orderedPaths.slice(from, to + 1), path);
-        return true;
+type BulkSelectionState = {
+  selected: Set<string>;
+  lastClicked: string | null;
+  toggle: (path: string) => void;
+  add: (path: string) => void;
+  remove: (path: string) => void;
+  clear: () => void;
+  selectRange: (paths: string[], from: string, to: string) => void;
+  isSelected: (path: string) => boolean;
+  handleClick: (event: React.MouseEvent, path: string, allPaths?: string[]) => boolean;
+};
+
+const useBulkSelectionStore = create<BulkSelectionState>((set, get) => ({
+  selected: new Set(),
+  lastClicked: null,
+
+  toggle: (path) =>
+    set((state) => {
+      const next = new Set(state.selected);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return { selected: next, lastClicked: path };
+    }),
+
+  add: (path) =>
+    set((state) => {
+      const next = new Set(state.selected);
+      next.add(path);
+      return { selected: next, lastClicked: path };
+    }),
+
+  remove: (path) =>
+    set((state) => {
+      const next = new Set(state.selected);
+      next.delete(path);
+      return { selected: next };
+    }),
+
+  clear: () => set({ selected: new Set(), lastClicked: null }),
+
+  selectRange: (paths, from, to) =>
+    set((state) => {
+      const fromIdx = paths.indexOf(from);
+      const toIdx = paths.indexOf(to);
+      if (fromIdx === -1 || toIdx === -1) return state;
+      const [start, end] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+      const next = new Set(state.selected);
+      for (let i = start; i <= end; i++) {
+        next.add(paths[i]);
       }
-    }
-    if (event.metaKey || event.ctrlKey) {
-      toggleOne(path);
-      return true;
-    }
-    if (selectedPaths.length > 0) {
-      setSelected([path], path);
-      return true;
-    }
-    return false;
-  }
+      return { selected: next, lastClicked: to };
+    }),
 
-  return { selectedPaths, selectedCount: selectedPaths.length, isSelected: (path: string) => selectedPaths.includes(path), handleClick, clear };
+  isSelected: (path) => get().selected.has(path),
+
+  handleClick: (event, path, allPaths) => {
+    const { metaKey, shiftKey } = event;
+    if (!metaKey && !shiftKey) return false; // let caller handle normal click
+
+    event.preventDefault();
+    if (metaKey) {
+      get().toggle(path);
+      return true;
+    }
+    if (shiftKey && allPaths && get().lastClicked) {
+      get().selectRange(allPaths, get().lastClicked!, path);
+      return true;
+    }
+    get().toggle(path);
+    return true;
+  },
+}));
+
+export function useBulkSelection() {
+  const selected = useBulkSelectionStore((s) => s.selected);
+  const toggle = useBulkSelectionStore((s) => s.toggle);
+  const clear = useBulkSelectionStore((s) => s.clear);
+  const isSelected = useBulkSelectionStore((s) => s.isSelected);
+  const handleClick = useBulkSelectionStore((s) => s.handleClick);
+  const selectRange = useBulkSelectionStore((s) => s.selectRange);
+
+  return { selected, toggle, clear, isSelected, handleClick, selectRange };
 }

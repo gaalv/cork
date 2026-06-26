@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tauri::{AppHandle, Emitter};
 
-use crate::vault::io::{metadata_mtime_ms, read_note, save_atomic, trash_note};
+use crate::vault::io::{map_not_found, metadata_mtime_ms, read_note, same_path, save_atomic, trash_note};
 use crate::vault::watcher::{FileChangeKind, FileChangeSource, VaultFileChangedEvent};
 use crate::vault::{SaveInput, VaultFileRenamedEvent, VaultPath, VaultState};
 use crate::IpcError;
@@ -294,18 +294,6 @@ fn emit_file_changed(
     .map_err(|err| IpcError::Other(err.to_string()))
 }
 
-fn same_path(left: &Path, right: &Path) -> bool {
-    left.canonicalize().ok() == right.canonicalize().ok()
-}
-
-fn map_not_found(err: std::io::Error) -> IpcError {
-    if err.kind() == std::io::ErrorKind::NotFound {
-        IpcError::NotFound
-    } else {
-        IpcError::Io(err.to_string())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
@@ -369,12 +357,12 @@ mod tests {
         fs::write(&note, "---\npinned: true\ntags:\n  - old\n---\n# Body\n").unwrap();
         let mut patch = Map::new();
         patch.insert("pinned".to_string(), Value::Null);
-        patch.insert("starred".to_string(), Value::Bool(true));
+        patch.insert("archived".to_string(), Value::Bool(true));
 
         apply_frontmatter_patch(&note, &patch, &state).unwrap();
         let written = fs::read_to_string(note).unwrap();
 
         assert!(!written.contains("pinned"));
-        assert!(written.contains("starred: true"));
+        assert!(written.contains("archived: true"));
     }
 }

@@ -1,108 +1,92 @@
-import { useSyncExternalStore } from "react";
+/**
+ * Theme runtime — applies the active theme to the DOM before React mounts.
+ *
+ * Supports three modes: "light", "dark", "system" (resolves via media query).
+ * Subscribes to OS-level preference changes when mode is "system".
+ * Sets `data-theme` attribute on `<html>` so CSS custom properties cascade.
+ *
+ * @see F15 — Theme Switching spec
+ */
 
-import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
+const THEME_KEY = "cork-theme";
 
-export type ResolvedTheme = "light" | "dark";
+type ThemeChoice = "light" | "dark" | "system";
+type ResolvedTheme = "light" | "dark";
 
-const listeners = new Set<() => void>();
-let activeResolved: ResolvedTheme = "light";
+function getMediaQuery(): MediaQueryList | null {
+  if (typeof window === "undefined" || !window.matchMedia) return null;
+  return window.matchMedia("(prefers-color-scheme: dark)");
+}
 
-function getMql(): MediaQueryList | null {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return null;
-  }
+function systemPrefersDark(): boolean {
+  return getMediaQuery()?.matches ?? false;
+}
+
+function resolveTheme(choice: ThemeChoice): ResolvedTheme {
+  if (choice === "light" || choice === "dark") return choice;
+  return systemPrefersDark() ? "dark" : "light";
+}
+
+function readStoredChoice(): ThemeChoice {
   try {
-    return window.matchMedia("(prefers-color-scheme: dark)");
+    const raw = localStorage.getItem(THEME_KEY);
+    if (raw === "light" || raw === "dark" || raw === "system") return raw;
   } catch {
-    return null;
+    // localStorage may be unavailable in some contexts
   }
+  return "system";
 }
 
-function compute(): ResolvedTheme {
-  const choice = useAppSettingsStore.getState().settings.appearance.theme;
-  if (choice === "light" || choice === "dark") {
-    return choice;
-  }
-  const mql = getMql();
-  return mql?.matches ? "dark" : "light";
+function apply(theme: ResolvedTheme) {
+  document.documentElement.setAttribute("data-theme", theme);
 }
 
-function applyResolved(next: ResolvedTheme): void {
-  if (typeof document === "undefined") return;
-  document.documentElement.dataset.theme = next;
-}
-
+/**
+ * Returns the currently active resolved theme ("light" | "dark").
+ * Useful for non-React consumers like Shiki highlighter.
+ */
 export function resolveActiveTheme(): ResolvedTheme {
-  return activeResolved;
+  return resolveTheme(readStoredChoice());
 }
 
-let installed: (() => void) | null = null;
-
-export function installThemeRuntime(): () => void {
-  if (typeof window === "undefined") return () => undefined;
-  if (installed) return installed;
-
-  const mql = getMql();
-  let lastChoice = useAppSettingsStore.getState().settings.appearance.theme;
-
-  const apply = () => {
-    const next = compute();
-    if (next === activeResolved) return;
-    activeResolved = next;
-    applyResolved(next);
-    for (const fn of listeners) fn();
-  };
-
-  // Apply immediately so first paint is correct.
-  activeResolved = compute();
-  applyResolved(activeResolved);
-
-  const unsubStore = useAppSettingsStore.subscribe((state) => {
-    const choice = state.settings.appearance.theme;
-    if (choice === lastChoice) return;
-    lastChoice = choice;
-    apply();
-  });
-
-  const onMql = () => apply();
-  mql?.addEventListener?.("change", onMql);
-
-  installed = () => {
-    unsubStore();
-    mql?.removeEventListener?.("change", onMql);
-    installed = null;
-  };
-  return installed;
+/**
+ * Persists theme choice and immediately applies it.
+ */
+export function setTheme(choice: ThemeChoice) {
+  try {
+    localStorage.setItem(THEME_KEY, choice);
+  } catch {
+    // best-effort
+  }
+  apply(resolveTheme(choice));
 }
 
-export function cycleTheme(): void {
-  const store = useAppSettingsStore.getState();
-  const current = store.settings.appearance.theme;
-  const next = current === "light" ? "dark" : current === "dark" ? "system" : "light";
-  void store.updateSettings({ appearance: { ...store.settings.appearance, theme: next } });
+/**
+ * Cycles through light → dark → system → light.
+ */
+export function cycleTheme(): ThemeChoice {
+  const current = readStoredChoice();
+  const next: ThemeChoice =
+    current === "light" ? "dark" : current === "dark" ? "system" : "light";
+  setTheme(next);
+  return next;
 }
 
-function subscribeResolvedTheme(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
+/**
+ * Call once at app startup (before React mount) to apply the persisted
+ * theme and start watching OS preference changes.
+ */
+export function installThemeRuntime() {
+  const choice = readStoredChoice();
+  apply(resolveTheme(choice));
 
-export function useResolvedTheme(): ResolvedTheme {
-  return useSyncExternalStore(subscribeResolvedTheme, resolveActiveTheme, () => "light");
+  const mq = getMediaQuery();
+  if (mq) {
+    mq.addEventListener("change", () => {
+      const current = readStoredChoice();
+      if (current === "system") {
+        apply(resolveTheme("system"));
+      }
+    });
+  }
 }
-
-export const __test__ = {
-  reset() {
-    if (installed) {
-      installed();
-    }
-    installed = null;
-    activeResolved = "light";
-    listeners.clear();
-    if (typeof document !== "undefined") {
-      delete document.documentElement.dataset.theme;
-    }
-  },
-};

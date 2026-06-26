@@ -56,13 +56,15 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.bulkTrash": "notes_bulk_trash",
   "notes.bulkSetFrontmatter": "notes_bulk_set_frontmatter",
   "notes.allPaged": "notes_all_paged",
-  "notes.recent": "notes_recent",
   "notes.byTag": "notes_by_tag",
   "notes.byFolder": "notes_by_folder",
   "notes.byId": "notes_by_id",
-  "notes.starred": "notes_starred",
-  "notes.search": "notes_search",
+  "notes.pinned": "notes_pinned",
+  "tags.create": "tags_create",
   "tags.list": "tags_list",
+  "tags.noteMap": "tags_note_map",
+  "tags.rename": "tags_rename",
+  "tags.delete": "tags_delete",
   "links.outgoing": "links_outgoing",
   "links.incoming": "links_incoming",
   "links.graph": "links_graph",
@@ -74,6 +76,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "vcs.history": "vcs_history",
   "vcs.restore": "vcs_restore",
   "vcs.remoteEnable": "vcs_remote_enable",
+  "vcs.remoteClone": "vcs_remote_clone",
   "vcs.remoteDisable": "vcs_remote_disable",
   "vcs.remoteSyncNow": "vcs_remote_sync_now",
   "vcs.generateDeployKey": "vcs_generate_deploy_key",
@@ -84,6 +87,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "ai.skillsList": "ai_skills_list",
   "ai.stats": "ai_stats",
   "ai.telemetryClear": "ai_telemetry_clear",
+  "ai.providersAvailable": "ai_providers_available",
   "todos.load": "todos_load",
   "todos.save": "todos_save",
   "diagnostics.reportError": "diagnostics_report_error",
@@ -127,7 +131,7 @@ export async function invokeCommand<Name extends IpcCommandName>(
     const message = ipcErrorMessage(err);
     const kind = ipcErrorKind(err);
     // NotFound is a control-flow signal (missing note, no recent files,
-    // no starred, etc.). Callers handle it explicitly — do not toast.
+    // no pinned notes, etc.). Callers handle it explicitly — do not toast.
     if (kind !== "NotFound") {
       emitIpcError({ topic: command, message });
     }
@@ -185,15 +189,17 @@ export const client = {
     bulkSetFrontmatter: (paths: string[], patch: JsonRecord) =>
       invokeCommand("notes.bulkSetFrontmatter", { paths, patch }),
     allPaged: (offset: number, limit: number) => invokeCommand("notes.allPaged", { offset, limit }),
-    recent: (limit?: number) => invokeCommand("notes.recent", { limit }),
     byTag: (tag: string) => invokeCommand("notes.byTag", { tag }),
     byFolder: (folder: string) => invokeCommand("notes.byFolder", { folder }),
     byId: (id: string) => invokeCommand("notes.byId", { id }),
-    starred: () => invokeCommand("notes.starred", undefined),
-    search: (query: string, limit?: number) => invokeCommand("notes.search", { query, limit }),
+    pinned: () => invokeCommand("notes.pinned", undefined),
   },
   tags: {
+    create: (tag: string) => invokeCommand("tags.create", { tag }),
     list: () => invokeCommand("tags.list", undefined),
+    noteMap: () => invokeCommand("tags.noteMap", undefined),
+    rename: (oldTag: string, newTag: string) => invokeCommand("tags.rename", { oldTag, newTag }),
+    delete: (tag: string) => invokeCommand("tags.delete", { tag }),
   },
   links: {
     outgoing: (noteId: string) => invokeCommand("links.outgoing", { noteId }),
@@ -212,6 +218,8 @@ export const client = {
     restore: (notePath: string, sha: string) => invokeCommand("vcs.restore", { notePath, sha }),
     remoteEnable: (input?: { url?: string; token?: string }) =>
       invokeCommand("vcs.remoteEnable", input ?? { url: undefined }),
+    remoteClone: (input: { url: string; token: string; parentPath?: string }) =>
+      invokeCommand("vcs.remoteClone", input),
     remoteDisable: () => invokeCommand("vcs.remoteDisable", undefined),
     remoteSyncNow: () => invokeCommand("vcs.remoteSyncNow", undefined),
     generateDeployKey: () => invokeCommand("vcs.generateDeployKey", undefined),
@@ -224,6 +232,7 @@ export const client = {
     skillsList: () => invokeCommand("ai.skillsList", undefined),
     stats: (since?: number) => invokeCommand("ai.stats", { since }),
     telemetryClear: () => invokeCommand("ai.telemetryClear", undefined),
+    providersAvailable: () => invokeCommand("ai.providersAvailable", undefined),
   },
   todos: {
     load: () => invokeCommand("todos.load", undefined),
@@ -268,9 +277,10 @@ function toRustArgs<Name extends IpcCommandName>(
     case "settings.appLoad":
     case "settings.vaultLoad":
     case "tags.list":
+    case "tags.noteMap":
     case "index.status":
     case "index.rebuild":
-    case "notes.starred":
+    case "notes.pinned":
     case "vcs.status":
     case "vcs.remoteDisable":
     case "vcs.remoteSyncNow":
@@ -289,9 +299,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "notes.read":
     case "notes.trash":
     case "notes.allPaged":
-    case "notes.recent":
     case "notes.byId":
-    case "notes.search":
     case "links.outgoing":
     case "links.incoming":
     case "index.search":
@@ -299,6 +307,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "vcs.history":
     case "vcs.restore":
     case "vcs.remoteEnable":
+    case "vcs.remoteClone":
       return { input: args } as RustArgs;
     case "ai.runSkill": {
       const input = args as { skillId: string; variables: Record<string, string> };
@@ -311,6 +320,15 @@ function toRustArgs<Name extends IpcCommandName>(
     case "ai.stats": {
       const input = args as { since?: number };
       return { input: { since: input.since } };
+    }
+    case "tags.create":
+    case "tags.delete": {
+      const input = args as { tag: string };
+      return { tag: input.tag };
+    }
+    case "tags.rename": {
+      const input = args as { oldTag: string; newTag: string };
+      return { oldTag: input.oldTag, newTag: input.newTag };
     }
     case "notes.byTag": {
       const input = args as { tag: string };

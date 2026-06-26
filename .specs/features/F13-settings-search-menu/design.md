@@ -12,7 +12,7 @@ src/features/settings/
     ShortcutsList.tsx
   state/
     appSettingsStore.ts        — already started in F09; expand
-    vaultSettingsStore.ts      — per-vault overrides (loaded from <vault>/.noxe/config.json)
+    vaultSettingsStore.ts      — per-vault overrides (loaded from <vault>/.cork/config.json)
   services/
     settingsBridge.ts          — read/write helpers; resolves global vs per-vault
 src/features/editor/cm/
@@ -35,11 +35,11 @@ src-tauri/src/menu.rs          — Tauri menu registration + event forward
   "assets": { "offlineMode": false }
 }
 
-// per-vault (<vault>/.noxe/config.json)
+// per-vault (<vault>/.cork/config.json)
 {
   "attachmentsFolder": "attachments",
   "wikilinks": { "autoRewriteOnRename": true },
-  "daily": { "pathPattern": "Daily/YYYY/MM/YYYY-MM-DD.md", "templatePath": ".noxe/templates/daily.md" }
+  "daily": { "pathPattern": "Daily/YYYY-MM-DD.md", "templatePath": ".cork/templates/daily.md" }
 }
 ```
 
@@ -96,7 +96,7 @@ Recovery: on `app.created`, check window inner position vs available displays vi
 Diagnostics JSON includes:
 ```json
 {
-  "app": { "name": "Noxe", "version": "...", "tauri": "..." },
+  "app": { "name": "Cork", "version": "...", "tauri": "..." },
   "os": { "platform": "...", "version": "..." },
   "vault": { "path": "...", "noteCount": N },
   "indexBuild": { "lastDuration_ms": N }

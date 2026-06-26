@@ -9,6 +9,7 @@ const notes = [
     path: path.join(fixturePath, "React.md"),
     title: "React Patterns",
     folder: "work",
+    snippet: "",
     size: 1,
     mtime: Date.UTC(2026, 4, 6, 12, 0),
   },
@@ -17,6 +18,7 @@ const notes = [
     path: path.join(fixturePath, "Rust.md"),
     title: "Rust Notes",
     folder: "work",
+    snippet: "",
     size: 1,
     mtime: Date.UTC(2026, 4, 6, 11, 0),
   },
@@ -24,7 +26,7 @@ const notes = [
 
 test("opens search drawer, searches, and navigates to a result", async ({ page }) => {
   await page.goto("/");
-  await page.evaluate(({ vaultPath, fixtureNotes }) => window.__noxe_test_setVault?.(vaultPath, fixtureNotes), {
+  await page.evaluate(({ vaultPath, fixtureNotes }) => window.__cork_test_setVault?.(vaultPath, fixtureNotes), {
     vaultPath: fixturePath,
     fixtureNotes: notes,
   });

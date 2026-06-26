@@ -30,13 +30,13 @@ export function SyncIndicator() {
   if (!remote || !remote.enabled) return null;
 
   let Icon = CloudCheck;
-  let className = "text-[var(--color-noxe-muted)] hover:text-[var(--color-noxe-ink)]";
+  let className = "text-[var(--color-cork-muted)] hover:text-[var(--color-cork-ink)]";
   let label = `Synced • last push ${relTime(remote.lastPush)}`;
   let weight: "regular" | "fill" = "regular";
 
   if (remote.syncStatus === "syncing") {
     Icon = CloudArrowUp;
-    className = "text-[var(--color-noxe-primary)] animate-pulse";
+    className = "text-[var(--color-cork-primary)] animate-pulse";
     label = "Syncing…";
   } else if (remote.syncStatus === "error") {
     Icon = Warning;
@@ -54,7 +54,7 @@ export function SyncIndicator() {
       title={label}
       aria-label={label}
       onClick={() => openSettings("sync")}
-      className={`rounded-full p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none ${className}`}
+      className={`rounded-full p-1.5 focus-visible:ring-2 focus-visible:ring-[var(--color-cork-ring)] focus-visible:outline-none ${className}`}
     >
       <Icon size={16} weight={weight} />
     </button>

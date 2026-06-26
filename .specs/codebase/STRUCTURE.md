@@ -1,11 +1,11 @@
 # Project Structure
 
-**Root:** `/Users/guilherme.aalves/www/personal/noxe/`
+**Root:** `/Users/guilherme.aalves/www/personal/cork/`
 
 ## Directory Tree
 
 ```
-noxe/
+cork/
 ├── .specs/                      # Spec-driven artifacts
 │   ├── project/                 # PROJECT.md, ROADMAP.md, STATE.md
 │   ├── codebase/                # STACK / ARCHITECTURE / CONVENTIONS / STRUCTURE / TESTING

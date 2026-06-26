@@ -25,7 +25,7 @@ pub struct TodoList {
 }
 
 fn todos_path(vault_root: &Path) -> std::path::PathBuf {
-    vault_root.join(".noxe").join("todos.json")
+    vault_root.join(".cork").join("todos.json")
 }
 
 pub fn load_todos(vault_root: &Path) -> Result<TodoList, IpcError> {
@@ -41,7 +41,7 @@ pub fn load_todos(vault_root: &Path) -> Result<TodoList, IpcError> {
 }
 
 pub fn save_todos(vault_root: &Path, list: &TodoList) -> Result<(), IpcError> {
-    let dir = vault_root.join(".noxe");
+    let dir = vault_root.join(".cork");
     fs::create_dir_all(&dir)?;
     let text = serde_json::to_string_pretty(list).map_err(|err| IpcError::Parse(err.to_string()))?;
     fs::write(dir.join("todos.json"), text)?;
@@ -105,8 +105,8 @@ mod tests {
     #[test]
     fn empty_file_returns_default() {
         let dir = tempdir().unwrap();
-        fs::create_dir_all(dir.path().join(".noxe")).unwrap();
-        fs::write(dir.path().join(".noxe").join("todos.json"), "").unwrap();
+        fs::create_dir_all(dir.path().join(".cork")).unwrap();
+        fs::write(dir.path().join(".cork").join("todos.json"), "").unwrap();
         let list = load_todos(dir.path()).unwrap();
         assert!(list.todos.is_empty());
     }
@@ -114,8 +114,8 @@ mod tests {
     #[test]
     fn malformed_json_returns_parse_error() {
         let dir = tempdir().unwrap();
-        fs::create_dir_all(dir.path().join(".noxe")).unwrap();
-        fs::write(dir.path().join(".noxe").join("todos.json"), "{ not json").unwrap();
+        fs::create_dir_all(dir.path().join(".cork")).unwrap();
+        fs::write(dir.path().join(".cork").join("todos.json"), "{ not json").unwrap();
         let err = load_todos(dir.path()).unwrap_err();
         assert!(matches!(err, IpcError::Parse(_)));
     }

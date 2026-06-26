@@ -54,40 +54,27 @@ pub fn build(skill: &Skill, vars: &HashMap<String, String>) -> String {
 
 fn interpolate(template: &str, vars: &HashMap<String, String>) -> String {
     let mut out = String::with_capacity(template.len() + 64);
-    let bytes = template.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if i + 1 < bytes.len() && bytes[i] == b'{' && bytes[i + 1] == b'{' {
-            if let Some(end) = find_close(&bytes[i + 2..]) {
-                let key_end = i + 2 + end;
-                let key = std::str::from_utf8(&bytes[i + 2..key_end])
-                    .unwrap_or("")
-                    .trim();
-                match vars.get(key) {
-                    Some(value) => out.push_str(value),
-                    None => {
-                        eprintln!("noxe: prompt var '{{{{{key}}}}}' is missing — substituted empty string");
-                    }
+    let mut rest = template;
+    while let Some(open) = rest.find("{{") {
+        out.push_str(&rest[..open]);
+        let after_open = &rest[open + 2..];
+        if let Some(close) = after_open.find("}}") {
+            let key = after_open[..close].trim();
+            match vars.get(key) {
+                Some(value) => out.push_str(value),
+                None => {
+                    eprintln!("cork: prompt var '{{{{{key}}}}}' is missing — substituted empty string");
                 }
-                i = key_end + 2;
-                continue;
             }
+            rest = &after_open[close + 2..];
+        } else {
+            // No closing `}}` — emit the `{{` literally and continue.
+            out.push_str("{{");
+            rest = after_open;
         }
-        out.push(bytes[i] as char);
-        i += 1;
     }
+    out.push_str(rest);
     out
-}
-
-fn find_close(rest: &[u8]) -> Option<usize> {
-    let mut j = 0;
-    while j + 1 < rest.len() {
-        if rest[j] == b'}' && rest[j + 1] == b'}' {
-            return Some(j);
-        }
-        j += 1;
-    }
-    None
 }
 
 /// Truncate a String to at most `max` bytes without breaking a UTF-8 char boundary.

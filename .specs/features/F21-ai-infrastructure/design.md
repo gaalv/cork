@@ -23,8 +23,8 @@ src-tauri/skills/                    (NEW — bundled defaults via include_dir!)
 ├── slash-expand.md
 └── slash-continue.md
 
-~/.noxe/skills/*.md                  (user overrides — same format as bundled)
-<vault>/.noxe/skills/*.md            (per-vault overrides — load last)
+~/.cork/skills/*.md                  (user overrides — same format as bundled)
+<vault>/.cork/skills/*.md            (per-vault overrides — load last)
 ```
 
 ## Data flow — `ai.runSkill("summarize", {title, body, frontmatter})`

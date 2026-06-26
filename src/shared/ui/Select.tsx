@@ -79,12 +79,12 @@ export function Select<T extends string | number>({
       setPosition({ left: rect.left, top, width: rect.width, placement });
     };
     computePosition();
-    const onChange = () => computePosition();
-    window.addEventListener("resize", onChange);
-    window.addEventListener("scroll", onChange, true);
+    const recompute = () => computePosition();
+    window.addEventListener("resize", recompute);
+    window.addEventListener("scroll", recompute, true);
     return () => {
-      window.removeEventListener("resize", onChange);
-      window.removeEventListener("scroll", onChange, true);
+      window.removeEventListener("resize", recompute);
+      window.removeEventListener("scroll", recompute, true);
     };
   }, [open, options.length]);
 
@@ -120,15 +120,15 @@ export function Select<T extends string | number>({
           }
         }}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] px-2.5 py-1.5 text-left text-[12px] text-[var(--color-noxe-ink)] shadow-sm",
-          "hover:border-[var(--color-noxe-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)]",
+          "flex w-full items-center justify-between gap-2 rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-2.5 py-1.5 text-left text-[12px] text-[var(--color-cork-ink)] shadow-sm",
+          "hover:border-[var(--color-cork-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cork-ring)]",
           disabled && "cursor-not-allowed opacity-50",
         )}
       >
-        <span className={cn("truncate", !selected && "text-[var(--color-noxe-muted)]")}>
+        <span className={cn("truncate", !selected && "text-[var(--color-cork-muted)]")}>
           {selected ? selected.label : placeholder ?? "Select…"}
         </span>
-        <CaretDown size={12} weight="bold" className="shrink-0 text-[var(--color-noxe-muted)]" />
+        <CaretDown size={12} weight="bold" className="shrink-0 text-[var(--color-cork-muted)]" />
       </button>
 
       {open && position
@@ -140,7 +140,7 @@ export function Select<T extends string | number>({
               aria-label={ariaLabel}
               tabIndex={-1}
               style={{ position: "fixed", left: position.left, top: position.top, width: position.width, maxHeight: 280 }}
-              className="z-[60] overflow-y-auto rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] py-1 shadow-lg"
+              className="z-[60] overflow-y-auto rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] py-1 shadow-lg"
               onKeyDown={(event) => {
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
@@ -175,17 +175,17 @@ export function Select<T extends string | number>({
                     onClick={() => commit(index)}
                     onMouseEnter={() => setActiveIndex(index)}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-noxe-ink)] outline-none",
-                      isActive && "bg-[var(--color-noxe-panel-2)]",
+                      "flex cursor-pointer items-center justify-between gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-cork-ink)] outline-none",
+                      isActive && "bg-[var(--color-cork-panel-2)]",
                     )}
                   >
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate">{option.label}</span>
                       {option.description ? (
-                        <span className="truncate text-[11px] text-[var(--color-noxe-muted)]">{option.description}</span>
+                        <span className="truncate text-[11px] text-[var(--color-cork-muted)]">{option.description}</span>
                       ) : null}
                     </span>
-                    {isSelected ? <Check size={12} weight="bold" className="shrink-0 text-[var(--color-noxe-accent)]" /> : null}
+                    {isSelected ? <Check size={12} weight="bold" className="shrink-0 text-[var(--color-cork-accent)]" /> : null}
                   </li>
                 );
               })}

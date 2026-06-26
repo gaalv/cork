@@ -54,7 +54,6 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
     let mut links = Vec::new();
     let mut headings = Vec::new();
     let mut markdown_extensions = Vec::new();
-    let mut first_h1 = None;
     let mut in_code_block = false;
     let mut skip_ranges = Vec::new();
     let mut heading: Option<HeadingAccumulator> = None;
@@ -78,9 +77,6 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
                 if let Some(acc) = heading.take() {
                     let text = normalize_inline(&acc.text);
                     if !text.is_empty() {
-                        if acc.level == 1 && first_h1.is_none() {
-                            first_h1 = Some(text.clone());
-                        }
                         headings.push(ParsedHeading {
                             level: acc.level,
                             text,
@@ -120,7 +116,7 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
     });
 
     Ok(ParsedNote {
-        title: first_h1.unwrap_or_else(|| fallback_title(filename)),
+        title: fallback_title(filename),
         body: body.clone(),
         body_hash: sha1_hex(body.as_bytes()),
         tags: tags.into_iter().collect(),
@@ -443,9 +439,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn extracts_first_h1_title_and_headings() {
+    fn title_is_filename_stem_not_h1() {
         let parsed = parse("# Title\n\n## Child\nText", "note.md").unwrap();
-        assert_eq!(parsed.title, "Title");
+        assert_eq!(parsed.title, "note");
         assert_eq!(parsed.headings.len(), 2);
         assert_eq!(parsed.headings[1].level, 2);
     }
@@ -506,7 +502,7 @@ mod tests {
     #[test]
     fn handles_unicode_heading_and_nested_emphasis() {
         let parsed = parse("# Olá **mundo _dev_**\nTexto", "a.md").unwrap();
-        assert_eq!(parsed.title, "Olá mundo dev");
+        assert_eq!(parsed.title, "a");
         assert_eq!(parsed.headings[0].text, "Olá mundo dev");
     }
 

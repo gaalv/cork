@@ -1,11 +1,11 @@
 use std::fs;
 use std::path::{Component, Path};
-use std::time::UNIX_EPOCH;
 
 use sha1::{Digest, Sha1};
 use walkdir::WalkDir;
 
 use crate::vault::frontmatter;
+use crate::vault::io::{metadata_mtime_ms, to_slash_string};
 use crate::vault::NoteEntry;
 
 pub const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
@@ -62,23 +62,25 @@ pub fn list(root: &Path) -> Result<Vec<NoteEntry>, IpcError> {
         let metadata = fs::metadata(&path)?;
         let content = fs::read_to_string(&path).unwrap_or_default();
         let (_, body) = frontmatter::parse(&content)?;
-        let title = title_from_body(&body).unwrap_or_else(|| {
-            path.file_stem()
-                .and_then(|stem| stem.to_str())
-                .unwrap_or("Untitled")
-                .to_string()
-        });
+        let title = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or("Untitled")
+            .to_string();
         let folder = path
             .parent()
             .and_then(|parent| parent.strip_prefix(&root).ok())
-            .map(path_to_slash_string)
+            .map(to_slash_string)
             .unwrap_or_default();
+
+        let snippet = snippet_from_body(&body, 120);
 
         entries.push(NoteEntry {
             id: sha1_hex(path_string.as_bytes()),
             path,
             title,
             folder,
+            snippet,
             size: metadata.len(),
             mtime: metadata_mtime_ms(&metadata)?,
         });
@@ -153,14 +155,28 @@ pub fn asset_kind(path: &Path) -> Option<AssetKind> {
     }
 }
 
-fn title_from_body(body: &str) -> Option<String> {
-    body.lines()
-        .find_map(|line| line.strip_prefix("# ").map(str::trim))
-        .filter(|title| !title.is_empty())
-        .map(ToOwned::to_owned)
+fn snippet_from_body(body: &str, max_len: usize) -> String {
+    let text: String = body
+        .lines()
+        .filter(|l| {
+            let t = l.trim();
+            !t.is_empty() && !t.starts_with('#') && !t.starts_with("---")
+        })
+        .take(3)
+        .collect::<Vec<_>>()
+        .join(" ");
+    if text.len() <= max_len {
+        text
+    } else {
+        let mut end = max_len;
+        while end > 0 && !text.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}…", &text[..end])
+    }
 }
 
-fn sha1_hex(bytes: &[u8]) -> String {
+pub fn sha1_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha1::new();
     hasher.update(bytes);
     hasher
@@ -170,23 +186,6 @@ fn sha1_hex(bytes: &[u8]) -> String {
         .collect()
 }
 
-fn metadata_mtime_ms(metadata: &fs::Metadata) -> Result<i64, IpcError> {
-    let duration = metadata
-        .modified()?
-        .duration_since(UNIX_EPOCH)
-        .map_err(|err| IpcError::Other(err.to_string()))?;
-    Ok(duration.as_millis() as i64)
-}
-
-fn path_to_slash_string(path: &Path) -> String {
-    path.components()
-        .filter_map(|component| match component {
-            Component::Normal(value) => value.to_str(),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-        .join("/")
-}
 
 #[cfg(test)]
 mod tests {
@@ -206,7 +205,7 @@ mod tests {
             .all(|entry| !entry.path.to_string_lossy().contains("/.")));
         assert!(entries.iter().all(|entry| entry.size > 0));
         assert!(entries.iter().all(|entry| entry.mtime > 0));
-        assert!(entries.iter().any(|entry| entry.title == "From Heading"));
+        assert!(entries.iter().any(|entry| entry.title == "from-heading"));
         assert!(entries.iter().any(|entry| entry.title == "filename-title"));
         assert!(entries.iter().any(|entry| entry.folder == "nested/deep"));
         assert!(entries.iter().all(|entry| entry.id.len() == 40));

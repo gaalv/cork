@@ -9,7 +9,7 @@
 The repo currently ships with Tauri's default scaffolded icons
 (rocket placeholder under `src-tauri/icons/`). The brand row in
 `NavPane` deliberately omits a logo glyph because none exists (see
-F31 D-1). Before v1 ships publicly Noxe needs a real visual identity:
+F31 D-1). Before v1 ships publicly Cork needs a real visual identity:
 a single source-of-truth logo, the full Tauri icon matrix, and the
 small set of UI surfaces that should pick up the new mark.
 
@@ -17,20 +17,20 @@ small set of UI surfaces that should pick up the new mark.
 
 ### Source asset
 
-- **R1** A vector source (`brand/noxe-logo.svg`) committed under a new
+- **R1** A vector source (`brand/cork-logo.svg`) committed under a new
   top-level `brand/` directory, square, drawn on a 512×512 viewport,
   with both light-on-dark and dark-on-light variants and an
   outline-only "monochrome" variant for the rail / favicon use.
-- **R2** A wordmark variant (`brand/noxe-wordmark.svg`) used in the
+- **R2** A wordmark variant (`brand/cork-wordmark.svg`) used in the
   NavPane brand row, the EmptyVault hero, and the README banner.
 - **R3** Brand tokens documented in `brand/README.md`:
-  - Primary indigo (matches `--color-noxe-accent`, currently `#4f46e5`)
+  - Primary indigo (matches `--color-cork-accent`, currently `#4f46e5`)
   - Ink black + paper white tokens
   - Typography choices (Inter for UI, JetBrains Mono for code)
 
 ### Tauri icon matrix
 
-- **R4** Run `pnpm tauri icon brand/noxe-logo.svg` to regenerate
+- **R4** Run `pnpm tauri icon brand/cork-logo.svg` to regenerate
   every file under `src-tauri/icons/` (replacing the placeholder
   rocket). The tauri-icon CLI produces the macOS `.icns`, the
   Windows `.ico` (multi-resolution), the Linux PNGs, and the
@@ -44,23 +44,23 @@ small set of UI surfaces that should pick up the new mark.
 - **R6** `public/favicon.svg` (vector) + a 32×32 fallback PNG used by
   `index.html`. Replace the existing Vite default `react.svg` favicon.
 - **R7** `index.html` `<title>` + `<meta name="description">` updated
-  to "Noxe — local-first Markdown notes for developers".
+  to "Cork — local-first Markdown notes for developers".
 - **R8** `NavPane` brand row gains a 14-px monochrome logo glyph to
-  the left of the "Noxe" wordmark (the F31 D-1 follow-up). Glyph SVG
+  the left of the "Cork" wordmark (the F31 D-1 follow-up). Glyph SVG
   imported as a React component via `?react` (vite-plugin-svgr) to
   inherit `currentColor`.
 - **R9** `EmptyVault.tsx` hero icon swap: replace the Phosphor
   placeholder with the wordmark + a short tagline ("Open a vault to
   begin").
 - **R10** `HelpModal.tsx` header gains the wordmark.
-- **R11** Tauri window `title` stays "Noxe" (already correct); macOS
+- **R11** Tauri window `title` stays "Cork" (already correct); macOS
   `Info.plist` `CFBundleName` derived from `productName` stays
-  "Noxe".
+  "Cork".
 
 ### README + GitHub presence
 
 - **R12** Replace the top-of-`README.md` heading with the wordmark
-  PNG (1280×320 export of `brand/noxe-wordmark.svg` on a transparent
+  PNG (1280×320 export of `brand/cork-wordmark.svg` on a transparent
   background) so the GitHub repo page renders the brand.
 - **R13** Add a `.github/assets/social-preview.png` (1280×640) used
   as the repository social preview. Documented in the brand README.
@@ -86,8 +86,8 @@ small set of UI surfaces that should pick up the new mark.
 - **D-3 Monochrome glyph in NavPane:** matches the prototype's
   understated look. Coloured-logo treatments stay reserved for
   Empty Vault hero and README.
-- **D-4 Naming:** "Noxe" is the product name everywhere. Lowercase
-  in code identifiers (`noxe-app`, `com.noxe.app`); title case
+- **D-4 Naming:** "Cork" is the product name everywhere. Lowercase
+  in code identifiers (`cork-app`, `com.cork.app`); title case
   in user-facing copy.
 
 ## Requirements traceability
@@ -110,14 +110,14 @@ small set of UI surfaces that should pick up the new mark.
 
 ## Acceptance
 
-- Every file under `src-tauri/icons/` is the real Noxe logo, not the
+- Every file under `src-tauri/icons/` is the real Cork logo, not the
   Tauri rocket. `pnpm tauri build` produces a bundle where the macOS
   Dock icon, Windows taskbar icon, and Linux notification icon all
   show the new mark.
 - `pnpm dev` shows the new favicon in the browser tab.
-- Opening Noxe with no vault selected shows the new EmptyVault hero
+- Opening Cork with no vault selected shows the new EmptyVault hero
   with the wordmark.
-- NavPane brand row renders the monochrome glyph + "Noxe" wordmark
+- NavPane brand row renders the monochrome glyph + "Cork" wordmark
   side by side.
 - The GitHub repo's README renders the wordmark banner at the top.
 - `pnpm typecheck && pnpm lint && pnpm exec vitest run` stay green.
@@ -131,14 +131,14 @@ small set of UI surfaces that should pick up the new mark.
   picks up a dark-mode background; currently the monochrome variant
   handles both themes.
 - **Implementation notes (M10 landing):**
-  - `brand/noxe-logo.svg`, `brand/noxe-wordmark.svg`, `brand/README.md`
+  - `brand/cork-logo.svg`, `brand/cork-wordmark.svg`, `brand/README.md`
     committed. PNG render of the logo at 1024×1024 used as input to
     `pnpm tauri icon` which regenerated the full
     `src-tauri/icons/` matrix (desktop + iOS + Android).
   - `public/favicon-32.png` + `public/apple-touch-icon.png` rendered
     via `sharp` (devDep added). `index.html` head links them and sets
     `theme-color="#3F3DFF"`.
-  - `<NoxeLogo>` + `<NoxeWordmark>` live in `src/shared/ui/NoxeLogo.tsx`
+  - `<CorkLogo>` + `<CorkWordmark>` live in `src/shared/ui/CorkLogo.tsx`
     and are wired into `NavPane`, `HelpModal`, and `AboutDialog`.
   - **Deferred (R9, R12, R13):** EmptyVault hero swap and the
     README / GitHub social-preview banners — these are pure marketing

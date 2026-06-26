@@ -44,6 +44,13 @@ struct RemoteInner {
 
 `VcsStatus` extended to include `has_gh: bool` and `remote: Option<RemoteInfo>`.
 
+## Auth
+
+- **HTTPS + repo PAT (preferred after AD-051):** `vcs.remoteEnable({ url, token })` accepts `https://github.com/owner/repo.git`, stores the PAT only in `.git/cork-credentials`, resets inherited credential helpers with an empty local `credential.helper`, enables `credential.useHttpPath`, and pushes `HEAD`. Vault settings only store the URL.
+- **Second device clone:** `vcs.remoteClone({ url, token, parentPath? })` uses a temporary credential store for `git clone`, writes the same repo-local credential store into the cloned repo, persists `gitRemote.enabled`, and returns the cloned vault path so the frontend can call `vault.open(path)`.
+- **SSH Deploy Key (fallback):** `vcs.generateDeployKey()` creates the per-vault keypair under `.cork/`; `vcs.remoteEnable({ url })` pins `core.sshCommand` to that key and retries via `ssh.github.com:443` on port-22 failures.
+- **Not supported:** account-global `gh` auth / repo auto-create. Sync auth must stay scoped to the selected repo.
+
 ## Workers
 
 Two background threads, both spawned at app setup (next to F18's commit worker):
@@ -95,4 +102,4 @@ fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String> {
   - `RemoteState` snapshot/transition logic (no IO).
   - `.gitignore` writer produces the new entries.
 - Frontend store test: mocks IPC, asserts polling + state transitions on status payloads.
-- Manual smoke for `gh repo create` (network).
+- Manual smoke for HTTPS+PAT and SSH Deploy Key pushes (network).

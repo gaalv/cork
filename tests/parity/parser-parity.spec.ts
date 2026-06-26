@@ -8,7 +8,7 @@ import { parse } from "@/shared/parsers/markdown";
 type NormalizedAst = {
   file: string;
   title: string;
-  tags: string[];
+  frontmatter: Record<string, unknown>;
   links: Array<{ targetText: string; alias: string | null; position: number }>;
   headings: Array<{ level: number; text: string; position: number }>;
   markdownExtensions: Array<{ kind: string; value: string; position: number }>;
@@ -19,7 +19,7 @@ describe("parser parity fixtures", () => {
     const output = collectFixtureAsts();
     expect(output).toHaveLength(18);
     expect(output).toMatchSnapshot();
-    if (process.env.NOXE_PARITY_EXPORT === "1") {
+    if (process.env.CORK_PARITY_EXPORT === "1") {
       const path = join(process.cwd(), "target", "parser-parity-ts.json");
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, `${JSON.stringify(output, null, 2)}\n`);
@@ -38,7 +38,7 @@ function collectFixtureAsts(): NormalizedAst[] {
       return {
         file,
         title: parsed.title,
-        tags: parsed.tags,
+        frontmatter: parsed.frontmatter,
         links: parsed.links,
         headings: parsed.headings,
         markdownExtensions: parsed.markdownExtensions,

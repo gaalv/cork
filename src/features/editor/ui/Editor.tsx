@@ -1,97 +1,145 @@
-import { useEffect, useMemo, useRef } from "react";
-import { EditorState, StateEffect } from "@codemirror/state";
+/**
+ * CodeMirror 6 Markdown editor — the core editing surface.
+ *
+ * Loads the note buffer via editorStore, creates a CM6 EditorView,
+ * and wires auto-save through the store's updateBody method.
+ *
+ * @see F05 — Editor spec
+ */
+
+import { useCallback, useEffect, useRef } from "react";
+import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
-import { createEditorDropPasteExtension } from "@/features/assets/hooks/useEditorDropPaste";
-import { createEditorExtensions } from "@/features/editor/cm/extensions";
 import { useEditorStore } from "@/features/editor/state/editorStore";
-import { useNoteViewStore } from "@/features/note-view/state/noteViewStore";
-import { useAppSettingsStore } from "@/features/settings/state/appSettingsStore";
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
+import { createExtensions } from "@/features/editor/cm/extensions";
+import { setEditorView } from "@/features/editor/cm/viewRef";
+import { useVimModeStore } from "@/shared/stores/vimModeStore";
 
-import type { Extension } from "@codemirror/state";
+import { ConflictBanner } from "./ConflictBanner";
 
-export type EditorProps = {
-  className?: string;
-  extraExtensions?: Extension[];
-  onReady?: (view: EditorView) => void;
-};
-
-export function Editor({ className, extraExtensions = [], onReady }: EditorProps) {
-  const parentRef = useRef<HTMLDivElement | null>(null);
+export function Editor({ noteId, path }: { noteId: string; path: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const activeNoteId = useEditorStore((state) => state.activeNoteId);
-  const buffer = useEditorStore((state) => (state.activeNoteId ? state.buffers.get(state.activeNoteId) : null));
-  const updateBody = useEditorStore((state) => state.updateBody);
-  const editorSettings = useAppSettingsStore((state) => state.settings.editor);
-  const liveMode = useNoteViewStore((state) => (activeNoteId ? state.liveMode[activeNoteId] ?? "live" : "live"));
-  const extensions = useMemo(
-    () => [
-      EditorView.updateListener.of((update) => {
-        if (!update.docChanged) {
-          return;
-        }
-        const noteId = useEditorStore.getState().activeNoteId;
-        if (noteId) {
-          updateBody(noteId, update.state.doc.toString());
-        }
-      }),
-      ...createEditorExtensions({
-        extraExtensions: [createEditorDropPasteExtension(), ...extraExtensions],
-        lineWrap: editorSettings.lineWrap,
-        showLineNumbers: false,
-        fontFamily: editorSettings.fontFamily,
-        fontSize: editorSettings.fontSize,
-        tabSize: editorSettings.tabSize,
-        liveMode,
-      }),
-    ],
-    [editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineWrap, editorSettings.tabSize, extraExtensions, liveMode, updateBody],
-  );
+  const openBuffer = useEditorStore((s) => s.openBuffer);
+  const body = useEditorStore((s) => s.body);
+  const loading = useEditorStore((s) => s.loading);
+  const conflict = useEditorStore((s) => s.conflict);
+  const editorSettings = useAppSettingsStore((s) => s.settings.editor);
 
+  // Stable callback for CM6 updates
+  const onUpdate = useCallback((newBody: string) => {
+    useEditorStore.getState().updateBody(newBody);
+  }, []);
+
+  // Load buffer when note changes
   useEffect(() => {
-    if (!parentRef.current || viewRef.current || !buffer) {
-      return;
+    void openBuffer(noteId, path);
+    return () => {
+      // Flush on unmount handled by closeBuffer in store
+    };
+  }, [noteId, path, openBuffer]);
+
+  // Create/recreate CM6 view when body loads or settings change
+  useEffect(() => {
+    if (loading || !containerRef.current) return;
+
+    // Destroy previous view
+    if (viewRef.current) {
+      viewRef.current.destroy();
+      viewRef.current = null;
     }
+
+    const extensions = createExtensions({
+      lineWrap: editorSettings.lineWrap,
+      showLineNumbers: editorSettings.showLineNumbers,
+      tabSize: editorSettings.tabSize,
+      vimMode: editorSettings.vimMode,
+      onUpdate,
+    });
+
+    const state = EditorState.create({
+      doc: body,
+      extensions,
+    });
 
     const view = new EditorView({
-      parent: parentRef.current,
-      state: EditorState.create({ doc: buffer.body, extensions }),
+      state,
+      parent: containerRef.current,
     });
+
     viewRef.current = view;
-    onReady?.(view);
+    setEditorView(view);
+
+    // Focus editor
+    view.focus();
+
+    // Observe vim mode changes via the CM6 vim status panel
+    let observer: MutationObserver | undefined;
+    if (editorSettings.vimMode) {
+      const setMode = useVimModeStore.getState().setMode;
+      const detectVimMode = () => {
+        const panel = containerRef.current?.querySelector(".cm-vim-panel");
+        if (!panel) return;
+        const text = panel.textContent?.trim().toUpperCase() ?? "";
+        if (text.includes("INSERT")) setMode("INSERT");
+        else if (text.includes("VISUAL")) setMode("VISUAL");
+        else if (text.includes("REPLACE")) setMode("REPLACE");
+        else setMode("NORMAL");
+      };
+      observer = new MutationObserver(detectVimMode);
+      observer.observe(containerRef.current!, { childList: true, subtree: true, characterData: true });
+      // Also listen for keystrokes that change mode
+      view.dom.addEventListener("keyup", detectVimMode);
+      setMode("NORMAL");
+    }
 
     return () => {
+      observer?.disconnect();
       view.destroy();
       viewRef.current = null;
+      setEditorView(null);
     };
-    // We deliberately key the editor lifecycle off `activeNoteId` (and the
-    // presence of a buffer), NOT off the buffer object itself — every keystroke
-    // produces a new buffer reference via the editor store, which would destroy
-    // and remount the EditorView and steal focus on every character.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNoteId, Boolean(buffer)]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only recreate on note load, not on every body change
+  }, [loading, noteId, editorSettings.lineWrap, editorSettings.showLineNumbers, editorSettings.tabSize, editorSettings.vimMode, onUpdate]);
 
+  // Sync external body changes (e.g., after reload) into CM6
+  // This handles the case where forceReload updates the store body
   useEffect(() => {
     const view = viewRef.current;
-    if (view) {
-      view.dispatch({ effects: StateEffect.reconfigure.of(extensions) });
-    }
-  }, [extensions]);
+    if (!view || loading) return;
 
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view || !buffer) {
-      return;
+    const currentDoc = view.state.doc.toString();
+    if (currentDoc !== body && !useEditorStore.getState().dirty) {
+      view.dispatch({
+        changes: {
+          from: 0,
+          to: currentDoc.length,
+          insert: body,
+        },
+      });
     }
-    const current = view.state.doc.toString();
-    if (current !== buffer.body) {
-      view.dispatch({ changes: { from: 0, to: current.length, insert: buffer.body } });
-    }
-  }, [activeNoteId, buffer]);
+  }, [body, loading]);
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <span className="text-[13px] text-[var(--color-cork-muted)]">Loading...</span>
+      </div>
+    );
+  }
 
   return (
-    <section className={className} data-testid="editor" aria-label="Markdown editor">
-      {buffer ? <div ref={parentRef} className="h-full min-h-0" /> : <p>No note selected</p>}
-    </section>
+    <div className="flex h-full flex-col overflow-hidden">
+      {conflict && <ConflictBanner />}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={containerRef}
+          className="absolute inset-0 mx-auto max-w-[720px] px-10"
+          style={{ fontSize: `${editorSettings.fontSize}px` }}
+        />
+      </div>
+    </div>
   );
 }

@@ -20,7 +20,7 @@ GitHub OAuth, remote push, and multi-device sync are explicitly **deferred** (se
 - **R2.2** After `notes.create` succeeds, schedule a "Create" commit for that file.
 - **R2.3** Consecutive saves of the same file within a 5-second debounce window are collapsed into a single commit.
 - **R2.4** Commit message: `Create <rel-path>` for new files, `Update <rel-path>` for existing.
-- **R2.5** Author set to `Noxe <noxe@local>`.
+- **R2.5** Author set to `Cork <cork@local>`.
 - **R2.6** If `git` is unavailable or `gitAutoCommit` is `false`, skip commit silently.
 
 ### R3 – History per note

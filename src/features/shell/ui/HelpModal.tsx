@@ -1,141 +1,88 @@
-import { useEffect, useRef } from "react";
+/**
+ * HelpModal — keyboard shortcuts reference.
+ *
+ * @see F13 — Settings spec (ShortcutsList)
+ */
+
 import { X } from "@phosphor-icons/react";
 
-import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
 import { useShellStore } from "@/features/shell/state/shellStore";
-import { NoxeLogo } from "@/shared/ui/NoxeLogo";
 
-const shortcutGroups = [
+const SHORTCUT_GROUPS = [
+  {
+    title: "General",
+    shortcuts: [
+      { keys: "⌘ K", label: "Command palette" },
+      { keys: "⌘ ,", label: "Settings" },
+      { keys: "⌘ N", label: "New note" },
+      { keys: "⌘ O", label: "Open vault" },
+      { keys: "⌘ ⇧ L", label: "Toggle theme" },
+    ],
+  },
+  {
+    title: "Editor",
+    shortcuts: [
+      { keys: "⌘ S", label: "Save note" },
+      { keys: "⌘ .", label: "Toggle inspector" },
+      { keys: "⌘ F", label: "Find in note" },
+      { keys: "⌘ ⇧ F", label: "Find & replace" },
+      { keys: "⌘ D", label: "Open daily note" },
+    ],
+  },
   {
     title: "Navigation",
     shortcuts: [
-      ["⌘K", "Open command palette"],
-      ["⌘[", "Back"],
-      ["⌘]", "Forward"],
-      ["⌘⇧G", "Open Graph view"],
-      ["⌘⇧C", "Open Calendar view"],
-    ],
-  },
-  {
-    title: "Vault",
-    shortcuts: [
-      ["⌘O", "Open vault"],
-      ["⌘N", "New note"],
-      ["⌘D", "Open today's daily note"],
-    ],
-  },
-  {
-    title: "View",
-    shortcuts: [
-      ["⌘\\", "Toggle last drawer"],
-      ["⌘⇧M", "Switch focus / triage layout"],
-      ["⌘⇧L", "Cycle theme"],
-    ],
-  },
-  {
-    title: "Global",
-    shortcuts: [
-      ["⌘⇧I", "Quick capture (system-wide)"],
-      ["⌘⇧T", "Open todos (system-wide)"],
-    ],
-  },
-  {
-    title: "App",
-    shortcuts: [
-      ["⌘,", "Open settings"],
-      ["?", "Show shortcuts"],
+      { keys: "Esc", label: "Close overlay" },
+      { keys: "⌘ [", label: "Go back" },
+      { keys: "⌘ ]", label: "Go forward" },
     ],
   },
 ];
 
 export function HelpModal() {
-  const open = useShellStore((state) => state.helpOpen);
-  const closeHelp = useShellStore((state) => state.closeHelp);
-  const autoRewrite = useAppSettingsStore((state) => state.autoRewriteLinksOnRename);
-  const setAutoRewrite = useAppSettingsStore((state) => state.setAutoRewriteLinksOnRename);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const open = useShellStore((s) => s.helpOpen);
+  const close = useShellStore((s) => s.setHelpOpen);
 
-  useEffect(() => {
-    if (!open) {
-      return undefined;
-    }
-    closeButtonRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeHelp();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [closeHelp, open]);
-
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4"
-      role="presentation"
-      onMouseDown={closeHelp}
+      className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--color-cork-ink)]/30"
+      onClick={() => close(false)}
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="Keyboard shortcuts"
-        className="w-[min(520px,100%)] rounded-2xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-5 shadow-2xl"
-        onMouseDown={(event) => event.stopPropagation()}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[480px] overflow-hidden rounded-2xl border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] shadow-2xl"
       >
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <NoxeLogo size={20} aria-hidden="true" />
-            <h2 className="text-lg font-semibold">Keyboard shortcuts</h2>
-          </div>
+        <div className="flex items-center justify-between border-b border-[var(--color-cork-border)] px-5 py-3">
+          <h2 className="text-[14px] font-semibold">Keyboard Shortcuts</h2>
           <button
-            ref={closeButtonRef}
-            type="button"
-            aria-label="Close shortcuts"
-            onClick={closeHelp}
-            className="rounded-md p-1 text-[var(--color-noxe-muted)] hover:bg-[var(--color-noxe-panel-2)] hover:text-[var(--color-noxe-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
+            onClick={() => close(false)}
+            className="rounded p-1 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
-        <div className="space-y-4">
-          <label className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-3 py-2 text-sm">
-            <span>
-              <span className="block font-medium">Rewrite wikilinks on rename</span>
-              <span className="text-[12px] text-[var(--color-noxe-muted)]">
-                Keep [[Old]] links pointing at renamed notes.
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={autoRewrite}
-              onChange={(event) => setAutoRewrite(event.currentTarget.checked)}
-              aria-label="Rewrite wikilinks on rename"
-            />
-          </label>
-          {shortcutGroups.map((group) => (
-            <div key={group.title}>
-              <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-noxe-muted)]">
+        <div className="max-h-[400px] overflow-y-auto px-5 py-4">
+          {SHORTCUT_GROUPS.map((group) => (
+            <div key={group.title} className="mb-5 last:mb-0">
+              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-cork-muted)]">
                 {group.title}
               </h3>
-              <dl className="space-y-2">
-                {group.shortcuts.map(([keys, label]) => (
-                  <div key={keys} className="flex items-center justify-between gap-4 text-sm">
-                    <dt>{label}</dt>
-                    <dd className="rounded-md border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel-2)] px-2 py-1 text-[12px] font-medium">
-                      {keys}
-                    </dd>
+              <div className="space-y-1">
+                {group.shortcuts.map((s) => (
+                  <div key={s.keys} className="flex items-center justify-between py-1">
+                    <span className="text-[13px]">{s.label}</span>
+                    <kbd className="rounded border border-[var(--color-cork-border)] bg-[var(--color-cork-kbd)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-cork-muted)]">
+                      {s.keys}
+                    </kbd>
                   </div>
                 ))}
-              </dl>
+              </div>
             </div>
           ))}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use regex::Regex;
 use rusqlite::Connection;
 
+use crate::error::sql_error;
 use crate::index::migrate::open_index;
 use crate::vault::fingerprint::FingerprintCache;
 use crate::vault::io;
@@ -90,10 +91,6 @@ fn file_stem(path: &Path) -> Result<String, IpcError> {
         .and_then(|stem| stem.to_str())
         .map(ToString::to_string)
         .ok_or_else(|| IpcError::Io("note path has no file stem".to_string()))
-}
-
-fn sql_error(error: rusqlite::Error) -> IpcError {
-    IpcError::Other(error.to_string())
 }
 
 #[cfg(test)]

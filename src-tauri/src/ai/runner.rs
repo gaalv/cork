@@ -46,7 +46,7 @@ impl Spawner for ProcessSpawner {
             .ok_or_else(|| AiError::provider_disabled(format!("Unknown AI provider: {provider}")))?;
         if !binary_available(binary) {
             return Err(AiError::binary_not_found(format!(
-                "Binary '{binary}' not found on PATH. Please install it and restart Noxe."
+                "Binary '{binary}' not found on PATH. Please install it and restart Cork."
             )));
         }
         Ok(())

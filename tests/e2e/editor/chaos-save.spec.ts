@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 test("keeps local editor text through simulated external-change chaos", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => {
-    window.__noxe_test_setVault?.("/vault", [
-      { id: "n1", path: "/vault/chaos.md", title: "Chaos", folder: "", size: 1, mtime: 1 },
+    window.__cork_test_setVault?.("/vault", [
+      { id: "n1", path: "/vault/chaos.md", title: "Chaos", folder: "", snippet: "", size: 1, mtime: 1 },
     ]);
   });
 

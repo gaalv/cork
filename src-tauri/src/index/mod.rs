@@ -16,7 +16,7 @@ use tauri::{AppHandle, Emitter, Listener, Manager};
 
 use crate::index::migrate::open_index_at;
 use crate::index::paths::index_db_path;
-use crate::index::query::{GraphData, LinkRow, TagCount};
+use crate::index::query::{GraphData, LinkRow, NoteTagPair, TagCount};
 use crate::index::search::SearchResult;
 use crate::index::worker::IndexJob;
 use crate::vault::watcher::{FileChangeKind, VaultFileChangedEvent};
@@ -230,16 +230,6 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tauri::command]
-pub fn notes_recent(
-    app: AppHandle,
-    vault: tauri::State<'_, VaultState>,
-    state: tauri::State<'_, IndexState>,
-    limit: Option<usize>,
-) -> Result<Vec<NoteEntry>, IpcError> {
-    state.with_conn(&app, &vault, |conn| query::recent(conn, limit))
-}
-
-#[tauri::command]
 pub fn notes_all_paged(
     app: AppHandle,
     vault: tauri::State<'_, VaultState>,
@@ -281,12 +271,58 @@ pub fn notes_by_id(
 }
 
 #[tauri::command]
-pub fn notes_starred(
+pub fn notes_pinned(
     app: AppHandle,
     vault: tauri::State<'_, VaultState>,
     state: tauri::State<'_, IndexState>,
 ) -> Result<Vec<NoteEntry>, IpcError> {
-    state.with_conn(&app, &vault, query::starred)
+    state.with_conn(&app, &vault, query::pinned)
+}
+
+#[tauri::command]
+pub fn tags_create(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+    tag: String,
+) -> Result<(), IpcError> {
+    state.with_conn(&app, &vault, |conn| query::tags_create(conn, &tag))
+}
+
+#[tauri::command]
+pub fn tags_rename(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+    old_tag: String,
+    new_tag: String,
+) -> Result<(), IpcError> {
+    let note_paths =
+        state.with_conn(&app, &vault, |conn| query::tags_rename(conn, &old_tag, &new_tag))?;
+
+    for path in &note_paths {
+        if path.exists() {
+            let _ = rename_tag_in_frontmatter(path, &old_tag, &new_tag, &vault, &app);
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn tags_delete(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+    tag: String,
+) -> Result<(), IpcError> {
+    let note_paths = state.with_conn(&app, &vault, |conn| query::tags_delete(conn, &tag))?;
+
+    for path in &note_paths {
+        if path.exists() {
+            let _ = remove_tag_from_frontmatter(path, &tag, &vault, &app);
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -296,6 +332,15 @@ pub fn tags_list(
     state: tauri::State<'_, IndexState>,
 ) -> Result<Vec<TagCount>, IpcError> {
     state.with_conn(&app, &vault, query::tags_list)
+}
+
+#[tauri::command]
+pub fn tags_note_map(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+) -> Result<Vec<NoteTagPair>, IpcError> {
+    state.with_conn(&app, &vault, query::tags_note_map)
 }
 
 #[tauri::command]
@@ -361,4 +406,106 @@ pub fn index_rebuild(
     state: tauri::State<'_, IndexState>,
 ) -> Result<(), IpcError> {
     state.send_job(&app, &vault, IndexJob::BuildAll)
+}
+
+fn emit_file_changed(app: &AppHandle, path: &std::path::Path) -> Result<(), IpcError> {
+    let metadata = std::fs::metadata(path)?;
+    let mtime = metadata
+        .modified()
+        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64;
+    app.emit(
+        "vault:fileChanged",
+        VaultFileChangedEvent {
+            path: path.to_path_buf(),
+            kind: FileChangeKind::Modified,
+            source: crate::vault::watcher::FileChangeSource::Internal,
+            mtime,
+            size: metadata.len(),
+        },
+    )
+    .map_err(|err| IpcError::Other(err.to_string()))
+}
+
+fn rename_tag_in_frontmatter(
+    path: &std::path::Path,
+    old_tag: &str,
+    new_tag: &str,
+    vault: &VaultState,
+    app: &AppHandle,
+) -> Result<(), IpcError> {
+    use crate::vault::io::{read_note, save_atomic};
+    use crate::vault::SaveInput;
+
+    let mut note = read_note(path)?;
+    if let Some(obj) = note.frontmatter.as_object_mut() {
+        if let Some(serde_json::Value::Array(tags)) = obj.get_mut("tags") {
+            let mut changed = false;
+            for tag in tags.iter_mut() {
+                if let serde_json::Value::String(s) = tag {
+                    if s == old_tag {
+                        *s = new_tag.to_string();
+                        changed = true;
+                    }
+                }
+            }
+            if changed {
+                note.frontmatter = serde_json::Value::Object(obj.clone());
+                save_atomic(
+                    &SaveInput {
+                        path: note.path,
+                        frontmatter: note.frontmatter,
+                        body: note.body,
+                        expected_mtime: None,
+                    },
+                    &vault.fingerprint_cache,
+                )?;
+                emit_file_changed(app, path)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn remove_tag_from_frontmatter(
+    path: &std::path::Path,
+    tag: &str,
+    vault: &VaultState,
+    app: &AppHandle,
+) -> Result<(), IpcError> {
+    use crate::vault::io::{read_note, save_atomic};
+    use crate::vault::SaveInput;
+
+    let mut note = read_note(path)?;
+    if let Some(obj) = note.frontmatter.as_object_mut() {
+        if let Some(serde_json::Value::Array(tags)) = obj.get_mut("tags") {
+            let original_len = tags.len();
+            tags.retain(|t| {
+                if let serde_json::Value::String(s) = t {
+                    s != tag
+                } else {
+                    true
+                }
+            });
+            if tags.len() != original_len {
+                if tags.is_empty() {
+                    obj.remove("tags");
+                }
+                note.frontmatter = serde_json::Value::Object(obj.clone());
+                save_atomic(
+                    &SaveInput {
+                        path: note.path,
+                        frontmatter: note.frontmatter,
+                        body: note.body,
+                        expected_mtime: None,
+                    },
+                    &vault.fingerprint_cache,
+                )?;
+                emit_file_changed(app, path)?;
+            }
+        }
+    }
+    Ok(())
 }

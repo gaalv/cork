@@ -68,6 +68,8 @@ pub struct EditorSettings {
     pub tab_size: u32,
     #[serde(default)]
     pub show_invisibles: bool,
+    #[serde(default)]
+    pub vim_mode: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -132,6 +134,7 @@ impl Default for EditorSettings {
             font_size: default_font_size(),
             tab_size: default_tab_size(),
             show_invisibles: false,
+            vim_mode: false,
         }
     }
 }

@@ -8,12 +8,12 @@
 ## Overview
 
 Adds a lightweight todo list scoped to the active vault, persisted at
-`<vault>/.noxe/todos.json`, with full CRUD via a dedicated TodosView
+`<vault>/.cork/todos.json`, with full CRUD via a dedicated TodosView
 plus deep command-palette and shortcut integration.
 
 ## Requirements
 
-- **R1** Per-vault JSON store at `.noxe/todos.json`. Schema:
+- **R1** Per-vault JSON store at `.cork/todos.json`. Schema:
   `{ id, title, done, createdAt, completedAt? }`. File is created on
   first write; missing file means empty list.
 - **R2** New `TodosView` reachable via the side rail (icon added in
@@ -40,7 +40,7 @@ plus deep command-palette and shortcut integration.
 ## Acceptance
 
 - Switching vaults swaps the todo list to the new vault's
-  `.noxe/todos.json` instantly.
+  `.cork/todos.json` instantly.
 - Cmd+K shows open todos and lets the user complete one without
   leaving the keyboard.
 - Cmd+Shift+T opens TodosView from anywhere in the app.

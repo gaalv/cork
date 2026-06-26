@@ -39,7 +39,7 @@ Single switch point. When `mode === "triage"`, renders only `<TriageBody/>`; mod
 
 ```
 ┌───────────────────────────┐
-│  Noxe  [vault]  <sync>    │  brand row (R3)
+│  Cork  [vault]  <sync>    │  brand row (R3)
 │  ┌───── New note ─────┐   │  primary CTA (R4)
 │  └────────────────────┘   │
 │                           │

@@ -1,99 +1,88 @@
-import { assetUrl } from "./assetUrl";
+/**
+ * Asset resolver — converts vault-relative image paths to Tauri asset protocol URLs.
+ *
+ * @see F11 — Assets & Images spec (ASSET-01, ASSET-02)
+ */
 
-export type AssetResolveResult =
-  | { status: "resolved"; path: string; url: string }
-  | { status: "blocked"; reason: "outside-vault" | "unsupported-url"; path: string }
-  | { status: "missing"; path: string };
+import { convertFileSrc } from "@tauri-apps/api/core";
 
-export type ResolveAssetOptions = {
-  exists?: (path: string) => boolean;
-  toUrl?: (path: string) => string;
-};
+const IMAGE_EXT = new Set([
+  "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif",
+]);
 
+/** Returns true if the path points to an image based on extension. */
+export function isImagePath(filePath: string): boolean {
+  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+  return IMAGE_EXT.has(ext);
+}
+
+/**
+ * Resolves a Markdown image/link `src` to a Tauri asset protocol URL.
+ *
+ * - Absolute URLs (http/https/data) are returned as-is.
+ * - Vault-relative paths are joined with vaultRoot and converted via `convertFileSrc`.
+ * - Paths that escape the vault (via `..`) are blocked and return `null`.
+ */
 export function resolveAssetSrc(
-  linkPath: string,
-  currentNotePath: string,
+  src: string,
   vaultRoot: string,
-  options: ResolveAssetOptions = {},
-): AssetResolveResult {
-  const trimmed = linkPath.trim();
-  if (isRemoteUrl(trimmed) || isDataUrl(trimmed)) {
-    return { status: "resolved", path: trimmed, url: trimmed };
-  }
-  if (trimmed.startsWith("file://") || trimmed.includes("://")) {
-    return { status: "blocked", reason: "unsupported-url", path: trimmed };
+  noteRelDir: string,
+): string | null {
+  // Pass through remote URLs and data URIs
+  if (/^https?:\/\//i.test(src) || src.startsWith("data:")) {
+    return src;
   }
 
-  const pathValue = safeDecodePath(trimmed);
-  const normalizedVault = normalizeAbsolutePath(vaultRoot);
-  const currentDir = dirname(normalizeAbsolutePath(currentNotePath));
-  const candidate = isAbsolutePath(pathValue)
-    ? normalizeAbsolutePath(pathValue)
-    : normalizeAbsolutePath(joinPath(currentDir, pathValue));
-
-  if (!isInsidePath(candidate, normalizedVault)) {
-    return { status: "blocked", reason: "outside-vault", path: candidate };
-  }
-  if (options.exists && !options.exists(candidate)) {
-    return { status: "missing", path: candidate };
+  // Already resolved
+  if (src.startsWith("asset://") || src.startsWith("https://asset.localhost/")) {
+    return src;
   }
 
-  return {
-    status: "resolved",
-    path: candidate,
-    url: options.toUrl ? options.toUrl(candidate) : assetUrl(candidate),
-  };
-}
+  // Resolve relative path against the note's directory within the vault
+  const resolved = resolveRelativePath(noteRelDir, src);
 
-function safeDecodePath(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
+  // Block path traversal outside vault
+  if (resolved.startsWith("..") || resolved.startsWith("/")) {
+    return null;
   }
+
+  const absolutePath = `${vaultRoot}/${resolved}`;
+  return convertFileSrc(absolutePath);
 }
 
-function isRemoteUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
+/**
+ * Resolves a relative path against a base directory.
+ * Normalizes `.` and `..` segments.
+ */
+function resolveRelativePath(baseDir: string, relativePath: string): string {
+  // If the path starts from vault root (e.g. _attachments/img.png), use as-is
+  if (!relativePath.startsWith(".") && !relativePath.startsWith("/")) {
+    // Could be relative to note dir or vault root — resolve against note dir
+    const parts = [...baseDir.split("/").filter(Boolean), ...relativePath.split("/")];
+    return normalizeParts(parts);
+  }
+
+  if (relativePath.startsWith("/")) {
+    return relativePath.slice(1);
+  }
+
+  const parts = [...baseDir.split("/").filter(Boolean), ...relativePath.split("/")];
+  return normalizeParts(parts);
 }
 
-function isDataUrl(value: string): boolean {
-  return /^data:/i.test(value);
-}
-
-function isAbsolutePath(value: string): boolean {
-  return value.startsWith("/") || /^[A-Za-z]:[\\/]/.test(value);
-}
-
-function normalizeAbsolutePath(path: string): string {
-  const normalized = path.replace(/\\/g, "/");
-  const prefix = /^[A-Za-z]:\//.test(normalized) ? normalized.slice(0, 2) : "";
-  const body = prefix ? normalized.slice(2) : normalized;
-  const parts: string[] = [];
-  for (const part of body.split("/")) {
-    if (!part || part === ".") {
-      continue;
-    }
+function normalizeParts(parts: string[]): string {
+  const stack: string[] = [];
+  for (const part of parts) {
+    if (part === "." || part === "") continue;
     if (part === "..") {
-      parts.pop();
-      continue;
+      if (stack.length > 0 && stack[stack.length - 1] !== "..") {
+        stack.pop();
+      } else {
+        stack.push("..");
+      }
+    } else {
+      stack.push(part);
     }
-    parts.push(part);
   }
-  return `${prefix}/${parts.join("/")}`;
+  return stack.join("/");
 }
-
-function joinPath(base: string, child: string): string {
-  return `${base.replace(/\/$/, "")}/${child}`;
-}
-
-function dirname(path: string): string {
-  const normalized = normalizeAbsolutePath(path);
-  const index = normalized.lastIndexOf("/");
-  return index <= 0 ? "/" : normalized.slice(0, index);
-}
-
-function isInsidePath(path: string, root: string): boolean {
-  return path === root || path.startsWith(`${root.replace(/\/$/, "")}/`);
-}
-

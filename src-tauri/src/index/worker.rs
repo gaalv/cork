@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, Instant, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
@@ -12,10 +12,12 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use walkdir::WalkDir;
 
+use crate::error::sql_error;
 use crate::index::migrate::open_index_at;
 use crate::index::parser::{parse, ParsedNote};
 use crate::index::resolver;
-use crate::vault::list::{asset_kind, is_markdown};
+use crate::vault::io::{metadata_mtime_ms, to_slash_string};
+use crate::vault::list::{asset_kind, is_markdown, sha1_hex};
 use crate::IpcError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,7 +53,7 @@ pub type ProgressSink = Arc<dyn Fn(IndexProgress) + Send + Sync + 'static>;
 pub type ErrorSink = Arc<dyn Fn(String) + Send + Sync + 'static>;
 /// Invoked after each successfully processed job (Upsert/Remove/Rename/BuildAll).
 /// The frontend listens to a corresponding event to refresh derived views
-/// (starred drawer, tag tree, etc.) once the index has caught up.
+/// (pinned drawer, tag tree, etc.) once the index has caught up.
 pub type UpdateSink = Arc<dyn Fn() + Send + Sync + 'static>;
 
 pub fn spawn_worker(
@@ -105,6 +107,13 @@ pub fn build_all(
     let total = files.len();
     emit_progress(progress_sink, 0, total, IndexPhase::Building);
     conn.execute("DELETE FROM assets", []).map_err(sql_error)?;
+
+    let live_note_ids: BTreeSet<String> = files
+        .iter()
+        .filter(|path| is_markdown(path))
+        .map(|path| note_id(path))
+        .collect();
+
     let mut last_emit = Instant::now();
     for (index, chunk) in files.chunks(100).enumerate() {
         let tx = conn.transaction().map_err(sql_error)?;
@@ -121,6 +130,8 @@ pub fn build_all(
             last_emit = Instant::now();
         }
     }
+
+    purge_stale_notes(conn, &live_note_ids)?;
     resolve_all_links(conn)?;
     if total == 0 {
         emit_progress(progress_sink, 0, 0, IndexPhase::Building);
@@ -249,6 +260,22 @@ fn upsert_path_in_tx(
             ],
         )
         .map_err(sql_error)?;
+        // Re-index frontmatter even when body unchanged (e.g. pinned toggle)
+        tx.execute("DELETE FROM frontmatter WHERE note_id = ?1", [&id])
+            .map_err(sql_error)?;
+        if let Value::Object(map) = &parsed.frontmatter {
+            for (key, value) in map {
+                tx.execute(
+                    "INSERT INTO frontmatter (note_id, key, value) VALUES (?1, ?2, ?3)",
+                    params![
+                        id,
+                        key,
+                        serde_json::to_string(value).map_err(|err| IpcError::Other(err.to_string()))?
+                    ],
+                )
+                .map_err(sql_error)?;
+            }
+        }
         return Ok(());
     }
 
@@ -321,6 +348,31 @@ fn replace_note_rows(
         params![id, parsed.title, parsed.body],
     )
     .map_err(sql_error)?;
+    Ok(())
+}
+
+fn purge_stale_notes(conn: &mut Connection, live_ids: &BTreeSet<String>) -> Result<(), IpcError> {
+    let mut stmt = conn
+        .prepare("SELECT id FROM notes")
+        .map_err(sql_error)?;
+    let stale_ids: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(sql_error)?
+        .filter_map(|r| r.ok())
+        .filter(|id| !live_ids.contains(id))
+        .collect();
+    drop(stmt);
+
+    if !stale_ids.is_empty() {
+        let tx = conn.transaction().map_err(sql_error)?;
+        for id in &stale_ids {
+            tx.execute("DELETE FROM notes_fts WHERE id = ?1", [id])
+                .map_err(sql_error)?;
+            tx.execute("DELETE FROM notes WHERE id = ?1", [id])
+                .map_err(sql_error)?;
+        }
+        tx.commit().map_err(sql_error)?;
+    }
     Ok(())
 }
 
@@ -490,38 +542,18 @@ fn file_sha1(path: &Path) -> Result<String, IpcError> {
 }
 
 fn note_id(path: &Path) -> String {
-    let mut hasher = Sha1::new();
-    hasher.update(path_string(path).as_bytes());
-    hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    sha1_hex(path_string(path).as_bytes())
 }
 
 fn folder_for(vault_path: &Path, path: &Path) -> String {
     path.parent()
         .and_then(|parent| parent.strip_prefix(vault_path).ok())
-        .map(|relative| {
-            relative
-                .components()
-                .filter_map(|component| component.as_os_str().to_str())
-                .collect::<Vec<_>>()
-                .join("/")
-        })
+        .map(|relative| to_slash_string(relative))
         .unwrap_or_default()
 }
 
 fn path_string(path: &Path) -> String {
     path.to_string_lossy().to_string()
-}
-
-fn metadata_mtime_ms(metadata: &fs::Metadata) -> Result<i64, IpcError> {
-    let duration = metadata
-        .modified()?
-        .duration_since(UNIX_EPOCH)
-        .map_err(|err| IpcError::Other(err.to_string()))?;
-    Ok(duration.as_millis() as i64)
 }
 
 fn frontmatter_i64(frontmatter: &Value, key: &str) -> Option<i64> {
@@ -553,10 +585,6 @@ fn emit_error(error_sink: &Option<ErrorSink>, message: String) {
     }
 }
 
-fn sql_error(error: rusqlite::Error) -> IpcError {
-    IpcError::Other(error.to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, Mutex};
@@ -583,7 +611,7 @@ mod tests {
 
         build_all(&mut conn, &vault, None).unwrap();
 
-        assert_eq!(query::recent(&conn, Some(10)).unwrap().len(), 2);
+        assert_eq!(query::all_paged(&conn, 0, 100).unwrap().len(), 2);
         let asset_count: i64 = conn
             .query_row("SELECT count(*) FROM assets", [], |row| row.get(0))
             .unwrap();
@@ -606,7 +634,7 @@ mod tests {
         );
 
         remove_path(&mut conn, &beta, None).unwrap();
-        assert_eq!(query::recent(&conn, Some(10)).unwrap().len(), 1);
+        assert_eq!(query::all_paged(&conn, 0, 100).unwrap().len(), 1);
         remove_path(&mut conn, &logo, None).unwrap();
         let asset_count: i64 = conn
             .query_row("SELECT count(*) FROM assets", [], |row| row.get(0))
@@ -674,5 +702,51 @@ mod tests {
             "build took {build_elapsed:?}"
         );
         assert!(update_start.elapsed() < Duration::from_millis(200));
+    }
+
+    #[test]
+    fn build_all_purges_notes_deleted_while_app_was_closed() {
+        let dir = tempdir().unwrap();
+        let vault = dir.path().join("vault");
+        fs::create_dir(&vault).unwrap();
+        let alpha = vault.join("alpha.md");
+        let beta = vault.join("beta.md");
+        fs::write(&alpha, "# Alpha\n[[Beta]]").unwrap();
+        fs::write(&beta, "# Beta").unwrap();
+        let mut conn = open_index_at(&dir.path().join("index.sqlite")).unwrap();
+
+        build_all(&mut conn, &vault, None).unwrap();
+        assert_eq!(query::all_paged(&conn, 0, 100).unwrap().len(), 2);
+
+        // Simulate deleting files while the app (watcher) is not running
+        fs::remove_file(&beta).unwrap();
+        build_all(&mut conn, &vault, None).unwrap();
+
+        assert_eq!(query::all_paged(&conn, 0, 100).unwrap().len(), 1);
+        assert!(query::by_id(&conn, &note_id(&beta)).unwrap().is_none());
+        // Dangling link to deleted note should be unresolved
+        let outgoing = query::links_outgoing(&conn, &note_id(&alpha)).unwrap();
+        assert_eq!(outgoing.len(), 1);
+        assert!(outgoing[0].target_id.is_none());
+    }
+
+    #[test]
+    fn build_all_on_empty_vault_purges_all_notes() {
+        let dir = tempdir().unwrap();
+        let vault = dir.path().join("vault");
+        fs::create_dir(&vault).unwrap();
+        fs::write(vault.join("a.md"), "# A").unwrap();
+        fs::write(vault.join("b.md"), "# B").unwrap();
+        let mut conn = open_index_at(&dir.path().join("index.sqlite")).unwrap();
+
+        build_all(&mut conn, &vault, None).unwrap();
+        assert_eq!(query::all_paged(&conn, 0, 100).unwrap().len(), 2);
+
+        // Delete everything
+        fs::remove_file(vault.join("a.md")).unwrap();
+        fs::remove_file(vault.join("b.md")).unwrap();
+        build_all(&mut conn, &vault, None).unwrap();
+
+        assert_eq!(query::all_paged(&conn, 0, 100).unwrap().len(), 0);
     }
 }

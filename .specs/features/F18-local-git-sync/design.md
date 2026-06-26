@@ -85,7 +85,7 @@ Behavior:
 After `state.set_current_path(path)`:
 ```rust
 if let Err(e) = crate::vcs::git_init_if_needed(&path) {
-    eprintln!("noxe vcs: git init skipped: {e}");
+    eprintln!("cork vcs: git init skipped: {e}");
 }
 ```
 

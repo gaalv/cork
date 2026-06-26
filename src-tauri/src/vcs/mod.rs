@@ -119,7 +119,7 @@ impl VcsState {
                 match do_commit(&vault_root, &note_path, is_new) {
                     Ok(()) => any_committed = true,
                     Err(e) => {
-                        eprintln!("noxe vcs: commit failed for {}: {e}", note_path.display());
+                        eprintln!("cork vcs: commit failed for {}: {e}", note_path.display());
                     }
                 }
             }
@@ -184,7 +184,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     if !gitignore.exists() {
         std::fs::write(
             &gitignore,
-            ".DS_Store\nnode_modules/\ndist/\n.noxe/cache/\n.noxe/sync.log\n",
+            ".DS_Store\nnode_modules/\ndist/\n.cork/cache/\n.cork/sync.log\n",
         )
         .map_err(|e| e.to_string())?;
     }
@@ -201,7 +201,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     if !has_name {
         let _ = Command::new("git")
             .current_dir(vault_root)
-            .args(["config", "--local", "user.name", "Noxe"])
+            .args(["config", "--local", "user.name", "Cork"])
             .status();
     }
     let has_email = Command::new("git")
@@ -213,7 +213,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     if !has_email {
         let _ = Command::new("git")
             .current_dir(vault_root)
-            .args(["config", "--local", "user.email", "noxe@local"])
+            .args(["config", "--local", "user.email", "cork@local"])
             .status();
     }
 
@@ -224,7 +224,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
         .status();
 
     let init_body = format!(
-        "Timestamp: {}\nVault: {}\n\nSource: noxe-app",
+        "Timestamp: {}\nVault: {}\n\nSource: cork-app",
         chrono::Utc::now().to_rfc3339(),
         vault_root.display()
     );
@@ -237,7 +237,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
             "vault(init): initial commit",
             "-m",
             &init_body,
-            "--author=Noxe <noxe@local>",
+            "--author=Cork <cork@local>",
         ])
         .output()
         .map_err(|e| e.to_string())?;
@@ -269,7 +269,7 @@ fn do_commit(vault_root: &Path, note_path: &Path, is_new: bool) -> Result<(), St
     let verb = if is_new { "create" } else { "update" };
     let subject = format!("note({verb}): {rel}");
     let body = format!(
-        "Timestamp: {}\nFile: {}\n\nSource: noxe-app",
+        "Timestamp: {}\nFile: {}\n\nSource: cork-app",
         chrono::Utc::now().to_rfc3339(),
         rel
     );
@@ -288,7 +288,7 @@ fn do_commit(vault_root: &Path, note_path: &Path, is_new: bool) -> Result<(), St
             &subject,
             "-m",
             &body,
-            "--author=Noxe <noxe@local>",
+            "--author=Cork <cork@local>",
         ])
         .status();
 
@@ -432,7 +432,7 @@ pub fn vcs_restore(
     };
     let subject = format!("note(restore): {rel} from {short_sha}");
     let body = format!(
-        "Timestamp: {}\nFile: {}\nRestored from: {}\n\nSource: noxe-app",
+        "Timestamp: {}\nFile: {}\nRestored from: {}\n\nSource: cork-app",
         chrono::Utc::now().to_rfc3339(),
         rel,
         input.sha
@@ -451,7 +451,7 @@ pub fn vcs_restore(
             &subject,
             "-m",
             &body,
-            "--author=Noxe <noxe@local>",
+            "--author=Cork <cork@local>",
         ])
         .status();
 

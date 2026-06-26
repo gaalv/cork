@@ -7,8 +7,6 @@ use crate::index::paths::index_db_path;
 use crate::IpcError;
 
 const SCHEMA: &str = include_str!("schema.sql");
-const MIGRATION_003_ASSETS: &str = include_str!("migrations/003_assets.sql");
-const MIGRATION_004_LINKS_AMBIGUOUS: &str = include_str!("migrations/004_links_ambiguous.sql");
 const SCHEMA_VERSION: i64 = 4;
 
 pub fn open_index(app_data_dir: &Path, vault_path: &Path) -> Result<Connection, IpcError> {
@@ -68,26 +66,16 @@ fn ensure_schema(conn: &Connection) -> Result<(), rusqlite::Error> {
     Ok(())
 }
 
-fn run_migrations(conn: &Connection, current_version: i64) -> Result<(), rusqlite::Error> {
-    if current_version < 3 {
-        conn.execute_batch(MIGRATION_003_ASSETS)?;
-    }
-    if current_version < 4 && !has_column(conn, "links", "ambiguous")? {
-        conn.execute_batch(MIGRATION_004_LINKS_AMBIGUOUS)?;
-    }
+fn run_migrations(conn: &Connection, _current_version: i64) -> Result<(), rusqlite::Error> {
+    // Incremental migration files were folded into schema.sql.
+    // If the schema is outdated the full schema is re-applied via
+    // CREATE TABLE IF NOT EXISTS / CREATE INDEX IF NOT EXISTS, which is
+    // idempotent.  Truly incompatible databases are caught by the
+    // open_index_at fallback that deletes and recreates the file.
+    conn.execute_batch(SCHEMA)?;
     Ok(())
 }
 
-fn has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
-    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
-    let columns = stmt.query_map([], |row| row.get::<_, String>(1))?;
-    for result in columns {
-        if result? == column {
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
 
 fn remove_sqlite_files(db_path: &Path) -> Result<(), IpcError> {
     for path in sqlite_paths(db_path) {

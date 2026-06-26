@@ -1,14 +1,16 @@
 import { Shell } from "@/features/shell";
+import { AuthGate } from "@/features/auth/ui/AuthGate";
 
 /**
- * Root app component. Currently renders the migrated Layout C as a single
- * legacy bundle; subsequent features (F04+) will progressively replace
- * `_legacy/LayoutMinimalCommand` with proper shell/home/note-view modules.
+ * Root app component. AuthGate wraps the shell — unauthenticated users
+ * see login/register screens; authenticated users enter the app.
  */
 export function App() {
   return (
     <div className="flex h-full flex-col">
-      <Shell />
+      <AuthGate>
+        <Shell />
+      </AuthGate>
     </div>
   );
 }

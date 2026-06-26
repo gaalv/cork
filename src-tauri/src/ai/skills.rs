@@ -141,7 +141,7 @@ pub fn parse_skill(raw: &str, source: SkillSource) -> Option<Skill> {
     })
 }
 
-/// Load all skills from bundled defaults, then user overrides under `~/.noxe/skills/`.
+/// Load all skills from bundled defaults, then user overrides under `~/.cork/skills/`.
 /// Later sources override earlier by `id`.
 pub fn load_all(user_dir: Option<PathBuf>) -> SkillStore {
     let mut store = SkillStore::new();
@@ -158,7 +158,7 @@ pub fn load_all(user_dir: Option<PathBuf>) -> SkillStore {
             store.insert(skill);
         } else {
             eprintln!(
-                "noxe: skipping malformed bundled skill: {}",
+                "cork: skipping malformed bundled skill: {}",
                 entry.path().display()
             );
         }
@@ -179,14 +179,14 @@ pub fn load_all(user_dir: Option<PathBuf>) -> SkillStore {
                                 store.insert(skill);
                             } else {
                                 eprintln!(
-                                    "noxe: skipping malformed user skill: {}",
+                                    "cork: skipping malformed user skill: {}",
                                     path.display()
                                 );
                             }
                         }
                         Err(err) => {
                             eprintln!(
-                                "noxe: failed to read user skill {}: {}",
+                                "cork: failed to read user skill {}: {}",
                                 path.display(),
                                 err
                             );
@@ -200,9 +200,9 @@ pub fn load_all(user_dir: Option<PathBuf>) -> SkillStore {
     store
 }
 
-/// Default user skills directory: `~/.noxe/skills/`.
+/// Default user skills directory: `~/.cork/skills/`.
 pub fn default_user_dir() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".noxe").join("skills"))
+    dirs::home_dir().map(|h| h.join(".cork").join("skills"))
 }
 
 #[cfg(test)]

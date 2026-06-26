@@ -5,6 +5,7 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Runtime};
 
+use crate::vault::io::to_slash_string;
 use crate::vault::VaultState;
 use crate::IpcError;
 
@@ -110,7 +111,7 @@ pub fn write_attachment_to_vault(
 
     let file_name = clean_file_name(&input.suggested_name)?;
     let destination = next_available_path(&destination_dir, &file_name);
-    let temp_path = destination.with_file_name(format!(".noxe-asset-{}.tmp", file_name));
+    let temp_path = destination.with_file_name(format!(".cork-asset-{}.tmp", file_name));
 
     if let Some(bytes) = &input.bytes {
         fs::write(&temp_path, bytes)?;
@@ -190,14 +191,7 @@ fn relative_slash_path(vault_root: &Path, path: &Path) -> Result<String, IpcErro
     let relative = path
         .strip_prefix(vault_root)
         .map_err(|err| IpcError::Other(err.to_string()))?;
-    Ok(relative
-        .components()
-        .filter_map(|component| match component {
-            Component::Normal(value) => value.to_str(),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-        .join("/"))
+    Ok(to_slash_string(relative))
 }
 
 #[cfg(test)]

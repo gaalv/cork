@@ -1,217 +1,232 @@
+/**
+ * Editor buffer store — manages the active note buffer, auto-save,
+ * and conflict detection with external changes.
+ *
+ * @see F05 — Editor spec
+ */
+
 import { create } from "zustand";
 
 import { client } from "@/shared/ipc/client";
+import type { IpcErrorPayload, JsonRecord } from "@/shared/ipc/types";
+import { useAppSettingsStore } from "@/features/shell/state/appSettingsStore";
+import { useVaultStore } from "@/features/vault/state/vaultStore";
 
-import type { JsonRecord, NoteFile, SaveInput, SaveResult } from "@/shared/ipc/types";
-
-export type SaveStatus = "idle" | "saving" | "saved" | "error";
-
-export type EditorConflict = {
+type Conflict = {
   externalMtime: number;
-  message?: string;
 };
 
-export type EditorBuffer = {
-  noteId: string;
-  path: string;
-  frontmatter: JsonRecord;
+type EditorState = {
+  // Buffer state
+  noteId: string | null;
+  path: string | null;
   body: string;
+  frontmatter: JsonRecord;
   loadedMtime: number;
   dirty: boolean;
-  saveStatus: SaveStatus;
-  saveError: string | null;
+  saving: boolean;
   lastSavedAt: number | null;
-  pendingSave: boolean;
-  conflict: EditorConflict | null;
+  conflict: Conflict | null;
+  loading: boolean;
+  error: string | null;
+
+  // Actions
+  openBuffer: (noteId: string, path: string) => Promise<void>;
+  updateBody: (body: string) => void;
+  updateFrontmatter: (frontmatter: JsonRecord) => void;
+  save: () => Promise<void>;
+  setPath: (path: string) => void;
+  forceReload: () => Promise<void>;
+  forceSave: () => Promise<void>;
+  closeBuffer: () => void;
 };
 
-type OpenBufferInput = {
-  noteId: string;
-  file: NoteFile;
-};
+export const useEditorStore = create<EditorState>((set, get) => {
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let inFlightSave: Promise<void> | null = null;
+  let pendingSave = false;
 
-type EditorStore = {
-  activeNoteId: string | null;
-  buffers: Map<string, EditorBuffer>;
-  openBuffer: (input: OpenBufferInput) => void;
-  setActiveNoteId: (noteId: string | null) => void;
-  updateBody: (noteId: string, body: string) => void;
-  updateFrontmatter: (noteId: string, patch: JsonRecord) => void;
-  markSaving: (noteId: string) => void;
-  markSaved: (noteId: string, result: SaveResult, savedAt?: number) => void;
-  markSaveError: (noteId: string, message: string) => void;
-  setPendingSave: (noteId: string, pendingSave: boolean) => void;
-  setConflict: (noteId: string, conflict: EditorConflict) => void;
-  resolveConflict: (noteId: string, strategy: "reload" | "keep", file?: NoteFile) => void;
-  replaceFromDisk: (noteId: string, file: NoteFile) => void;
-  flushAll: () => Promise<void>;
-};
+  function clearSaveTimer() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+  }
 
-export const useEditorStore = create<EditorStore>((set) => ({
-  activeNoteId: null,
-  buffers: new Map(),
+  function getDebounceMs(): number {
+    return useAppSettingsStore.getState().settings.editor.autoSaveDebounceMs;
+  }
 
-  openBuffer({ noteId, file }) {
-    set((state) => {
-      const buffers = cloneBuffers(state.buffers);
-      buffers.set(noteId, createBuffer(noteId, file));
-      return { activeNoteId: noteId, buffers };
-    });
-  },
+  async function doSave() {
+    const { path, body, frontmatter, loadedMtime, dirty } = get();
+    if (!path || !dirty) return;
 
-  setActiveNoteId(noteId) {
-    set({ activeNoteId: noteId });
-  },
-
-  updateBody(noteId, body) {
-    updateBuffer(set, noteId, (buffer) => ({
-      ...buffer,
-      body,
-      dirty: body !== buffer.body ? true : buffer.dirty,
-      pendingSave: body !== buffer.body && buffer.saveStatus === "saving" ? true : buffer.pendingSave,
-      saveStatus: body !== buffer.body && buffer.saveStatus !== "saving" ? "idle" : buffer.saveStatus,
-    }));
-  },
-
-  updateFrontmatter(noteId, patch) {
-    updateBuffer(set, noteId, (buffer) => {
-      const next = { ...buffer.frontmatter, ...patch };
-      const changed = JSON.stringify(next) !== JSON.stringify(buffer.frontmatter);
-      if (!changed) {
-        return buffer;
-      }
-      return {
-        ...buffer,
-        frontmatter: next,
-        dirty: true,
-        pendingSave: buffer.saveStatus === "saving" ? true : buffer.pendingSave,
-        saveStatus: buffer.saveStatus !== "saving" ? "idle" : buffer.saveStatus,
-      };
-    });
-  },
-
-  markSaving(noteId) {
-    updateBuffer(set, noteId, (buffer) => ({ ...buffer, saveStatus: "saving", saveError: null }));
-  },
-
-  markSaved(noteId, result, savedAt = Date.now()) {
-    updateBuffer(set, noteId, (buffer) => ({
-      ...buffer,
-      path: result.path,
-      loadedMtime: result.mtime,
-      dirty: buffer.pendingSave,
-      pendingSave: buffer.pendingSave,
-      saveStatus: "saved",
-      saveError: null,
-      lastSavedAt: savedAt,
-      conflict: null,
-    }));
-  },
-
-  markSaveError(noteId, message) {
-    updateBuffer(set, noteId, (buffer) => ({ ...buffer, saveStatus: "error", saveError: message }));
-  },
-
-  setPendingSave(noteId, pendingSave) {
-    updateBuffer(set, noteId, (buffer) => ({ ...buffer, pendingSave }));
-  },
-
-  setConflict(noteId, conflict) {
-    updateBuffer(set, noteId, (buffer) => ({ ...buffer, conflict, saveStatus: "error" }));
-  },
-
-  resolveConflict(noteId, strategy, file) {
-    if (strategy === "reload" && file) {
-      updateBuffer(set, noteId, () => createBuffer(noteId, file));
+    if (inFlightSave) {
+      pendingSave = true;
       return;
     }
-    updateBuffer(set, noteId, (buffer) => ({ ...buffer, conflict: null, saveStatus: "idle" }));
-  },
 
-  replaceFromDisk(noteId, file) {
-    updateBuffer(set, noteId, () => createBuffer(noteId, file));
-  },
+    set({ saving: true });
 
-  async flushAll() {
-    const dirtyBuffers = [...useEditorStore.getState().buffers.values()].filter(
-      (buffer) => buffer.dirty && !buffer.conflict,
-    );
-    await Promise.all(dirtyBuffers.map((buffer) => flushBuffer(buffer.noteId)));
-  },
-}));
+    inFlightSave = (async () => {
+      try {
+        const saved = await client.notes.save({
+          path,
+          body,
+          frontmatter,
+          expectedMtime: loadedMtime,
+        });
+        set({
+          dirty: false,
+          saving: false,
+          loadedMtime: saved.mtime,
+          lastSavedAt: Date.now(),
+        });
 
-function createBuffer(noteId: string, file: NoteFile): EditorBuffer {
-  return {
-    noteId,
-    path: file.path,
-    frontmatter: file.frontmatter,
-    body: file.body,
-    loadedMtime: file.mtime,
-    dirty: false,
-    saveStatus: "idle",
-    saveError: null,
-    lastSavedAt: null,
-    pendingSave: false,
-    conflict: null,
-  };
-}
+        // Refresh note list immediately (file is already on disk).
+        // Index-derived data (tags, counts, pinned) refreshes automatically
+        // via the index:updated event emitted after the Rust indexer processes.
+        void useVaultStore.getState().loadNotes();
+      } catch (err) {
+        const error = err as IpcErrorPayload;
+        if (error.kind === "Conflict" && error.currentMtime) {
+          set({
+            saving: false,
+            conflict: { externalMtime: error.currentMtime },
+          });
+        } else {
+          set({ saving: false, error: String(err) });
+        }
+      } finally {
+        inFlightSave = null;
+        if (pendingSave) {
+          pendingSave = false;
+          void doSave();
+        }
+      }
+    })();
 
-function cloneBuffers(buffers: Map<string, EditorBuffer>) {
-  return new Map(buffers);
-}
-
-async function flushBuffer(noteId: string): Promise<void> {
-  const buffer = useEditorStore.getState().buffers.get(noteId);
-  if (!buffer || !buffer.dirty || buffer.conflict) {
-    return;
+    await inFlightSave;
   }
-  useEditorStore.getState().markSaving(noteId);
-  try {
-    useEditorStore.getState().setPendingSave(noteId, false);
-    const result = await client.notes.save(saveInput(buffer));
-    useEditorStore.getState().markSaved(noteId, result);
-  } catch (error) {
-    useEditorStore.getState().markSaveError(noteId, errorMessage(error));
-    throw error;
-  }
-}
 
-function saveInput(buffer: EditorBuffer): SaveInput {
-  return {
-    path: buffer.path,
-    frontmatter: buffer.frontmatter,
-    body: buffer.body,
-    expectedMtime: buffer.loadedMtime,
-  };
-}
+  return ({
+  noteId: null,
+  path: null,
+  body: "",
+  frontmatter: {},
+  loadedMtime: 0,
+  dirty: false,
+  saving: false,
+  lastSavedAt: null,
+  conflict: null,
+  loading: false,
+  error: null,
 
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === "object" && error !== null && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === "string") {
-      return message;
+  openBuffer: async (noteId, path) => {
+    // Flush pending saves before switching
+    clearSaveTimer();
+    if (get().dirty && get().path) {
+      await doSave();
     }
-  }
-  return "Unable to save note";
-}
 
-type SetEditorState = (updater: (state: EditorStore) => Partial<EditorStore>) => void;
+    set({
+      noteId,
+      path,
+      body: "",
+      frontmatter: {},
+      loadedMtime: 0,
+      dirty: false,
+      saving: false,
+      lastSavedAt: null,
+      conflict: null,
+      loading: true,
+      error: null,
+    });
 
-function updateBuffer(
-  set: SetEditorState,
-  noteId: string,
-  updater: (buffer: EditorBuffer) => EditorBuffer,
-) {
-  set((state) => {
-    const current = state.buffers.get(noteId);
-    if (!current) {
-      return state;
+    try {
+      const note = await client.notes.read(path);
+      set({
+        body: note.body,
+        frontmatter: note.frontmatter,
+        loadedMtime: note.mtime,
+        loading: false,
+      });
+    } catch (err) {
+      set({ loading: false, error: String(err) });
     }
-    const buffers = cloneBuffers(state.buffers);
-    buffers.set(noteId, updater(current));
-    return { buffers };
-  });
-}
+  },
+
+  updateBody: (body) => {
+    set({ body, dirty: true, conflict: null });
+
+    // Schedule auto-save
+    clearSaveTimer();
+    saveTimer = setTimeout(() => {
+      void doSave();
+    }, getDebounceMs());
+  },
+
+  updateFrontmatter: (frontmatter) => {
+    set({ frontmatter, dirty: true });
+    clearSaveTimer();
+    saveTimer = setTimeout(() => {
+      void doSave();
+    }, getDebounceMs());
+  },
+
+  save: async () => {
+    clearSaveTimer();
+    await doSave();
+  },
+
+  setPath: (path) => {
+    set({ path });
+  },
+
+  forceReload: async () => {
+    const { path, noteId } = get();
+    if (!path || !noteId) return;
+    set({ conflict: null, dirty: false });
+    await get().openBuffer(noteId, path);
+  },
+
+  forceSave: async () => {
+    const { path, body, frontmatter } = get();
+    if (!path) return;
+
+    set({ saving: true, conflict: null });
+    try {
+      const saved = await client.notes.save({ path, body, frontmatter });
+      set({
+        dirty: false,
+        saving: false,
+        loadedMtime: saved.mtime,
+        lastSavedAt: Date.now(),
+      });
+      void useVaultStore.getState().loadNotes();
+    } catch (err) {
+      set({ saving: false, error: String(err) });
+    }
+  },
+
+  closeBuffer: () => {
+    clearSaveTimer();
+    if (get().dirty && get().path) {
+      void doSave();
+    }
+    set({
+      noteId: null,
+      path: null,
+      body: "",
+      frontmatter: {},
+      loadedMtime: 0,
+      dirty: false,
+      saving: false,
+      lastSavedAt: null,
+      conflict: null,
+      loading: false,
+      error: null,
+    });
+  },
+});
+});

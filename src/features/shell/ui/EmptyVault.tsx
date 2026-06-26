@@ -1,29 +1,43 @@
+/**
+ * EmptyVault hero — shown when no vault is open.
+ * Prompts the user to open or create a vault.
+ */
+
+import { FolderSimple, Notebook } from "@phosphor-icons/react";
+
 import { useVaultStore } from "@/features/vault/state/vaultStore";
-import { NoxeWordmark } from "@/shared/ui/NoxeLogo";
 
 export function EmptyVault() {
-  const isLoading = useVaultStore((state) => state.isLoading);
-  const openVault = useVaultStore((state) => state.openVault);
+  const openVault = useVaultStore((s) => s.openVault);
+  const isLoading = useVaultStore((s) => s.isLoading);
 
   return (
-    <main className="flex min-h-full flex-1 items-center justify-center bg-[var(--color-noxe-bg)] p-8">
-      <section className="w-full max-w-md rounded-2xl border border-[var(--color-noxe-border)] bg-[var(--color-noxe-panel)] p-8 text-center shadow-sm">
-        <div className="mb-5 flex justify-center">
-          <NoxeWordmark height={32} />
-        </div>
-        <h1 className="text-xl font-semibold tracking-tight">Open a vault to begin</h1>
-        <p className="mt-2 text-sm text-[var(--color-noxe-muted)]">
-          Choose a folder of Markdown notes. Noxe keeps your vault as plain files on disk.
+    <div className="flex h-full flex-col items-center justify-center gap-6">
+      <div className="flex size-16 items-center justify-center rounded-2xl bg-[var(--color-cork-panel-2)]">
+        <Notebook size={32} weight="duotone" className="text-[var(--color-cork-accent)]" />
+      </div>
+      <div className="text-center">
+        <h1 className="font-display text-[24px] text-[var(--color-cork-ink)]">Open a vault to begin</h1>
+        <p className="mt-1.5 max-w-[320px] text-[14px] text-[var(--color-cork-muted)]">
+          Open a folder of Markdown files to get started. Cork works with any folder — no import
+          needed.
         </p>
-        <button
-          type="button"
-          onClick={() => void openVault()}
-          disabled={isLoading}
-          className="mt-6 rounded-full bg-[var(--color-noxe-primary)] px-4 py-2 text-sm font-medium text-[var(--color-noxe-primary-foreground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[var(--color-noxe-ring)] focus-visible:outline-none"
-        >
-          {isLoading ? "Opening…" : "Open Vault"}
-        </button>
-      </section>
-    </main>
+      </div>
+      <button
+        onClick={() => void openVault()}
+        disabled={isLoading}
+        className="flex items-center gap-2 rounded-[10px] bg-[var(--color-cork-primary)] px-5 py-2.5 text-[13px] font-medium text-[var(--color-cork-primary-foreground)] transition-transform hover:opacity-90 active:scale-[var(--press-scale)] disabled:opacity-50"
+      >
+        <FolderSimple size={16} />
+        {isLoading ? "Opening..." : "Open Vault"}
+      </button>
+      <p className="text-[12px] text-[var(--color-cork-subtle)]">
+        or press{" "}
+        <kbd className="rounded border border-[var(--color-cork-border)] bg-[var(--color-cork-kbd)] px-1 text-[10px]">
+          ⌘ O
+        </kbd>{" "}
+        to pick a folder
+      </p>
+    </div>
   );
 }
