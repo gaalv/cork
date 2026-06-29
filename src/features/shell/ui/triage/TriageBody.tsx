@@ -20,6 +20,7 @@ export function TriageBody() {
   const [filter, setFilterRaw] = useState<SidebarFilter>(loadFilter);
   const inspectorOpen = useShellStore((s) => s.inspectorOpen);
   const toggleInspector = useShellStore((s) => s.toggleInspector);
+  const sidebarOpen = useShellStore((s) => s.sidebarOpen);
 
   const setFilter = useCallback((f: SidebarFilter) => {
     setFilterRaw(f);
@@ -30,15 +31,18 @@ export function TriageBody() {
     <div className="flex h-full w-full flex-col bg-[var(--color-cork-bg)]">
       <div
         className={`grid min-h-0 flex-1 grid-rows-[1fr] overflow-hidden ${
-          inspectorOpen ? "grid-cols-[260px_340px_1fr_280px]" : "grid-cols-[260px_340px_1fr]"
+          sidebarOpen
+            ? inspectorOpen
+              ? "grid-cols-[260px_340px_1fr_280px]"
+              : "grid-cols-[260px_340px_1fr]"
+            : inspectorOpen
+              ? "grid-cols-[340px_1fr_280px]"
+              : "grid-cols-[340px_1fr]"
         }`}
       >
-        <Sidebar filter={filter} setFilter={setFilter} />
+        {sidebarOpen && <Sidebar filter={filter} setFilter={setFilter} />}
         <NotesList filter={filter} />
-        <EditorPane
-          inspectorOpen={inspectorOpen}
-          onToggleInspector={toggleInspector}
-        />
+        <EditorPane inspectorOpen={inspectorOpen} onToggleInspector={toggleInspector} />
         {inspectorOpen && <InspectorPane />}
       </div>
       <StatusBar />

@@ -11,7 +11,14 @@ import { folderOps } from "@/features/folder-ops/services/folderOps";
 import { client } from "@/shared/ipc/client";
 
 import type { SidebarFilter } from "./helpers";
-import { loadFolderIcons, saveFolderIcon, loadFolderColors, saveFolderColor, FOLDER_COLOR_MAP, clampMenuPosition } from "./helpers";
+import {
+  loadFolderIcons,
+  saveFolderIcon,
+  loadFolderColors,
+  saveFolderColor,
+  FOLDER_COLOR_MAP,
+  clampMenuPosition,
+} from "./helpers";
 import { SidebarSection, SidebarRow, InlineNewFolder, InlineNewTag } from "./SidebarPrimitives";
 import { FolderContextPopover } from "./FolderContextPopover";
 import { TagContextMenu } from "./TagContextMenu";
@@ -69,15 +76,18 @@ export function Sidebar({
     [loadNotes, refreshFolders],
   );
 
-  const handleCreateTag = useCallback(async (tag: string) => {
-    try {
-      await createTag(tag);
-      setCreatingTag(false);
-      toast.success(`Tag "${tag}" created`);
-    } catch (err) {
-      toast.error(String(err));
-    }
-  }, [createTag]);
+  const handleCreateTag = useCallback(
+    async (tag: string) => {
+      try {
+        await createTag(tag);
+        setCreatingTag(false);
+        toast.success(`Tag "${tag}" created`);
+      } catch (err) {
+        toast.error(String(err));
+      }
+    },
+    [createTag],
+  );
 
   const folderTree = useMemo(() => {
     const counts = new Map<string, number>();
@@ -178,7 +188,9 @@ export function Sidebar({
             const isActive = isFolderActive(f.id);
             const CustomIcon = folderIcons[f.id] ? getIconComponent(folderIcons[f.id]) : null;
             const FolderIcon = CustomIcon ?? FolderSimple;
-            const folderColor = folderColors[f.id] ? FOLDER_COLOR_MAP[folderColors[f.id]] : undefined;
+            const folderColor = folderColors[f.id]
+              ? FOLDER_COLOR_MAP[folderColors[f.id]]
+              : undefined;
             return (
               <button
                 key={f.id}
@@ -198,7 +210,11 @@ export function Sidebar({
                   size={14}
                   style={!isActive && folderColor ? { color: folderColor } : undefined}
                   className={
-                    isActive ? "text-[var(--color-cork-accent)]" : folderColor ? "" : "text-[var(--color-cork-muted)]"
+                    isActive
+                      ? "text-[var(--color-cork-accent)]"
+                      : folderColor
+                        ? ""
+                        : "text-[var(--color-cork-muted)]"
                   }
                 />
                 <span className="truncate">{f.name}</span>

@@ -7,10 +7,7 @@
 
 import { create } from "zustand";
 
-type View =
-  | { kind: "home" }
-  | { kind: "note"; id: string }
-  | { kind: "daily" };
+type View = { kind: "home" } | { kind: "note"; id: string } | { kind: "daily" };
 
 type Drawer = null | "search" | "starred" | "tags" | "folders";
 
@@ -22,6 +19,7 @@ type ShellState = {
   helpOpen: boolean;
   generateModalOpen: boolean;
   inspectorOpen: boolean;
+  sidebarOpen: boolean;
   navigate: (view: View) => void;
   setDrawer: (drawer: Drawer) => void;
   toggleDrawer: (drawer: Drawer) => void;
@@ -30,6 +28,7 @@ type ShellState = {
   setHelpOpen: (open: boolean) => void;
   setGenerateModalOpen: (open: boolean) => void;
   toggleInspector: () => void;
+  toggleSidebar: () => void;
   openNote: (id: string) => void;
   goHome: () => void;
   reset: () => void;
@@ -43,13 +42,13 @@ export const useShellStore = create<ShellState>((set) => ({
   helpOpen: false,
   generateModalOpen: false,
   inspectorOpen: false,
+  sidebarOpen: true,
 
   navigate: (view) => set({ view, drawer: null }),
 
   setDrawer: (drawer) => set({ drawer }),
 
-  toggleDrawer: (d) =>
-    set((state) => ({ drawer: state.drawer === d ? null : d })),
+  toggleDrawer: (d) => set((state) => ({ drawer: state.drawer === d ? null : d })),
 
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
@@ -57,6 +56,7 @@ export const useShellStore = create<ShellState>((set) => ({
   setGenerateModalOpen: (generateModalOpen) => set({ generateModalOpen }),
 
   toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
+  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
   openNote: (id) => set({ view: { kind: "note", id }, drawer: null, paletteOpen: false }),
 
@@ -71,5 +71,6 @@ export const useShellStore = create<ShellState>((set) => ({
       helpOpen: false,
       generateModalOpen: false,
       inspectorOpen: false,
+      sidebarOpen: true,
     }),
 }));

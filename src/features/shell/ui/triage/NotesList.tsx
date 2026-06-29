@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { DotsThreeVertical, MagnifyingGlass, Star, Tag } from "@phosphor-icons/react";
+import {
+  CircleNotch,
+  DotsThreeVertical,
+  FunnelSimple,
+  MagnifyingGlass,
+  SidebarSimple,
+  SortAscending,
+  SortDescending,
+  Star,
+  Tag,
+} from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
 
 import { useDragRegion } from "@/shared/hooks/useDragRegion";
@@ -17,17 +27,28 @@ import type { ContextMenuState, MoveSubmenuState } from "./NoteContextMenu";
 
 export function NotesList({ filter }: { filter: SidebarFilter }) {
   const allNotes = useVaultStore((s) => s.notes);
+  const isLoading = useVaultStore((s) => s.isLoading);
   const trashNote = useVaultStore((s) => s.trashNote);
   const moveNote = useVaultStore((s) => s.moveNote);
   const tags = useIndexStore((s) => s.tags);
   const noteTagMap = useIndexStore((s) => s.noteTagMap);
   const pinnedIds = useIndexStore((s) => s.pinnedIds);
   const toggleNotePin = useIndexStore((s) => s.toggleNotePin);
+  const isIndexing = useIndexStore((s) => s.isIndexing);
+  const indexProgress = useIndexStore((s) => s.indexProgress);
   const view = useShellStore((s) => s.view);
   const openNote = useShellStore((s) => s.openNote);
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
+  const sidebarOpen = useShellStore((s) => s.sidebarOpen);
+  const toggleSidebar = useShellStore((s) => s.toggleSidebar);
 
   const dragRef = useDragRegion<HTMLDivElement>();
+
+  const [sortOrder, setSortOrder] = useState<"updated" | "created" | "title">("updated");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [moveSubmenu, setMoveSubmenu] = useState<MoveSubmenuState | null>(null);
@@ -56,6 +77,25 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
       document.removeEventListener("keydown", onKey);
     };
   }, [ctxMenu, moveSubmenu]);
+
+  useEffect(() => {
+    if (!filterMenuOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (filterBtnRef.current?.contains(target)) return;
+      if (filterMenuRef.current?.contains(target)) return;
+      setFilterMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFilterMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [filterMenuOpen]);
 
   const openCardMenu = useCallback((e: React.MouseEvent, note: NoteEntry) => {
     e.stopPropagation();
@@ -147,104 +187,194 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
       }
     }
 
-    return { notes: filtered, scopeLabel: label };
-  }, [filter, allNotes, tags, noteTagMap, pinnedIds]);
+    const sorted = [...filtered].sort((a, b) => {
+      let cmp: number;
+      switch (sortOrder) {
+        case "title":
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case "created":
+          cmp = b.mtime - a.mtime;
+          break;
+        case "updated":
+        default:
+          cmp = b.mtime - a.mtime;
+          break;
+      }
+      return sortAsc ? -cmp : cmp;
+    });
+
+    return { notes: sorted, scopeLabel: label };
+  }, [filter, allNotes, tags, noteTagMap, pinnedIds, sortOrder, sortAsc]);
 
   return (
-    <section className="flex h-full flex-col border-r border-[var(--color-cork-border)] ">
+    <section className="flex min-h-0 flex-col border-r border-[var(--color-cork-border)]">
       <div
         ref={dragRef}
-        className="flex h-12 items-center gap-2 border-b border-[var(--color-cork-border)] px-3"
+        className={`flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] px-3 ${
+          !sidebarOpen ? "pl-[76px]" : ""
+        }`}
       >
-        <button
-          onClick={() => setPaletteOpen(true)}
-          className="flex flex-1 items-center gap-2 rounded-md bg-[var(--color-cork-panel-2)] px-2.5 py-1.5"
-        >
-          <MagnifyingGlass size={14} className="text-[var(--color-cork-muted)]" />
-          <span className="flex-1 text-left text-sm text-[var(--color-cork-subtle)]">
-            Search notes…
-          </span>
-          <kbd className="rounded border border-[var(--color-cork-border)] bg-[var(--color-cork-kbd)] px-1 text-[10px] font-medium text-[var(--color-cork-muted)]">
-            ⌘K
-          </kbd>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={toggleSidebar}
+            title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            className={`rounded-md p-1.5 ${
+              sidebarOpen
+                ? "text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+                : "bg-[var(--color-cork-panel-2)] text-[var(--color-cork-ink)]"
+            }`}
+          >
+            <SidebarSimple size={14} className="scale-x-[-1]" />
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            title="Search (⌘K)"
+            className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+          >
+            <MagnifyingGlass size={14} />
+          </button>
+          <div className="relative">
+            <button
+              ref={filterBtnRef}
+              onClick={() => setFilterMenuOpen((v) => !v)}
+              title="Sort & filter"
+              className={`rounded-md p-1.5 ${
+                filterMenuOpen
+                  ? "bg-[var(--color-cork-panel-2)] text-[var(--color-cork-ink)]"
+                  : "text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+              }`}
+            >
+              <FunnelSimple size={14} />
+            </button>
+            {filterMenuOpen && (
+              <div
+                ref={filterMenuRef}
+                className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] py-1 shadow-lg"
+              >
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-cork-subtle)]">
+                  Sort by
+                </p>
+                {(["updated", "created", "title"] as const).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (sortOrder === key) {
+                        setSortAsc((v) => !v);
+                      } else {
+                        setSortOrder(key);
+                        setSortAsc(false);
+                      }
+                      setFilterMenuOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-[var(--color-cork-panel-2)] ${
+                      sortOrder === key
+                        ? "text-[var(--color-cork-ink)] font-medium"
+                        : "text-[var(--color-cork-muted)]"
+                    }`}
+                  >
+                    <span className="capitalize">{key}</span>
+                    {sortOrder === key &&
+                      (sortAsc ? <SortAscending size={12} /> : <SortDescending size={12} />)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between px-4 pb-2 pt-3 text-xs text-[var(--color-cork-muted)]">
+      <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-3 text-xs text-[var(--color-cork-muted)]">
         <span>
           {scopeLabel} · {notes.length} notes
         </span>
-        <button className="hover:text-[var(--color-cork-ink)]">Updated ▾</button>
       </div>
 
-      <ul className="flex-1 overflow-y-auto">
-        {notes.map((n) => {
-          const isActive = view.kind === "note" && view.id === n.id;
-          const noteTags = noteTagMap.get(n.id) ?? [];
-          return (
-            <li key={n.id}>
-              <div
-                onClick={() => openNote(n.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") openNote(n.id);
-                }}
-                className={`group flex w-full flex-col gap-1.5 border-l-[3px] px-4 py-3 text-left transition cursor-pointer ${
-                  isActive
-                    ? "border-[var(--color-cork-accent)] bg-[var(--color-cork-accent-soft)]"
-                    : "border-transparent hover:bg-[var(--color-cork-panel-2)]"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    {pinnedIds.has(n.id) && (
-                      <Star size={10} weight="fill" className="shrink-0 text-amber-500" />
-                    )}
-                    <span className="truncate text-[13px] font-semibold text-[var(--color-cork-ink)]">
-                      {n.title}
-                    </span>
-                  </div>
-                  <button
-                    onClick={(e) => openCardMenu(e, n)}
-                    className="rounded p-0.5 text-[var(--color-cork-subtle)] opacity-0 transition-opacity hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)] group-hover:opacity-100"
-                    title="Actions"
-                  >
-                    <DotsThreeVertical size={14} weight="bold" />
-                  </button>
-                </div>
-                {n.snippet && (
-                  <p className="line-clamp-2 text-[12px] leading-relaxed text-[var(--color-cork-muted)]">
-                    {n.snippet}
-                  </p>
-                )}
-                {noteTags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {noteTags.slice(0, 3).map((t) => (
-                      <span
-                        key={t}
-                        className="inline-flex items-center gap-0.5 rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400"
-                      >
-                        <Tag size={8} />
-                        {t}
+      <ul className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {isLoading && (
+          <li className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+            <CircleNotch size={24} className="animate-spin text-[var(--color-cork-accent)]" />
+            <span className="text-[12px] text-[var(--color-cork-subtle)]">Opening vault…</span>
+          </li>
+        )}
+        {!isLoading && isIndexing && indexProgress && notes.length === 0 && (
+          <li className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+            <CircleNotch size={24} className="animate-spin text-[var(--color-cork-accent)]" />
+            <span className="text-[12px] text-[var(--color-cork-subtle)]">
+              Indexing notes… {indexProgress.processed}/{indexProgress.total}
+            </span>
+          </li>
+        )}
+        {!isLoading &&
+          notes.map((n) => {
+            const isActive = view.kind === "note" && view.id === n.id;
+            const noteTags = noteTagMap.get(n.id) ?? [];
+            return (
+              <li key={n.id}>
+                <div
+                  onClick={() => openNote(n.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") openNote(n.id);
+                  }}
+                  className={`group flex w-full flex-col gap-1.5 border-l-[3px] px-4 py-3 text-left transition cursor-pointer ${
+                    isActive
+                      ? "border-[var(--color-cork-accent)] bg-[var(--color-cork-accent-soft)]"
+                      : "border-transparent hover:bg-[var(--color-cork-panel-2)]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      {pinnedIds.has(n.id) && (
+                        <Star size={10} weight="fill" className="shrink-0 text-amber-500" />
+                      )}
+                      <span className="truncate text-[13px] font-semibold text-[var(--color-cork-ink)]">
+                        {n.title}
                       </span>
-                    ))}
-                    {noteTags.length > 3 && (
-                      <span className="rounded bg-[var(--color-cork-panel-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-cork-subtle)]">
-                        +{noteTags.length - 3}
-                      </span>
-                    )}
+                    </div>
+                    <button
+                      onClick={(e) => openCardMenu(e, n)}
+                      className="rounded p-0.5 text-[var(--color-cork-subtle)] opacity-0 transition-opacity hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)] group-hover:opacity-100"
+                      title="Actions"
+                    >
+                      <DotsThreeVertical size={14} weight="bold" />
+                    </button>
                   </div>
-                )}
-                <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
-                  <span>{formatRelativeDate(n.mtime)}</span>
-                  <span>Created {formatRelativeDate(n.mtime)}</span>
+                  {n.snippet && (
+                    <p className="line-clamp-2 text-[12px] leading-relaxed text-[var(--color-cork-muted)]">
+                      {n.snippet}
+                    </p>
+                  )}
+                  {noteTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {noteTags.slice(0, 3).map((t) => (
+                        <span
+                          key={t}
+                          className="inline-flex items-center gap-0.5 rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400"
+                        >
+                          <Tag size={8} />
+                          {t}
+                        </span>
+                      ))}
+                      {noteTags.length > 3 && (
+                        <span className="rounded bg-[var(--color-cork-panel-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-cork-subtle)]">
+                          +{noteTags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
+                    <span>{formatRelativeDate(n.mtime)}</span>
+                    <span>Created {formatRelativeDate(n.mtime)}</span>
+                  </div>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-        {notes.length === 0 && (
+              </li>
+            );
+          })}
+        {!isLoading && !isIndexing && notes.length === 0 && (
           <li className="px-4 py-8 text-center text-[12px] text-[var(--color-cork-subtle)]">
             No notes yet
           </li>
