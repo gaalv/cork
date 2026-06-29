@@ -125,15 +125,15 @@ const corkHighlightStyle = HighlightStyle.define([
   },
   {
     tag: [tags.string, tags.special(tags.string)],
-    color: "#5b6e4f",
+    color: "var(--color-cork-success)",
   },
   {
     tag: tags.number,
-    color: "#9a7f57",
+    color: "var(--color-cork-muted)",
   },
   {
     tag: tags.bool,
-    color: "#9a7f57",
+    color: "var(--color-cork-muted)",
   },
   {
     tag: [tags.definition(tags.variableName), tags.function(tags.variableName)],

@@ -151,7 +151,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   }, [filter, allNotes, tags, noteTagMap, pinnedIds]);
 
   return (
-    <section className="flex h-full flex-col border-r border-[var(--color-cork-border)] bg-[var(--color-cork-panel)]">
+    <section className="flex h-full flex-col border-r border-[var(--color-cork-border)] ">
       <div
         ref={dragRef}
         className="flex h-12 items-center gap-2 border-b border-[var(--color-cork-border)] px-3"

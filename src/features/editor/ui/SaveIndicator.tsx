@@ -23,7 +23,7 @@ export function SaveIndicator() {
     color = "text-[var(--color-cork-muted)]";
   } else if (dirty) {
     label = "Unsaved";
-    color = "text-amber-500";
+    color = "text-[var(--color-cork-muted)]";
   } else if (lastSavedAt) {
     label = "Saved";
     color = "text-[var(--color-cork-subtle)]";
@@ -31,9 +31,5 @@ export function SaveIndicator() {
     return null;
   }
 
-  return (
-    <div className={`absolute right-4 bottom-4 text-[11px] ${color}`}>
-      {label}
-    </div>
-  );
+  return <div className={`absolute right-4 bottom-4 text-[11px] ${color}`}>{label}</div>;
 }

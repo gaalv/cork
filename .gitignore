@@ -22,7 +22,3 @@ target/
 src-tauri/target/
 src-tauri/gen/
 
-# Test outputs
-coverage/
-playwright-report/
-test-results/
