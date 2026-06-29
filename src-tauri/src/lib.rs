@@ -5,119 +5,21 @@ pub mod error;
 pub mod index;
 pub mod menu;
 pub mod settings;
+pub mod shortcuts;
+pub mod tray;
 pub mod vault;
 pub mod vcs;
+pub mod window;
 
 pub use error::IpcError;
 
-use tauri::image::Image;
-use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
-use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, WebviewWindow, WindowEvent};
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
-
-const QUICK_CAPTURE_EVENT: &str = "quick-capture:new";
-const SYNC_NOW_EVENT: &str = "sync:now";
+use tauri::{Emitter, Manager, WindowEvent};
 
 /// Health check for the IPC bridge — used by the smoke test and as a
 /// reference for typed IPC contracts.
 #[tauri::command]
 fn health() -> Result<&'static str, IpcError> {
     Ok("ok")
-}
-
-fn ensure_window_visible(window: &WebviewWindow) -> Result<(), tauri::Error> {
-    let position = window.outer_position()?;
-    let size = window.outer_size()?;
-    let monitors = window.available_monitors()?;
-    let is_visible = monitors.iter().any(|monitor| {
-        let monitor_position = monitor.position();
-        let monitor_size = monitor.size();
-        let left = monitor_position.x;
-        let top = monitor_position.y;
-        let right = left + monitor_size.width as i32;
-        let bottom = top + monitor_size.height as i32;
-        position.x < right
-            && position.x + size.width as i32 > left
-            && position.y < bottom
-            && position.y + size.height as i32 > top
-    });
-
-    if !is_visible {
-        let target = monitors.first().map_or(PhysicalPosition { x: 100, y: 100 }, |monitor| {
-            let monitor_position = monitor.position();
-            let monitor_size = monitor.size();
-            PhysicalPosition {
-                x: monitor_position.x + ((monitor_size.width.saturating_sub(size.width)) / 2) as i32,
-                y: monitor_position.y + ((monitor_size.height.saturating_sub(size.height)) / 2) as i32,
-            }
-        });
-        window.set_position(Position::Physical(target))?;
-    }
-
-    Ok(())
-}
-
-fn show_main_window(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.unminimize();
-        let _ = window.show();
-        let _ = window.set_focus();
-        let _ = ensure_window_visible(&window);
-    }
-}
-
-fn trigger_quick_capture(app: &AppHandle) {
-    show_main_window(app);
-    let _ = app.emit(QUICK_CAPTURE_EVENT, ());
-}
-
-fn trigger_sync_now(app: &AppHandle) {
-    let _ = app.emit(SYNC_NOW_EVENT, ());
-}
-
-fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
-    let quick = MenuItemBuilder::with_id("tray:quick-capture", "Quick capture")
-        .accelerator("CmdOrCtrl+Shift+I")
-        .build(app)?;
-    let sync = MenuItemBuilder::with_id("tray:sync-now", "Sync now").build(app)?;
-    let show = MenuItemBuilder::with_id("tray:show", "Show Cork").build(app)?;
-    let separator = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItemBuilder::with_id("tray:quit", "Quit Cork").build(app)?;
-
-    let menu = MenuBuilder::new(app).items(&[&quick, &sync, &show, &separator, &quit]).build()?;
-
-    let icon = Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
-        .map_err(|_| tauri::Error::AssetNotFound("tray icon".into()))?;
-
-    TrayIconBuilder::with_id("cork-tray")
-        .icon(icon)
-        .icon_as_template(true)
-        .menu(&menu)
-        .show_menu_on_left_click(true)
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "tray:quick-capture" => trigger_quick_capture(app),
-            "tray:sync-now" => trigger_sync_now(app),
-            "tray:show" => show_main_window(app),
-            "tray:quit" => app.exit(0),
-            _ => {}
-        })
-        .build(app)?;
-
-    Ok(())
-}
-
-fn register_quick_capture_shortcut(app: &AppHandle) -> Result<(), String> {
-    let shortcut = Shortcut::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyI);
-    let app_for_handler = app.clone();
-    app.global_shortcut()
-        .on_shortcut(shortcut, move |_, _, event| {
-            if event.state == ShortcutState::Pressed {
-                trigger_quick_capture(&app_for_handler);
-            }
-        })
-        .map_err(|err| err.to_string())?;
-    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -139,32 +41,40 @@ pub fn run() {
             vault::setup(app)?;
             index::setup(app)?;
             ai::setup(app.handle())?;
+
             // Start the VCS debounce worker (signals RemoteState so commits trigger pushes)
             let vcs_state = app.state::<vcs::VcsState>();
             let remote_state = app.state::<vcs::remote::RemoteState>();
             vcs::start_worker(&vcs_state, &remote_state);
             vcs::remote::start_workers(&remote_state);
+
+            // App menu
             let menu = menu::build_app_menu(app.handle())?;
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| {
                 app.emit("menu:action", event.id().0.as_str()).ok();
             });
-            if let Some(window) = app.get_webview_window("main") {
-                ensure_window_visible(&window)?;
+
+            // Window lifecycle
+            if let Some(win) = app.get_webview_window("main") {
+                window::ensure_visible(&win)?;
                 let app_handle = app.handle().clone();
-                window.on_window_event(move |event| {
+                win.on_window_event(move |event| {
                     if let WindowEvent::CloseRequested { api, .. } = event {
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.hide();
+                        if let Some(w) = app_handle.get_webview_window("main") {
+                            let _ = w.hide();
                         }
                         api.prevent_close();
                     }
                 });
             }
-            build_tray(app.handle())?;
-            if let Err(err) = register_quick_capture_shortcut(app.handle()) {
+
+            tray::build(app.handle())?;
+
+            if let Err(err) = shortcuts::register_quick_capture(app.handle()) {
                 eprintln!("cork: failed to register global shortcut: {err}");
             }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

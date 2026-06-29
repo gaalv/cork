@@ -1,5 +1,5 @@
-import { Shell } from "@/features/shell";
-import { AuthGate } from "@/features/auth/ui/AuthGate";
+import { Shell } from "@/screens/Shell";
+import { AuthGate } from "@/components/auth/AuthGate";
 
 /**
  * Root app component. AuthGate wraps the shell — unauthenticated users
