@@ -49,7 +49,7 @@ export type AppSettings = {
     provider: AiProvider;
   };
   layout?: {
-    mode: "focus" | "triage";
+    mode: "triage";
     triageNavWidth: number;
     triageListWidth: number;
   };
@@ -66,6 +66,8 @@ export type VaultSettings = {
   autoRewriteLinksOnRename?: boolean;
   gitAutoCommit?: boolean;
   tagLibrary?: string[];
+  folderIcons?: Record<string, string>;
+  folderColors?: Record<string, string>;
 };
 
 export type NoteEntry = {
@@ -76,6 +78,7 @@ export type NoteEntry = {
   snippet: string;
   size: number;
   mtime: number;
+  ctime: number;
 };
 
 export type NoteFile = {

@@ -42,7 +42,7 @@ export function EditorPane({
   }
 
   return (
-    <main className="flex h-full flex-col bg-[var(--color-cork-panel)]">
+    <main className="flex h-full flex-col ">
       <EditorHeader
         note={note}
         inspectorOpen={inspectorOpen}
@@ -207,7 +207,7 @@ function EmptyEditor() {
   const dragRef = useDragRegion<HTMLDivElement>();
 
   return (
-    <main className="relative flex h-full flex-col items-center justify-center gap-2 bg-[var(--color-cork-panel)] text-[var(--color-cork-muted)]">
+    <main className="relative flex h-full flex-col items-center justify-center gap-2  text-[var(--color-cork-muted)]">
       <div ref={dragRef} className="absolute inset-x-0 top-0 h-12" />
       <NotePencil size={32} className="text-[var(--color-cork-subtle)]" />
       <span className="text-[14px]">Select a note to get started</span>

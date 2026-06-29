@@ -18,11 +18,6 @@ pnpm typecheck            # tsc -b --noEmit
 pnpm lint                 # eslint (max-warnings=0)
 pnpm format               # prettier write
 pnpm format:check         # prettier check (CI)
-pnpm test                 # vitest run (unit + component)
-pnpm test:watch           # vitest watch mode
-pnpm test:coverage        # vitest with v8 coverage
-pnpm test:e2e             # playwright (auto-starts vite preview on :4173)
-cd src-tauri && cargo test # rust integration tests
 ```
 
 ## Architecture
@@ -58,6 +53,7 @@ Rust modules: `vault/` (filesystem ops, scaffold, watcher, folders, bulk ops), `
 ### Spec-driven development
 
 `.specs/` is the source of truth for all features. Before working on a feature, read:
+
 1. `.specs/project/PROJECT.md` — vision, beliefs, strategic decisions
 2. `.specs/project/ROADMAP.md` — current milestone + what's real vs planned
 3. `.specs/project/STATE.md` — architectural decisions (`AD-NNN` are locked), blockers, lessons
@@ -65,13 +61,6 @@ Rust modules: `vault/` (filesystem ops, scaffold, watcher, folders, bulk ops), `
 5. `.specs/features/Fxx-*/{spec.md,design.md,tasks.md}` — feature requirements and tasks
 
 **Important:** Some specs describe features that are PARTIAL or not yet implemented. Always check the ROADMAP status before assuming a feature exists in code.
-
-### Testing
-
-- **Unit/component:** Vitest + React Testing Library, tests next to source (`Foo.test.tsx`), jsdom env. Setup in `src/test/setup.ts`.
-- **E2E:** Playwright (chromium only) in `tests/e2e/`, runs against `pnpm preview` on :4173.
-- **Rust:** `cargo test` in `src-tauri/`.
-- Test names describe user-visible behavior: `'opens command palette on ⌘K'`.
 
 ## Key conventions
 

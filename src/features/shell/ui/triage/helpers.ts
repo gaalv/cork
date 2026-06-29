@@ -1,5 +1,7 @@
 import type React from "react";
 
+import { client } from "@/shared/ipc/client";
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -12,45 +14,61 @@ export type SidebarFilter =
   | { kind: "tag"; tag: string };
 
 /* ------------------------------------------------------------------ */
-/*  LocalStorage helpers                                               */
+/*  Folder icons & colors — persisted in .cork/config.json             */
 /* ------------------------------------------------------------------ */
 
-const FILTER_STORAGE_KEY = "cork:sidebar-filter";
-const FOLDER_ICONS_KEY = "cork:folder-icons";
+let _folderIcons: Record<string, string> = {};
+let _folderColors: Record<string, string> = {};
+
+export async function loadFolderPrefsFromVault(): Promise<{
+  icons: Record<string, string>;
+  colors: Record<string, string>;
+}> {
+  try {
+    const settings = await client.settings.vaultLoad();
+    _folderIcons = settings.folderIcons ?? {};
+    _folderColors = settings.folderColors ?? {};
+  } catch {
+    _folderIcons = {};
+    _folderColors = {};
+  }
+  return { icons: _folderIcons, colors: _folderColors };
+}
 
 export function loadFolderIcons(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(FOLDER_ICONS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
-  } catch {
-    return {};
-  }
+  return { ..._folderIcons };
 }
 
 export function saveFolderIcon(folder: string, iconName: string | null) {
-  const icons = loadFolderIcons();
-  if (iconName) icons[folder] = iconName;
-  else delete icons[folder];
-  localStorage.setItem(FOLDER_ICONS_KEY, JSON.stringify(icons));
+  if (iconName) _folderIcons[folder] = iconName;
+  else delete _folderIcons[folder];
+  void persistFolderPrefs();
 }
 
-const FOLDER_COLORS_KEY = "cork:folder-colors";
-
 export function loadFolderColors(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(FOLDER_COLORS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
-  } catch {
-    return {};
-  }
+  return { ..._folderColors };
 }
 
 export function saveFolderColor(folder: string, colorKey: string | null) {
-  const colors = loadFolderColors();
-  if (colorKey) colors[folder] = colorKey;
-  else delete colors[folder];
-  localStorage.setItem(FOLDER_COLORS_KEY, JSON.stringify(colors));
+  if (colorKey) _folderColors[folder] = colorKey;
+  else delete _folderColors[folder];
+  void persistFolderPrefs();
 }
+
+async function persistFolderPrefs() {
+  try {
+    const settings = await client.settings.vaultLoad();
+    await client.settings.vaultSave({
+      ...settings,
+      folderIcons: Object.keys(_folderIcons).length > 0 ? _folderIcons : undefined,
+      folderColors: Object.keys(_folderColors).length > 0 ? _folderColors : undefined,
+    });
+  } catch {
+    // persist failed — in-memory state still reflects the change
+  }
+}
+
+const FILTER_STORAGE_KEY = "cork:sidebar-filter";
 
 export const FOLDER_COLOR_MAP: Record<string, string> = {
   red: "#ef4444",

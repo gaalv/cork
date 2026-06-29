@@ -350,15 +350,6 @@ export type IpcCommandMap = {
     args: undefined;
     result: ProvidersAvailable;
   };
-  // === F25 Todos ===
-  "todos.load": {
-    args: undefined;
-    result: TodoList;
-  };
-  "todos.save": {
-    args: { list: TodoList };
-    result: TodoList;
-  };
   // === F35 Diagnostics ===
   "diagnostics.reportError": {
     args: {
@@ -387,18 +378,6 @@ export type CrashEvent = {
   stack?: string;
   route?: string;
   version?: string;
-};
-
-export type Todo = {
-  id: string;
-  text: string;
-  done: boolean;
-  createdAt: string;
-  completedAt?: string;
-};
-
-export type TodoList = {
-  todos: Todo[];
 };
 
 export type AiSkillResult = {

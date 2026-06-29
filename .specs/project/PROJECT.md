@@ -21,12 +21,12 @@
 
 ## Inspirations
 
-| App | What we take | What we leave |
-|-----|-------------|---------------|
-| **Obsidian** | Vault-on-disk philosophy, wikilinks, community ecosystem model | Plugin dependency for basics, Electron weight, sync as paid lock-in |
-| **Tolaria** | Tauri stack, git-as-storage, AI-first vault design, keyboard-first UX | Typed knowledge graph (Cork stays closer to freeform notes) |
-| **Inkdrop** | Solo-dev sustainability proof, polished UX, "just works" sync | Electron, CouchDB coupling, proprietary sync as the only option |
-| **Linear** | 3-column triage layout, command palette as primary nav, visual density | SaaS-only model, team-oriented features |
+| App          | What we take                                                           | What we leave                                                       |
+| ------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Obsidian** | Vault-on-disk philosophy, wikilinks, community ecosystem model         | Plugin dependency for basics, Electron weight, sync as paid lock-in |
+| **Tolaria**  | Tauri stack, git-as-storage, AI-first vault design, keyboard-first UX  | Typed knowledge graph (Cork stays closer to freeform notes)         |
+| **Inkdrop**  | Solo-dev sustainability proof, polished UX, "just works" sync          | Electron, CouchDB coupling, proprietary sync as the only option     |
+| **Linear**   | 3-column triage layout, command palette as primary nav, visual density | SaaS-only model, team-oriented features                             |
 
 ## Goals
 
@@ -97,7 +97,6 @@ Theme: Light / Dark / System (F15, shipped).
 - Native OS menubar
 - Light / Dark / System theming (F15)
 - AI infrastructure + generate-note modal (F21, F23)
-- Inbox folder + tray quick-capture (F17 — partial)
 - Local git auto-commit (F18 — backend, no history UI)
 - GitHub sync with PAT + SSH (F26)
 - Onboarding scaffold (Welcome.md + starter content)
@@ -113,8 +112,6 @@ Theme: Light / Dark / System (F15, shipped).
 - Calendar / agenda view (F19 — removed, may revisit)
 - AI insights sidebar (F22 — removed, may revisit)
 - AI slash commands (F24 — removed, may revisit)
-- Todos UI (F25 — backend exists, no frontend)
-- Focus layout mode (F28 — only triage exists)
 - NoteHistory UI panel (F18 — backend ready)
 - Asset drop/paste UI in editor (F11 — backend ready)
 - CM6 rendering for callouts/footnotes/highlights (F14 — parser only)

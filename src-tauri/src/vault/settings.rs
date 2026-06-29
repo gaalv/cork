@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -20,6 +21,8 @@ pub struct VaultSettings {
     /// User-curated tag library for standalone tag creation. Tags listed here
     /// appear in the Tags drawer even if no note currently uses them.
     pub tag_library: Option<Vec<String>>,
+    pub folder_icons: Option<HashMap<String, String>>,
+    pub folder_colors: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,6 +108,8 @@ mod tests {
             git_auto_commit: None,
             git_remote: None,
             tag_library: Some(vec!["draft".to_string(), "review".to_string()]),
+            folder_icons: None,
+            folder_colors: None,
         };
 
         save_vault_settings(dir.path(), &settings).unwrap();

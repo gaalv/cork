@@ -5,7 +5,6 @@ pub mod error;
 pub mod index;
 pub mod menu;
 pub mod settings;
-pub mod todos;
 pub mod vault;
 pub mod vcs;
 
@@ -18,7 +17,6 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Position, WebviewWind
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 const QUICK_CAPTURE_EVENT: &str = "quick-capture:new";
-const OPEN_TODOS_EVENT: &str = "todos:open";
 const SYNC_NOW_EVENT: &str = "sync:now";
 
 /// Health check for the IPC bridge — used by the smoke test and as a
@@ -74,11 +72,6 @@ fn trigger_quick_capture(app: &AppHandle) {
     let _ = app.emit(QUICK_CAPTURE_EVENT, ());
 }
 
-fn trigger_open_todos(app: &AppHandle) {
-    show_main_window(app);
-    let _ = app.emit(OPEN_TODOS_EVENT, ());
-}
-
 fn trigger_sync_now(app: &AppHandle) {
     let _ = app.emit(SYNC_NOW_EVENT, ());
 }
@@ -87,15 +80,12 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let quick = MenuItemBuilder::with_id("tray:quick-capture", "Quick capture")
         .accelerator("CmdOrCtrl+Shift+I")
         .build(app)?;
-    let todos = MenuItemBuilder::with_id("tray:open-todos", "Open Todos")
-        .accelerator("CmdOrCtrl+Shift+T")
-        .build(app)?;
     let sync = MenuItemBuilder::with_id("tray:sync-now", "Sync now").build(app)?;
     let show = MenuItemBuilder::with_id("tray:show", "Show Cork").build(app)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItemBuilder::with_id("tray:quit", "Quit Cork").build(app)?;
 
-    let menu = MenuBuilder::new(app).items(&[&quick, &todos, &sync, &show, &separator, &quit]).build()?;
+    let menu = MenuBuilder::new(app).items(&[&quick, &sync, &show, &separator, &quit]).build()?;
 
     let icon = Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
         .map_err(|_| tauri::Error::AssetNotFound("tray icon".into()))?;
@@ -107,7 +97,6 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "tray:quick-capture" => trigger_quick_capture(app),
-            "tray:open-todos" => trigger_open_todos(app),
             "tray:sync-now" => trigger_sync_now(app),
             "tray:show" => show_main_window(app),
             "tray:quit" => app.exit(0),
@@ -125,19 +114,6 @@ fn register_quick_capture_shortcut(app: &AppHandle) -> Result<(), String> {
         .on_shortcut(shortcut, move |_, _, event| {
             if event.state == ShortcutState::Pressed {
                 trigger_quick_capture(&app_for_handler);
-            }
-        })
-        .map_err(|err| err.to_string())?;
-    Ok(())
-}
-
-fn register_open_todos_shortcut(app: &AppHandle) -> Result<(), String> {
-    let shortcut = Shortcut::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyT);
-    let app_for_handler = app.clone();
-    app.global_shortcut()
-        .on_shortcut(shortcut, move |_, _, event| {
-            if event.state == ShortcutState::Pressed {
-                trigger_open_todos(&app_for_handler);
             }
         })
         .map_err(|err| err.to_string())?;
@@ -188,9 +164,6 @@ pub fn run() {
             build_tray(app.handle())?;
             if let Err(err) = register_quick_capture_shortcut(app.handle()) {
                 eprintln!("cork: failed to register global shortcut: {err}");
-            }
-            if let Err(err) = register_open_todos_shortcut(app.handle()) {
-                eprintln!("cork: failed to register open-todos shortcut: {err}");
             }
             Ok(())
         })
@@ -266,9 +239,6 @@ pub fn run() {
             ai::ai_stats,
             ai::ai_telemetry_clear,
             ai::ai_providers_available,
-            // === F25 Todos ===
-            todos::todos_load,
-            todos::todos_save,
             // === F35 Diagnostics ===
             diagnostics::diagnostics_report_error,
             diagnostics::diagnostics_crash_log_path,

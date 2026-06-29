@@ -6,6 +6,7 @@
 **Product arc:** v1 (desktop MVP) → v2 (CRDT real-time sync) → v3 (graph + deep AI) → future (mobile, plugins, hosted relay). See `PROJECT.md §Long-term Direction` and `§Strategic Decisions` for rationale.
 
 **Prioritization principles:**
+
 1. Ship v1 first — nothing else matters until the app is in users' hands
 2. Sync unlocks growth — multi-device is the #1 request for every notes app; v2 is sync
 3. AI is a differentiator, not the product — keep it contextual and grounded
@@ -161,22 +162,6 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ---
 
-## M6.5 — Productivity surfaces
-
-**Goal:** Lightweight productivity capture.
-
-### Features
-
-**[F25 — Per-vault Todos](../features/F25-todos/spec.md)** — PARTIAL
-
-- ✅ `<vault>/.cork/todos.json` Rust backend (load/save/CRUD)
-- ✅ Scaffold seeds starter todos
-- ✅ Service registration for tray event → navigate
-- ❌ TodosView UI — not implemented
-- ❌ Command palette integration — not implemented
-
----
-
 ## M7 — Sync, layout & onboarding
 
 **Goal:** Make the app usable across machines and welcoming on first run.
@@ -186,23 +171,16 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 **[F26 — GitHub sync](../features/F26-github-sync/spec.md)** — COMPLETE
 
 - Per-vault GitHub remote synced with repo-scoped HTTPS PAT auth (SSH Deploy Key as fallback)
-- Full vault sweep on every commit (notes, frontmatter, todos, settings, attachments)
+- Full vault sweep on every commit (notes, frontmatter, settings, attachments)
 - Structured commit messages: Conventional Commits + ISO timestamp + file-list trailer
 - Conflict-as-copy resolution (no merge UX)
 - Heartbeat pull worker (12s cycle)
 
 **[F27 — Cross-account sync auth pivot](../features/F27-cross-account-sync-pivot/spec.md)** — ABSORBED INTO F26
 
-**[F28 — Dual layout modes (Focus + Triage)](../features/F28-dual-layout-modes/spec.md)** — PARTIAL
-
-- ✅ Triage 3-column layout (Sidebar + NotesList + EditorPane) — fully implemented as default
-- ❌ Focus 2-column layout — not implemented
-- ❌ ⌘⇧M toggle between modes — not implemented
-- ❌ Auto-fallback on narrow viewports — not applicable (only triage exists)
-
 **[F30 — Onboarding scaffold](../features/F30-onboarding-scaffold/spec.md)** — COMPLETE
 
-- New vaults seeded with Welcome.md, README, starter folders + todos
+- New vaults seeded with Welcome.md, README, starter folders
 - Idempotent via `.cork/scaffold.json` marker; respects pre-existing files
 
 ---
@@ -323,6 +301,8 @@ These features had specs marked COMPLETE but were never implemented. They were p
 - **F22 — AI Insights sidebar** — Summary/Tags/Related cards in note meta. Never built.
 - **F24 — Slash Commands** — /ai-summarize, /ai-rephrase, etc. in CM6 slash menu. Never built.
 - **F29 — Home Polish** — Refinement of F06 which didn't exist. Never built.
+- **F25 — Per-vault Todos** — Per-vault todo list with UI and palette. Pivoted away.
+- **F28 — Dual Layout Modes** — Focus/Triage toggle. Only Triage was ever built; Focus mode dropped.
 
 ---
 

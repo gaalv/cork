@@ -41,7 +41,7 @@ pub fn all_paged(
     let limit = limit.clamp(1, 200) as i64;
     let mut stmt = conn
         .prepare(
-            "SELECT id, path, folder, title, size, mtime
+            "SELECT id, path, folder, title, size, mtime, created
              FROM notes
              ORDER BY mtime DESC
              LIMIT ?1 OFFSET ?2",
@@ -57,7 +57,7 @@ pub fn by_tag(conn: &Connection, tag: &str) -> Result<Vec<NoteEntry>, IpcError> 
     let descendant = format!("{tag}/%");
     let mut stmt = conn
         .prepare(
-            "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime
+            "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime, n.created
              FROM notes n
              JOIN note_tags nt ON nt.note_id = n.id
              WHERE nt.tag = ?1 OR nt.tag LIKE ?2
@@ -78,7 +78,7 @@ pub fn by_folder(conn: &Connection, folder: &str) -> Result<Vec<NoteEntry>, IpcE
     };
     let mut stmt = conn
         .prepare(
-            "SELECT id, path, folder, title, size, mtime
+            "SELECT id, path, folder, title, size, mtime, created
              FROM notes
              WHERE folder = ?1 OR folder LIKE ?2
              ORDER BY mtime DESC",
@@ -92,7 +92,7 @@ pub fn by_folder(conn: &Connection, folder: &str) -> Result<Vec<NoteEntry>, IpcE
 
 pub fn by_id(conn: &Connection, id: &str) -> Result<Option<NoteEntry>, IpcError> {
     conn.query_row(
-        "SELECT id, path, folder, title, size, mtime FROM notes WHERE id = ?1",
+        "SELECT id, path, folder, title, size, mtime, created FROM notes WHERE id = ?1",
         [id],
         note_from_row,
     )
@@ -103,7 +103,7 @@ pub fn by_id(conn: &Connection, id: &str) -> Result<Option<NoteEntry>, IpcError>
 pub fn pinned(conn: &Connection) -> Result<Vec<NoteEntry>, IpcError> {
     let mut stmt = conn
         .prepare(
-            "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime
+            "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime, n.created
              FROM notes n
              JOIN frontmatter fm ON fm.note_id = n.id
              WHERE fm.key = 'pinned' AND fm.value = 'true'
@@ -329,6 +329,8 @@ fn link_query(conn: &Connection, sql: &str, note_id: &str) -> Result<Vec<LinkRow
 
 fn note_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NoteEntry> {
     let size: i64 = row.get(4)?;
+    let mtime: i64 = row.get(5)?;
+    let ctime: Option<i64> = row.get(6)?;
     Ok(NoteEntry {
         id: row.get(0)?,
         path: PathBuf::from(row.get::<_, String>(1)?),
@@ -336,7 +338,8 @@ fn note_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NoteEntry> {
         title: row.get(3)?,
         snippet: String::new(),
         size: size as u64,
-        mtime: row.get(5)?,
+        mtime,
+        ctime: ctime.unwrap_or(mtime),
     })
 }
 

@@ -17,11 +17,14 @@ export function VaultIndicator() {
   const [recentVaults, setRecentVaults] = useState<RecentVault[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
-  const vaultName = vaultPath ? vaultPath.split("/").pop() ?? "Vault" : "No vault";
+  const vaultName = vaultPath ? (vaultPath.split("/").pop() ?? "Vault") : "No vault";
 
   useEffect(() => {
     if (!open) return;
-    client.vault.recent().then(setRecentVaults).catch(() => setRecentVaults([]));
+    client.vault
+      .recent()
+      .then(setRecentVaults)
+      .catch(() => setRecentVaults([]));
   }, [open]);
 
   useEffect(() => {
@@ -55,9 +58,9 @@ export function VaultIndicator() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+        className="flex items-center gap-1.5 rounded px-1.5 py-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
       >
-        <FolderSimple size={13} weight="fill" className="text-[var(--color-cork-accent)]" />
+        <FolderSimple size={13} className="text-[var(--color-cork-accent)]" />
         <span className="max-w-[140px] truncate text-[11px] font-medium">{vaultName}</span>
         <CaretUpDown size={10} />
       </button>

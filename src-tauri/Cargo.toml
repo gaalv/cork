@@ -1,5 +1,5 @@
 [package]
-name = "cork"
+name = "Cork"
 version = "0.1.0"
 description = "Cork — local-first Markdown notes"
 authors = ["Cork contributors"]

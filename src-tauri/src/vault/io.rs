@@ -205,6 +205,16 @@ pub fn metadata_mtime_ms(metadata: &fs::Metadata) -> Result<i64, IpcError> {
     Ok(duration.as_millis() as i64)
 }
 
+pub fn metadata_ctime_ms(metadata: &fs::Metadata) -> Result<i64, IpcError> {
+    let time = metadata
+        .created()
+        .or_else(|_| metadata.modified())?;
+    let duration = time
+        .duration_since(UNIX_EPOCH)
+        .map_err(|err| IpcError::Other(err.to_string()))?;
+    Ok(duration.as_millis() as i64)
+}
+
 pub fn map_not_found(err: std::io::Error) -> IpcError {
     if err.kind() == std::io::ErrorKind::NotFound {
         IpcError::NotFound

@@ -21,7 +21,6 @@ import type {
   AppSettings,
   VaultSettings,
 } from "./types";
-import type { TodoList } from "./IpcContract";
 
 const commandNames: Record<IpcCommandName, string> = {
   health: "health",
@@ -88,8 +87,6 @@ const commandNames: Record<IpcCommandName, string> = {
   "ai.stats": "ai_stats",
   "ai.telemetryClear": "ai_telemetry_clear",
   "ai.providersAvailable": "ai_providers_available",
-  "todos.load": "todos_load",
-  "todos.save": "todos_save",
   "diagnostics.reportError": "diagnostics_report_error",
   "diagnostics.crashLogPath": "diagnostics_crash_log_path",
   "diagnostics.recent": "diagnostics_recent",
@@ -234,10 +231,6 @@ export const client = {
     telemetryClear: () => invokeCommand("ai.telemetryClear", undefined),
     providersAvailable: () => invokeCommand("ai.providersAvailable", undefined),
   },
-  todos: {
-    load: () => invokeCommand("todos.load", undefined),
-    save: (list: TodoList) => invokeCommand("todos.save", { list }),
-  },
   diagnostics: {
     reportError: (input: {
       source: string;
@@ -290,7 +283,6 @@ function toRustArgs<Name extends IpcCommandName>(
     case "ai.skillsReload":
     case "ai.skillsList":
     case "ai.telemetryClear":
-    case "todos.load":
     case "diagnostics.crashLogPath":
       return undefined;
     case "vault.open":
@@ -373,7 +365,6 @@ function toRustArgs<Name extends IpcCommandName>(
     case "notes.bulkMove":
     case "notes.bulkTrash":
     case "notes.bulkSetFrontmatter":
-    case "todos.save":
     case "diagnostics.reportError":
     case "diagnostics.recent":
       return args as RustArgs;

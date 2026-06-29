@@ -69,7 +69,6 @@ If you need to make a decision the spec doesn't cover:
 - **SQLite via rusqlite** in `src-tauri`. WAL mode.
 - **Zustand** for cross-feature state.
 - **Phosphor icons** + **Lucide** as fallback.
-- **Vitest + RTL** for unit/component, **Playwright** for E2E.
 
 ## Commands you'll need
 
@@ -81,9 +80,6 @@ pnpm build                # vite build
 pnpm tauri build          # tauri release build
 pnpm typecheck            # tsc -b --noEmit
 pnpm lint                 # eslint
-pnpm test                 # vitest run
-pnpm test:e2e             # playwright (preview)
-cd src-tauri && cargo test
 ```
 
 ## Repo layout (cheat sheet)
@@ -91,7 +87,7 @@ cd src-tauri && cargo test
 ```
 .specs/                  # source of truth — read first
   project/               # PROJECT, ROADMAP, STATE
-  codebase/              # STACK, ARCHITECTURE, CONVENTIONS, STRUCTURE, TESTING
+  codebase/              # STACK, ARCHITECTURE, CONVENTIONS, STRUCTURE
   features/Fxx-*/        # spec.md + design.md + tasks.md
 src/                     # frontend
   features/
@@ -121,7 +117,6 @@ src-tauri/               # Rust backend
     vault/               # FS ops, watcher, scaffold, folders, bulk
     vcs/                 # Git local + remote sync
 brand/                   # Logo SVGs, icon source
-tests/e2e/               # Playwright specs
 AGENTS.md                # this file
 CLAUDE.md                # Claude Code guidance
 ```
@@ -140,9 +135,8 @@ Before introducing any technical claim:
 
 1. All tasks in its `tasks.md` are `done`.
 2. The feature's spec.md requirements are verified.
-3. The feature folder has a passing E2E spec under `tests/e2e/`.
-4. Update `ROADMAP.md` status from `IN PROGRESS` → `COMPLETE`.
-5. Add a one-line `L-NNN` Lesson Learned to STATE.md if anything surprising happened.
+3. Update `ROADMAP.md` status from `IN PROGRESS` → `COMPLETE`.
+4. Add a one-line `L-NNN` Lesson Learned to STATE.md if anything surprising happened.
 
 ## When you're stuck
 

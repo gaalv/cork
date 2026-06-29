@@ -6,7 +6,14 @@
  * Wikilinks render as styled bold text (navigable in editor mode).
  */
 
-import { useEffect, useMemo, useRef, useState, Fragment, type ComponentPropsWithoutRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  Fragment,
+  type ComponentPropsWithoutRef,
+} from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
@@ -35,16 +42,8 @@ const schema = {
   attributes: {
     ...defaultSchema.attributes,
     "*": [...(defaultSchema.attributes?.["*"] ?? []), "className", "style"],
-    span: [
-      ...(defaultSchema.attributes?.["span"] ?? []),
-      "className",
-      "style",
-    ],
-    div: [
-      ...(defaultSchema.attributes?.["div"] ?? []),
-      "className",
-      "style",
-    ],
+    span: [...(defaultSchema.attributes?.["span"] ?? []), "className", "style"],
+    div: [...(defaultSchema.attributes?.["div"] ?? []), "className", "style"],
     img: [...(defaultSchema.attributes?.["img"] ?? []), "src", "alt", "title"],
     math: ["xmlns"],
     annotation: ["encoding"],
@@ -60,7 +59,7 @@ const schema = {
       "ariaLabel",
     ],
     li: [...(defaultSchema.attributes?.["li"] ?? []), "id"],
-    input: ["type", "checked", "disabled"],
+    input: ["type", "checked", "disabled", "dataCbIndex"],
   },
   tagNames: [
     ...(defaultSchema.tagNames ?? []),
@@ -110,11 +109,12 @@ function MermaidBlock({ children }: { children?: React.ReactNode }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const code = typeof children === "string"
-    ? children
-    : Array.isArray(children)
-      ? children.map(String).join("")
-      : String(children ?? "");
+  const code =
+    typeof children === "string"
+      ? children
+      : Array.isArray(children)
+        ? children.map(String).join("")
+        : String(children ?? "");
 
   useEffect(() => {
     let cancelled = false;
@@ -127,7 +127,9 @@ function MermaidBlock({ children }: { children?: React.ReactNode }) {
         if (!cancelled) setError(String(err));
       },
     );
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [code]);
 
   if (error) {
@@ -139,16 +141,73 @@ function MermaidBlock({ children }: { children?: React.ReactNode }) {
   }
 
   if (!svg) {
-    return <div className="py-4 text-center text-[12px] text-[var(--color-cork-muted)]">Rendering diagram...</div>;
+    return (
+      <div className="py-4 text-center text-[12px] text-[var(--color-cork-muted)]">
+        Rendering diagram...
+      </div>
+    );
   }
 
-  return <div ref={containerRef} className="my-4 flex justify-center" dangerouslySetInnerHTML={{ __html: svg }} />;
+  return (
+    <div
+      ref={containerRef}
+      className="my-4 flex justify-center"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
+
+/** Rehype plugin that assigns a sequential index to each task-list checkbox. */
+function rehypeIndexCheckboxes() {
+  return () => (tree: HastNode) => {
+    let idx = 0;
+    function visit(node: HastNode) {
+      if (node.tagName === "input" && node.properties?.type === "checkbox") {
+        node.properties["data-cb-index"] = idx++;
+        delete node.properties.disabled;
+      }
+      if (node.children) {
+        for (const child of node.children) visit(child);
+      }
+    }
+    visit(tree);
+  };
+}
+
+/** Interactive checkbox that toggles the task in the source markdown. */
+function TaskCheckbox(props: ComponentPropsWithoutRef<"input"> & Record<string, unknown>) {
+  const cbIndex = Number(props["data-cb-index"] ?? -1);
+
+  const handleChange = () => {
+    if (cbIndex < 0) return;
+
+    const { body, updateBody } = useEditorStore.getState();
+    const re = /^(\s*[-*+]\s)\[([ xX])\]/gm;
+    let match: RegExpExecArray | null;
+    let seen = 0;
+
+    while ((match = re.exec(body)) !== null) {
+      if (seen === cbIndex) {
+        const isChecked = match[2] !== " ";
+        const replacement = `${match[1]}[${isChecked ? " " : "x"}]`;
+        const updated =
+          body.slice(0, match.index) + replacement + body.slice(match.index + match[0].length);
+        updateBody(updated);
+        return;
+      }
+      seen++;
+    }
+  };
+
+  return <input {...props} disabled={false} onChange={handleChange} />;
 }
 
 /** Custom <pre> that intercepts mermaid code blocks. */
 function PreBlock({ children, ...props }: ComponentPropsWithoutRef<"pre">) {
   // children is a <code> element for fenced blocks
-  const child = children as React.ReactElement<{ className?: string; children?: React.ReactNode }> | undefined;
+  const child = children as
+    | React.ReactElement<{ className?: string; children?: React.ReactNode }>
+    | undefined;
   if (
     child &&
     typeof child === "object" &&
@@ -194,7 +253,8 @@ function createProcessor(vaultRoot: string | null, noteRelDir: string) {
     .use(remarkMath)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeSanitize, schema)
-    .use(rehypeKatex);
+    .use(rehypeKatex)
+    .use(rehypeIndexCheckboxes());
 
   if (vaultRoot) {
     pipeline.use(rehypeRewriteImages(vaultRoot, noteRelDir));
@@ -206,6 +266,7 @@ function createProcessor(vaultRoot: string | null, noteRelDir: string) {
     Fragment,
     components: {
       pre: PreBlock,
+      input: TaskCheckbox,
     },
   } as Parameters<typeof rehypeReact>[0]);
 }
@@ -247,14 +308,14 @@ export function MarkdownPreview() {
     processor.process(processed).then((file: { result: React.ReactNode }) => {
       if (!cancelled) setContent(file.result as React.ReactNode);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [processed, vaultRoot, noteRelDir]);
 
   return (
     <div className="cork-preview-scroll absolute inset-0 overflow-y-auto">
-      <article className="cork-preview mx-auto max-w-[720px] px-10 py-6">
-        {content}
-      </article>
+      <article className="cork-preview mx-auto max-w-[720px] px-10 py-6">{content}</article>
     </div>
   );
 }

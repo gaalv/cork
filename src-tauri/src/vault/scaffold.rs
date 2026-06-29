@@ -4,20 +4,11 @@ use std::path::{Path, PathBuf};
 use chrono::{SecondsFormat, Utc};
 use serde::Serialize;
 
-use crate::todos::{load_todos, save_todos, Todo, TodoList};
 use crate::vault::VaultState;
 use crate::IpcError;
 
 const SCAFFOLD_VERSION: u8 = 2;
 const MARKER_IGNORE_ENTRY: &str = ".cork/scaffold.json";
-const SEED_TODOS: [&str; 6] = [
-    "Skim Welcome and Cheatsheet",
-    "Open ⌘K and try `Generate note from topic`",
-    "Pin the Engineering Patterns note",
-    "Add today's first daily note",
-    "Wire your first GitHub sync (Settings → Sync)",
-    "Capture one idea in Inbox/Quick Capture",
-];
 const SCAFFOLD_FILES: &[(&str, &str)] = &[
     (
         "Welcome.md",
@@ -681,7 +672,6 @@ pub(crate) fn scaffold_if_needed_at(
         created_files.push((*relative_path).to_string());
     }
 
-    seed_todos_if_empty(vault_root, created_at)?;
     ensure_marker_gitignored(vault_root)?;
     write_marker(&marker, created_at)?;
 
@@ -699,39 +689,6 @@ fn read_marker_version(marker: &Path) -> Option<u8> {
 
 fn marker_path(vault_root: &Path) -> PathBuf {
     vault_root.join(".cork").join("scaffold.json")
-}
-
-fn todos_path(vault_root: &Path) -> PathBuf {
-    vault_root.join(".cork").join("todos.json")
-}
-
-fn seed_todos_if_empty(vault_root: &Path, created_at: &str) -> Result<(), IpcError> {
-    let path = todos_path(vault_root);
-    let should_seed = if !path.exists() {
-        true
-    } else {
-        let text = fs::read_to_string(&path)?;
-        text.trim().is_empty() || load_todos(vault_root)?.todos.is_empty()
-    };
-
-    if !should_seed {
-        return Ok(());
-    }
-
-    let list = TodoList {
-        todos: SEED_TODOS
-            .iter()
-            .enumerate()
-            .map(|(index, text)| Todo {
-                id: format!("onboarding-{}", index + 1),
-                text: (*text).to_string(),
-                done: false,
-                created_at: created_at.to_string(),
-                completed_at: None,
-            })
-            .collect(),
-    };
-    save_todos(vault_root, &list)
 }
 
 fn ensure_marker_gitignored(vault_root: &Path) -> Result<(), IpcError> {
@@ -790,7 +747,6 @@ mod tests {
         assert!(fs::read_to_string(root.join(".gitignore"))
             .unwrap()
             .contains(MARKER_IGNORE_ENTRY));
-        assert_eq!(load_todos(root).unwrap().todos.len(), SEED_TODOS.len());
 
         fs::write(root.join("Welcome.md"), "keep me").unwrap();
         let second = scaffold_if_needed_at(root, created_at).unwrap();
@@ -801,7 +757,6 @@ mod tests {
             fs::read_to_string(root.join("Welcome.md")).unwrap(),
             "keep me"
         );
-        assert_eq!(load_todos(root).unwrap().todos.len(), SEED_TODOS.len());
     }
 
     #[test]

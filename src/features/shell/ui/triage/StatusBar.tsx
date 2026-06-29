@@ -1,17 +1,26 @@
 import { toast } from "sonner";
-import { Bell, CheckCircle, GearSix, Megaphone } from "@phosphor-icons/react";
+import { Bell, CheckCircle, CircleNotch, GearSix, Megaphone } from "@phosphor-icons/react";
 
 import { useShellStore } from "@/features/shell/state/shellStore";
+import { useIndexStore } from "@/features/index/state/indexStore";
 import { VimIndicator } from "./VimIndicator";
 import { VaultIndicator } from "./VaultIndicator";
 
 export function StatusBar() {
   const setSettingsOpen = useShellStore((s) => s.setSettingsOpen);
+  const isIndexing = useIndexStore((s) => s.isIndexing);
+  const indexProgress = useIndexStore((s) => s.indexProgress);
 
   return (
-    <footer className="flex h-8 shrink-0 items-center justify-between border-t border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-3 text-[11px] text-[var(--color-cork-muted)]">
+    <footer className="flex h-8 shrink-0 items-center justify-between rounded-b-[10px] border-t border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-3 text-[11px] text-[var(--color-cork-muted)]">
       <div className="flex items-center gap-2">
         <VaultIndicator />
+        {isIndexing && indexProgress && (
+          <span className="flex items-center gap-1 text-[var(--color-cork-subtle)]">
+            <CircleNotch size={12} className="animate-spin" />
+            Indexing {indexProgress.processed}/{indexProgress.total}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-1.5">
         <VimIndicator />

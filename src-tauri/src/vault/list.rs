@@ -5,7 +5,7 @@ use sha1::{Digest, Sha1};
 use walkdir::WalkDir;
 
 use crate::vault::frontmatter;
-use crate::vault::io::{metadata_mtime_ms, to_slash_string};
+use crate::vault::io::{metadata_ctime_ms, metadata_mtime_ms, to_slash_string};
 use crate::vault::NoteEntry;
 
 pub const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
@@ -83,6 +83,7 @@ pub fn list(root: &Path) -> Result<Vec<NoteEntry>, IpcError> {
             snippet,
             size: metadata.len(),
             mtime: metadata_mtime_ms(&metadata)?,
+            ctime: metadata_ctime_ms(&metadata)?,
         });
     }
 

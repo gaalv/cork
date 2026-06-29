@@ -28,9 +28,17 @@ type PendingTagOp = { noteId: string; tag: string; op: "add" | "remove"; at: num
 /** How long (ms) to keep replaying optimistic tag ops over backend data. */
 const PENDING_TAG_TTL = 5_000;
 
+type IndexProgress = {
+  processed: number;
+  total: number;
+  phase: "building" | "updating" | "removing" | "renaming";
+};
+
 type IndexState = {
   ready: boolean;
   error: string | null;
+  isIndexing: boolean;
+  indexProgress: IndexProgress | null;
   tags: TagCount[];
   noteTagMap: Map<string, string[]>;
   pinnedIds: Set<string>;
@@ -57,6 +65,8 @@ let pendingTagOps: PendingTagOp[] = [];
 export const useIndexStore = create<IndexState>((set, get) => ({
   ready: false,
   error: null,
+  isIndexing: false,
+  indexProgress: null,
   tags: [],
   noteTagMap: new Map(),
   pinnedIds: new Set(),
@@ -82,7 +92,14 @@ export const useIndexStore = create<IndexState>((set, get) => ({
       // Subscribe to index:updated — fires AFTER the Rust indexer has
       // processed a change, so queries return fresh data immediately.
       void client.events.on("index:updated", () => {
+        set({ isIndexing: false, indexProgress: null });
         void get().refreshIndex();
+      });
+
+      // Track indexing progress so the UI can show a spinner/progress bar.
+      void client.events.on("index:progress", (progress: IndexProgress) => {
+        const done = progress.processed >= progress.total && progress.total > 0;
+        set({ isIndexing: !done, indexProgress: done ? null : progress });
       });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err) });
@@ -219,9 +236,7 @@ export const useIndexStore = create<IndexState>((set, get) => ({
 
     // 1. Optimistic: rename in tags list and noteTagMap
     set((state) => {
-      const nextTags = state.tags.map((t) =>
-        t.tag === oldTag ? { ...t, tag: newTag } : t,
-      );
+      const nextTags = state.tags.map((t) => (t.tag === oldTag ? { ...t, tag: newTag } : t));
       const nextMap = new Map<string, string[]>();
       for (const [noteId, noteTags] of state.noteTagMap) {
         nextMap.set(

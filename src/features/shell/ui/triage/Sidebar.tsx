@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDragRegion } from "@/shared/hooks/useDragRegion";
 import { toast } from "sonner";
-import { FolderSimple, Hash, NotePencil, Plus, Star, Tag } from "@phosphor-icons/react";
+import { FolderSimple, NotePencil, Plus, Star, Tag, Tray } from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
 
 import { getIconComponent } from "@/shared/ui/IconPicker";
@@ -16,6 +16,7 @@ import {
   saveFolderIcon,
   loadFolderColors,
   saveFolderColor,
+  loadFolderPrefsFromVault,
   FOLDER_COLOR_MAP,
   clampMenuPosition,
 } from "./helpers";
@@ -60,6 +61,13 @@ export function Sidebar({
   useEffect(() => {
     refreshFolders();
   }, [refreshFolders, notes]);
+
+  useEffect(() => {
+    void loadFolderPrefsFromVault().then(({ icons, colors }) => {
+      setFolderIcons(icons);
+      setFolderColors(colors);
+    });
+  }, []);
 
   const handleCreateFolder = useCallback(
     async (name: string) => {
@@ -164,7 +172,7 @@ export function Sidebar({
             onClick={() => setFilter({ kind: "starred" })}
           />
           <SidebarRow
-            icon={<Hash size={14} />}
+            icon={<Tray size={14} />}
             label="Inbox"
             badge={inboxCount > 0 ? String(inboxCount) : undefined}
             active={filter.kind === "inbox"}

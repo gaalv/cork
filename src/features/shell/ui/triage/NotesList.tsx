@@ -368,7 +368,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
                   )}
                   <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
                     <span>{formatRelativeDate(n.mtime)}</span>
-                    <span>Created {formatRelativeDate(n.mtime)}</span>
+                    <span>Created {formatRelativeDate(n.ctime)}</span>
                   </div>
                 </div>
               </li>

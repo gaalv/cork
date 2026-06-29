@@ -40,6 +40,7 @@ pub struct NoteEntry {
     pub snippet: String,
     pub size: u64,
     pub mtime: i64,
+    pub ctime: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
