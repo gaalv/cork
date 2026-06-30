@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  ArrowCounterClockwise,
   CircleNotch,
   DotsThreeVertical,
   FunnelSimple,
@@ -18,7 +19,7 @@ import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useIndexStore } from "@/stores/indexStore";
 import { client } from "@/ipc/client";
-import type { NoteEntry } from "@/ipc/types";
+import type { ArchivedNoteEntry, NoteEntry } from "@/ipc/types";
 
 import type { SidebarFilter } from "@/utils/triageHelpers";
 import { formatRelativeDate } from "@/utils/triageHelpers";
@@ -50,10 +51,22 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   const filterBtnRef = useRef<HTMLButtonElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
+  const [archivedNotes, setArchivedNotes] = useState<ArchivedNoteEntry[]>([]);
+  const loadNotes = useVaultStore((s) => s.loadNotes);
+
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [moveSubmenu, setMoveSubmenu] = useState<MoveSubmenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (filter.kind === "archived") {
+      void client.archive
+        .list()
+        .then(setArchivedNotes)
+        .catch(() => setArchivedNotes([]));
+    }
+  }, [filter]);
 
   useEffect(() => {
     if (!ctxMenu) return;
@@ -143,6 +156,34 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
     setMoveSubmenu(null);
   }, [ctxMenu, trashNote]);
 
+  const handleArchive = useCallback(async () => {
+    if (!ctxMenu) return;
+    try {
+      await client.archive.note(ctxMenu.note.path);
+      await loadNotes();
+      toast.success("Note archived");
+    } catch {
+      toast.error("Failed to archive note");
+    }
+    setCtxMenu(null);
+    setMoveSubmenu(null);
+  }, [ctxMenu, loadNotes]);
+
+  const handleRestore = useCallback(
+    async (path: string) => {
+      try {
+        await client.archive.restore(path);
+        await loadNotes();
+        const updated = await client.archive.list().catch(() => [] as ArchivedNoteEntry[]);
+        setArchivedNotes(updated);
+        toast.success("Note restored");
+      } catch {
+        toast.error("Failed to restore note");
+      }
+    },
+    [loadNotes],
+  );
+
   const handleTogglePin = useCallback(async () => {
     if (!ctxMenu) return;
     const isPinned = pinnedIds.has(ctxMenu.note.id);
@@ -185,6 +226,10 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
         label = `${filter.tag}${tagInfo ? ` · ${tagInfo.count}` : ""}`;
         break;
       }
+      case "archived":
+        filtered = [];
+        label = "Archived";
+        break;
     }
 
     const sorted = [...filtered].sort((a, b) => {
@@ -288,7 +333,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
 
       <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-3 text-xs text-[var(--color-cork-muted)]">
         <span>
-          {scopeLabel} · {notes.length} notes
+          {scopeLabel} · {filter.kind === "archived" ? archivedNotes.length : notes.length} notes
         </span>
       </div>
 
@@ -308,6 +353,43 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
           </li>
         )}
         {!isLoading &&
+          filter.kind === "archived" &&
+          archivedNotes.map((n) => (
+            <li key={n.path}>
+              <div className="group flex w-full flex-col gap-1.5 border-l-[3px] border-transparent px-4 py-3 text-left transition hover:bg-[var(--color-cork-panel-2)]">
+                <div className="flex items-center justify-between">
+                  <span className="truncate text-[13px] font-semibold text-[var(--color-cork-ink)]">
+                    {n.title}
+                  </span>
+                  <button
+                    onClick={() => void handleRestore(n.path)}
+                    className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-[var(--color-cork-accent)] opacity-0 transition-opacity hover:bg-[var(--color-cork-accent-soft)] group-hover:opacity-100"
+                    title="Restore note"
+                  >
+                    <ArrowCounterClockwise size={12} />
+                    Restore
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
+                  <span>{n.archivedFrom ? `from ${n.archivedFrom}` : "from root"}</span>
+                  <span>
+                    {n.daysRemaining != null
+                      ? n.daysRemaining > 0
+                        ? `${n.daysRemaining}d remaining`
+                        : "Expiring soon"
+                      : "Kept forever"}
+                  </span>
+                </div>
+              </div>
+            </li>
+          ))}
+        {!isLoading && filter.kind === "archived" && archivedNotes.length === 0 && (
+          <li className="px-4 py-8 text-center text-[12px] text-[var(--color-cork-subtle)]">
+            No archived notes
+          </li>
+        )}
+        {!isLoading &&
+          filter.kind !== "archived" &&
           notes.map((n) => {
             const isActive = view.kind === "note" && view.id === n.id;
             const noteTags = noteTagMap.get(n.id) ?? [];
@@ -374,7 +456,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
               </li>
             );
           })}
-        {!isLoading && !isIndexing && notes.length === 0 && (
+        {!isLoading && !isIndexing && filter.kind !== "archived" && notes.length === 0 && (
           <li className="px-4 py-8 text-center text-[12px] text-[var(--color-cork-subtle)]">
             No notes yet
           </li>
@@ -390,6 +472,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
             isPinned={pinnedIds.has(ctxMenu.note.id)}
             onTogglePin={() => void handleTogglePin()}
             onMoveTo={() => void handleMoveTo()}
+            onArchive={() => void handleArchive()}
             onTrash={() => void handleTrash()}
           />,
           document.body,

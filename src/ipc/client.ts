@@ -87,6 +87,10 @@ const commandNames: Record<IpcCommandName, string> = {
   "ai.stats": "ai_stats",
   "ai.telemetryClear": "ai_telemetry_clear",
   "ai.providersAvailable": "ai_providers_available",
+  // === Archive ===
+  "archive.note": "archive_note",
+  "archive.restore": "restore_note",
+  "archive.list": "list_archived",
   "diagnostics.reportError": "diagnostics_report_error",
   "diagnostics.crashLogPath": "diagnostics_crash_log_path",
   "diagnostics.recent": "diagnostics_recent",
@@ -231,6 +235,11 @@ export const client = {
     telemetryClear: () => invokeCommand("ai.telemetryClear", undefined),
     providersAvailable: () => invokeCommand("ai.providersAvailable", undefined),
   },
+  archive: {
+    note: (path: string) => invokeCommand("archive.note", { path }),
+    restore: (path: string) => invokeCommand("archive.restore", { path }),
+    list: () => invokeCommand("archive.list", undefined),
+  },
   diagnostics: {
     reportError: (input: {
       source: string;
@@ -280,6 +289,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "vcs.generateDeployKey":
     case "folders.list":
     case "links.graph":
+    case "archive.list":
     case "ai.skillsReload":
     case "ai.skillsList":
     case "ai.telemetryClear":
@@ -295,6 +305,8 @@ function toRustArgs<Name extends IpcCommandName>(
     case "links.outgoing":
     case "links.incoming":
     case "index.search":
+    case "archive.note":
+    case "archive.restore":
       return args as RustArgs;
     case "vcs.history":
     case "vcs.restore":

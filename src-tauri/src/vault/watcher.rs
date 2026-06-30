@@ -117,7 +117,7 @@ fn event_to_change(
     path: &Path,
     cache: &FingerprintCache,
 ) -> Option<VaultFileChangedEvent> {
-    if !is_markdown(path) || is_hidden(path, root) {
+    if !is_markdown(path) || is_hidden(path, root) || is_in_attachments_folder(path, root) {
         return None;
     }
 
@@ -151,6 +151,17 @@ fn is_hidden(path: &Path, root: &Path) -> bool {
     let relative = path.strip_prefix(root).unwrap_or(path);
     relative.components().any(|component| match component {
         Component::Normal(name) => name.to_str().is_some_and(|name| name.starts_with('.')),
+        _ => false,
+    })
+}
+
+/// Skip files inside the attachments folder — changes there should not
+/// trigger note re-indexing. Hardcodes `_attachments` since the watcher
+/// callback doesn't have access to vault settings.
+fn is_in_attachments_folder(path: &Path, root: &Path) -> bool {
+    let relative = path.strip_prefix(root).unwrap_or(path);
+    relative.components().any(|component| match component {
+        Component::Normal(name) => name.to_str().is_some_and(|n| n == "_attachments"),
         _ => false,
     })
 }

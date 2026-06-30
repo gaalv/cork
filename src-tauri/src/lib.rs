@@ -98,6 +98,10 @@ pub fn run() {
             // === F11 Assets ===
             assets::assets_set_scope,
             assets::assets_write_attachment,
+            // === Archive ===
+            vault::archive::archive_note,
+            vault::archive::restore_note,
+            vault::archive::list_archived,
             // === F12 Folder Ops ===
             vault::folders::folders_list,
             vault::folders::folders_create,

@@ -84,7 +84,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 - Wikilink autocomplete in editor
 - Editor toolbar, save indicator, conflict banner
 
-**[F08 — Note view + Meta panel](../features/F08-note-view/spec.md)** — PARTIAL
+**[F08 — Note view + Meta panel](../features/F08-note-view/spec.md)** — COMPLETE
 
 - ~~Dedicated NoteView layout wrapper~~ → EditorPane in triage serves as note view
 - Inspector panel: Outline, Tags, Properties, Backlinks, AI sections
@@ -98,13 +98,13 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 - Create-on-click for missing notes
 - Backlinks query + Inspector section
 
-**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — PARTIAL
+**[F11 — Assets & Images](../features/F11-assets-images/spec.md)** — COMPLETE
 
 - ✅ Tauri `asset://` protocol w/ runtime-scoped vault path
 - ✅ `assets` SQLite table populated by extended F02 walker
 - ✅ Backend IPC commands + frontend ingest service
-- ❌ Drop / paste image UI in editor — not implemented
-- ❌ Inline image rendering in preview — not implemented
+- ✅ Drop / paste image UI in editor (CM6 drop/paste handler)
+- ✅ Inline image rendering in editor (CM6 block widget) + preview (rehype plugin)
 
 **[F12 — Folder Ops & Rename UX](../features/F12-folder-ops/spec.md)** — COMPLETE
 
@@ -204,12 +204,12 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 - ❌ Folder selector in NoteMetaPanel (move-from-inside-the-note) — not implemented
 - ❌ Dedicated Inbox view/filter — not implemented
 
-**[F18 — Local Git Sync (v0/v1 local-only)](../features/F18-local-git-sync/spec.md)** — PARTIAL
+**[F18 — Local Git Sync (v0/v1 local-only)](../features/F18-local-git-sync/spec.md)** — COMPLETE
 
 - ✅ Per-vault `git init` + auto-commit on save (debounced)
 - ✅ Silent degrade when `git` is not on PATH
 - ✅ Backend: commit history retrieval, restore-to-revision commands
-- ❌ NoteHistory UI panel — not implemented (backend ready, no frontend)
+- ✅ NoteHistory UI in Inspector (HistorySection with inline restore confirm)
 
 ---
 

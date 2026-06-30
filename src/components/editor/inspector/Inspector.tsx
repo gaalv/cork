@@ -9,6 +9,7 @@ import { TagsSection } from "./TagsSection";
 import { PropertiesSection } from "./PropertiesSection";
 import { BacklinksSection } from "./BacklinksSection";
 import { AiSection } from "./AiSection";
+import { HistorySection } from "./HistorySection";
 
 export function Inspector({ noteMtime }: { noteMtime: number }) {
   return (
@@ -19,6 +20,7 @@ export function Inspector({ noteMtime }: { noteMtime: number }) {
         <PropertiesSection noteMtime={noteMtime} />
         <BacklinksSection />
         <AiSection />
+        <HistorySection />
       </div>
     </aside>
   );

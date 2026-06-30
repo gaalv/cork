@@ -6,6 +6,7 @@ use walkdir::WalkDir;
 
 use crate::vault::frontmatter;
 use crate::vault::io::{metadata_ctime_ms, metadata_mtime_ms, to_slash_string};
+use crate::vault::settings::load_vault_settings;
 use crate::vault::NoteEntry;
 
 pub const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
@@ -38,12 +39,16 @@ use crate::IpcError;
 
 pub fn list(root: &Path) -> Result<Vec<NoteEntry>, IpcError> {
     let root = root.canonicalize()?;
+    let attachments_folder = load_vault_settings(&root)
+        .ok()
+        .and_then(|s| s.attachments_folder)
+        .unwrap_or_else(|| "_attachments".to_string());
     let mut entries = Vec::new();
 
     for entry in WalkDir::new(&root)
         .follow_links(false)
         .into_iter()
-        .filter_entry(|entry| !is_hidden(entry.path(), &root))
+        .filter_entry(|entry| !is_excluded(entry.path(), &root, &attachments_folder))
     {
         let entry = match entry {
             Ok(entry) => entry,
@@ -93,12 +98,16 @@ pub fn list(root: &Path) -> Result<Vec<NoteEntry>, IpcError> {
 
 pub fn list_assets(root: &Path) -> Result<Vec<AssetEntry>, IpcError> {
     let root = root.canonicalize()?;
+    let attachments_folder = load_vault_settings(&root)
+        .ok()
+        .and_then(|s| s.attachments_folder)
+        .unwrap_or_else(|| "_attachments".to_string());
     let mut entries = Vec::new();
 
     for entry in WalkDir::new(&root)
         .follow_links(false)
         .into_iter()
-        .filter_entry(|entry| !is_hidden(entry.path(), &root))
+        .filter_entry(|entry| !is_excluded(entry.path(), &root, &attachments_folder))
     {
         let entry = match entry {
             Ok(entry) => entry,
@@ -129,6 +138,19 @@ fn is_hidden(path: &Path, root: &Path) -> bool {
     let relative = path.strip_prefix(root).unwrap_or(path);
     relative.components().any(|component| match component {
         Component::Normal(name) => name.to_str().is_some_and(|name| name.starts_with('.')),
+        _ => false,
+    })
+}
+
+/// Returns true if the path is hidden (dot-prefixed) or inside an internal
+/// folder like the attachments folder (default `_attachments`).
+pub fn is_excluded(path: &Path, root: &Path, attachments_folder: &str) -> bool {
+    if is_hidden(path, root) {
+        return true;
+    }
+    let relative = path.strip_prefix(root).unwrap_or(path);
+    relative.components().any(|component| match component {
+        Component::Normal(name) => name.to_str().is_some_and(|n| n == attachments_folder),
         _ => false,
     })
 }

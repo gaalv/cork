@@ -23,6 +23,8 @@ pub struct VaultSettings {
     pub tag_library: Option<Vec<String>>,
     pub folder_icons: Option<HashMap<String, String>>,
     pub folder_colors: Option<HashMap<String, String>>,
+    /// Days to keep archived notes before auto-deleting (0 = keep forever).
+    pub archive_retention_days: Option<u32>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

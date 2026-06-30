@@ -68,6 +68,7 @@ export type VaultSettings = {
   tagLibrary?: string[];
   folderIcons?: Record<string, string>;
   folderColors?: Record<string, string>;
+  archiveRetentionDays?: number;
 };
 
 export type NoteEntry = {
@@ -214,6 +215,15 @@ export type VcsStatus = {
   hasGh: boolean;
   ghAccount: GhAccount | null;
   remote: RemoteInfo | null;
+};
+
+export type ArchivedNoteEntry = {
+  path: string;
+  title: string;
+  archivedAt: string;
+  archivedFrom: string;
+  daysRemaining: number | null;
+  mtime: number;
 };
 
 export type AiProvider = "disabled" | "claude" | "copilot";

@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { FolderSimple, Star, Trash } from "@phosphor-icons/react";
+import { Archive, FolderSimple, Star, Trash } from "@phosphor-icons/react";
 
 import { clampMenuPosition } from "@/utils/triageHelpers";
 
@@ -26,10 +26,11 @@ export const NoteContextMenu = forwardRef<
     isPinned: boolean;
     onTogglePin: () => void;
     onMoveTo: () => void;
+    onArchive: () => void;
     onTrash: () => void;
   }
->(function NoteContextMenu({ x, y, isPinned, onTogglePin, onMoveTo, onTrash }, ref) {
-  const style = clampMenuPosition(x, y, 176, 120);
+>(function NoteContextMenu({ x, y, isPinned, onTogglePin, onMoveTo, onArchive, onTrash }, ref) {
+  const style = clampMenuPosition(x, y, 176, 152);
 
   return (
     <div
@@ -54,6 +55,13 @@ export const NoteContextMenu = forwardRef<
       >
         <FolderSimple size={14} className="text-[var(--color-cork-muted)]" />
         Move to…
+      </button>
+      <button
+        onClick={onArchive}
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-cork-ink)] hover:bg-[var(--color-cork-panel-2)]"
+      >
+        <Archive size={14} className="text-[var(--color-cork-muted)]" />
+        Archive
       </button>
       <div className="mx-2 border-t border-[var(--color-cork-border)]" />
       <button

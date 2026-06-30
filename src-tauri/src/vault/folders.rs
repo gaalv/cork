@@ -5,6 +5,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 use crate::vault::io::{map_not_found, same_path, to_slash_string};
+use crate::vault::settings::load_vault_settings;
 use crate::vault::watcher::FileChangeSource;
 use crate::vault::{VaultPath, VaultState};
 use crate::IpcError;
@@ -31,6 +32,10 @@ pub enum FolderChangeKind {
 pub fn folders_list(state: tauri::State<'_, VaultState>) -> Result<Vec<String>, IpcError> {
     let root = state.current_path().ok_or(IpcError::NotFound)?;
     let root = root.canonicalize()?;
+    let attachments_folder = load_vault_settings(&root)
+        .ok()
+        .and_then(|s| s.attachments_folder)
+        .unwrap_or_else(|| "_attachments".to_string());
     let mut folders: Vec<String> = Vec::new();
     for entry in walkdir::WalkDir::new(&root)
         .follow_links(false)
@@ -38,7 +43,7 @@ pub fn folders_list(state: tauri::State<'_, VaultState>) -> Result<Vec<String>, 
         .into_iter()
         .filter_entry(|entry| {
             let name = entry.file_name().to_str().unwrap_or("");
-            !name.starts_with('.')
+            !name.starts_with('.') && name != attachments_folder && name != "_archived"
         })
     {
         let entry = match entry {
@@ -215,6 +220,7 @@ fn validate_folder_name(name: &str) -> Result<(), IpcError> {
         || trimmed == "."
         || trimmed == ".."
         || trimmed.starts_with('.')
+        || trimmed.starts_with('_')
         || trimmed.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])
     {
         return Err(IpcError::Io("invalid folder name".to_string()));

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDragRegion } from "@/hooks/useDragRegion";
 import { toast } from "sonner";
-import { FolderSimple, NotePencil, Plus, Star, Tag, Tray } from "@phosphor-icons/react";
+import { Archive, FolderSimple, NotePencil, Plus, Star, Tag, Tray } from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
 
 import { getIconComponent } from "@/components/ui/IconPicker";
@@ -177,6 +177,12 @@ export function Sidebar({
             badge={inboxCount > 0 ? String(inboxCount) : undefined}
             active={filter.kind === "inbox"}
             onClick={() => setFilter({ kind: "inbox" })}
+          />
+          <SidebarRow
+            icon={<Archive size={14} />}
+            label="Archived"
+            active={filter.kind === "archived"}
+            onClick={() => setFilter({ kind: "archived" })}
           />
         </div>
 

@@ -10,6 +10,7 @@ export type SidebarFilter =
   | { kind: "all" }
   | { kind: "starred" }
   | { kind: "inbox" }
+  | { kind: "archived" }
   | { kind: "folder"; id: string }
   | { kind: "tag"; tag: string };
 

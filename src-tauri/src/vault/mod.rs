@@ -1,3 +1,4 @@
+pub mod archive;
 pub mod bulk;
 pub mod fingerprint;
 pub mod folders;
@@ -281,6 +282,11 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let remote = app_handle.state::<crate::vcs::remote::RemoteState>();
                 let settings = crate::vault::settings::load_vault_settings(&path).ok();
+                let retention_days = settings
+                    .as_ref()
+                    .and_then(|s| s.archive_retention_days)
+                    .unwrap_or(30);
+                archive::cleanup_expired(&path, retention_days);
                 remote.configure(Some(path.clone()), settings.and_then(|s| s.git_remote));
             }
             state.start_watcher(&app_handle)?;
@@ -332,6 +338,11 @@ pub async fn vault_open(
         }
         let remote = app.state::<crate::vcs::remote::RemoteState>();
         let settings = crate::vault::settings::load_vault_settings(&path).ok();
+        let retention_days = settings
+            .as_ref()
+            .and_then(|s| s.archive_retention_days)
+            .unwrap_or(30);
+        archive::cleanup_expired(&path, retention_days);
         remote.configure(Some(path.clone()), settings.and_then(|s| s.git_remote));
         crate::diagnostics::set_vault_root(Some(&path));
     }

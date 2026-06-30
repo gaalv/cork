@@ -8,7 +8,7 @@ import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { GenerateNoteModal } from "@/components/modals/GenerateNoteModal";
 import { BulkActionsBar } from "@/components/folders/BulkActionsBar";
 import { CommandPalette } from "@/components/modals/CommandPalette";
-import { EmptyVault } from "@/screens/EmptyVault";
+import { WelcomeScreen } from "@/screens/WelcomeScreen";
 import { HelpModal } from "@/components/modals/HelpModal";
 import { Toaster } from "@/components/ui/Toaster";
 import { TriageBody } from "@/screens/TriageBody";
@@ -32,25 +32,31 @@ export function Shell() {
     };
   }, []);
 
+  // Auto-open most recent vault on launch (skip WelcomeScreen if user already has one)
   useEffect(() => {
-    const init = async () => {
-      // Try to auto-open the most recent vault
-      const state = useVaultStore.getState();
-      if (!state.path) {
-        try {
-          const recent = await client.vault.recent();
-          if (recent.length > 0) {
-            await useVaultStore.getState().openVault(recent[0].path);
-          }
-        } catch {
-          /* no recent vaults — show EmptyVault */
+    const autoOpen = async () => {
+      if (useVaultStore.getState().path) return;
+      try {
+        const recent = await client.vault.recent();
+        if (recent.length > 0) {
+          await useVaultStore.getState().openVault(recent[0].path);
         }
+      } catch {
+        /* no recent vaults — show WelcomeScreen */
       }
+    };
+    void autoOpen();
+  }, []);
 
+  // Initialize vault services once a vault is open
+  useEffect(() => {
+    if (!vaultPath) return;
+
+    const init = async () => {
       await loadNotes();
 
       const current = useVaultStore.getState();
-      if (current.path && current.notes.length === 0) {
+      if (current.notes.length === 0) {
         const result = await client.vault.scaffoldIfNeeded();
         if (result.created) {
           toast.success("Welcome to Cork — example notes added");
@@ -58,18 +64,16 @@ export function Shell() {
         }
       }
 
-      if (useVaultStore.getState().path) {
-        await loadVaultSettings();
-      }
+      await loadVaultSettings();
       await Promise.all([startWatcherIntegration(), startIndexIntegration()]);
     };
     void init().catch(() => undefined);
-  }, [loadNotes, loadVaultSettings, startIndexIntegration, startWatcherIntegration]);
+  }, [vaultPath, loadNotes, loadVaultSettings, startIndexIntegration, startWatcherIntegration]);
 
   if (!vaultPath) {
     return (
       <div data-testid="shell" className="h-full bg-[var(--color-cork-bg)]">
-        <EmptyVault />
+        <WelcomeScreen />
         <CommandPalette />
         <GenerateNoteModal />
         <HelpModal />

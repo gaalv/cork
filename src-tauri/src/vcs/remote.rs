@@ -373,6 +373,31 @@ fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Like `run_git` but for remote operations (push, fetch, clone).
+/// When the vault uses HTTPS auth, injects `-c credential.*` overrides so the
+/// macOS Keychain and any global credential helpers are fully bypassed.
+fn run_git_remote(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
+    let cred_path = https_credential_store_path(vault_root);
+    let mut cmd = Command::new("git");
+    cmd.current_dir(vault_root)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "");
+
+    if cred_path.exists() {
+        let helper = format!(
+            "store --file {}",
+            shell_single_quote(&cred_path.to_string_lossy())
+        );
+        // Empty string resets the credential helper chain, then we add ours
+        cmd.arg("-c").arg("credential.helper=")
+            .arg("-c").arg(format!("credential.helper={helper}"))
+            .arg("-c").arg("credential.useHttpPath=true");
+    }
+
+    cmd.args(args).output().map_err(|e| e.to_string())
+}
+
 fn run_git_check(vault_root: &Path, args: &[&str]) -> Result<String, String> {
     let out = run_git(vault_root, args)?;
     if !out.status.success() {
@@ -805,7 +830,7 @@ fn git_push(vault_root: &Path) -> Result<(), String> {
             "--author=Cork <cork@local>",
         ],
     );
-    let out = run_git(vault_root, &["push", "origin", "HEAD"]);
+    let out = run_git_remote(vault_root, &["push", "origin", "HEAD"]);
     let _ = append_log(
         vault_root,
         &match &out {
@@ -954,7 +979,7 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
         return Ok(PullOutcome::NotConfigured);
     }
     let _ = append_log(vault_root, "[pull] fetch");
-    let fetch_out = run_git(vault_root, &["fetch", "origin"])?;
+    let fetch_out = run_git_remote(vault_root, &["fetch", "origin"])?;
     if !fetch_out.status.success() {
         return Err(String::from_utf8_lossy(&fetch_out.stderr)
             .trim()
@@ -1330,7 +1355,7 @@ fn enable_https_remote_blocking(vault_root: &Path, url: &str, token: &str) -> Re
     ensure_head_exists(vault_root);
 
     let push_out =
-        run_git(vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
+        run_git_remote(vault_root, &["push", "-u", "origin", "HEAD"]).map_err(IpcError::Other)?;
     if !push_out.status.success() {
         let stderr = redact_secret(String::from_utf8_lossy(&push_out.stderr).trim(), token);
         let stdout = redact_secret(String::from_utf8_lossy(&push_out.stdout).trim(), token);

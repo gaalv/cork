@@ -27,6 +27,7 @@ import type {
   VcsStatus,
   RemoteInfo,
   DeployKeyInfo,
+  ArchivedNoteEntry,
 } from "./types";
 
 export type TagCount = {
@@ -163,6 +164,19 @@ export type IpcCommandMap = {
   "assets.writeAttachment": {
     args: { sourcePath?: string; bytes?: number[]; suggestedName: string; vaultRelDir?: string };
     result: { path: string; relativePath: string };
+  };
+  // === Archive ===
+  "archive.note": {
+    args: { path: string };
+    result: string;
+  };
+  "archive.restore": {
+    args: { path: string };
+    result: string;
+  };
+  "archive.list": {
+    args: undefined;
+    result: ArchivedNoteEntry[];
   };
   // === F12 Folder Ops ===
   "folders.create": {

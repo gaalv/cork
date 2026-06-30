@@ -348,19 +348,6 @@ export function GitHubSyncSection() {
                 onChange={(e) => setToken(e.currentTarget.value)}
                 className="w-full rounded-lg border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-3 py-2 text-sm text-[var(--color-cork-ink)]"
               />
-              <details className="rounded border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-[11px] leading-relaxed text-yellow-700 dark:text-yellow-300">
-                <summary className="cursor-pointer">
-                  ⚠ HTTPS + PAT may not work on macOS with gh / Keychain
-                </summary>
-                <p className="mt-2">
-                  On macOS the system git often routes credentials through the Keychain or an
-                  existing <code>gh</code> credential helper at a layer below our config overrides —
-                  the PAT we set in
-                  <code>.git/config</code> may be silently bypassed and another account&apos;s
-                  credentials used instead, producing 403s. If this fails for you, switch to{" "}
-                  <strong>SSH Deploy Key</strong> above.
-                </p>
-              </details>
               <details className="rounded border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-cork-muted)]">
                 <summary className="cursor-pointer text-[var(--color-cork-ink)]">
                   How to create the repo &amp; token

@@ -29,6 +29,7 @@ import { wikilinkCompletion } from "./autocomplete";
 import { wikilinkExtension } from "./wikilinks";
 import { checkboxExtension } from "./checkboxes";
 import { assetDropPaste } from "@/cm/dropPaste";
+import { imagePreviewExtension } from "./imagePreview";
 
 type EditorOptions = {
   lineWrap: boolean;
@@ -80,6 +81,9 @@ export function createExtensions(options: EditorOptions): Extension[] {
 
     // Asset drag-drop and clipboard paste
     assetDropPaste(),
+
+    // Inline image preview below ![](…) and ![[…]] lines
+    imagePreviewExtension(),
 
     // Fold gutter
     foldGutter(),
