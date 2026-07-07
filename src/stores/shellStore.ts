@@ -19,6 +19,7 @@ type ShellState = {
   generateModalOpen: boolean;
   inspectorOpen: boolean;
   sidebarOpen: boolean;
+  forceEdit: boolean;
   navigate: (view: View) => void;
   setDrawer: (drawer: Drawer) => void;
   toggleDrawer: (drawer: Drawer) => void;
@@ -40,6 +41,7 @@ export const useShellStore = create<ShellState>((set) => ({
   generateModalOpen: false,
   inspectorOpen: false,
   sidebarOpen: true,
+  forceEdit: false,
 
   navigate: (view) => set({ view, drawer: null }),
 

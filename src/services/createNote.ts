@@ -25,6 +25,7 @@ export async function createNote(folder = "") {
       );
     });
     if (note) {
+      useShellStore.setState({ forceEdit: true });
       useShellStore.getState().openNote(note.id);
     }
   } catch (err) {

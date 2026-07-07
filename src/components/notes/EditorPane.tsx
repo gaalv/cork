@@ -31,7 +31,9 @@ export function EditorPane({
   // Reset preview mode on note switch and always load the buffer
   // (MarkdownPreview reads from editorStore, so openBuffer must run even in preview)
   useEffect(() => {
-    setPreview(useAppSettingsStore.getState().settings.editor.previewDefault);
+    const { forceEdit } = useShellStore.getState();
+    setPreview(forceEdit ? false : useAppSettingsStore.getState().settings.editor.previewDefault);
+    if (forceEdit) useShellStore.setState({ forceEdit: false });
     if (noteId && notePath) void openBuffer(noteId, notePath);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, notePath]);
