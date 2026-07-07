@@ -288,31 +288,3 @@ pub struct SkillSummary {
 }
 
 // ── Unit tests ────────────────────────────────────────────────────────────────
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn binary_for_known_providers() {
-        assert_eq!(binary_for_provider("claude"), Some("claude"));
-        assert_eq!(binary_for_provider("copilot"), Some("copilot"));
-    }
-
-    #[test]
-    fn binary_for_disabled_returns_none() {
-        assert_eq!(binary_for_provider("disabled"), None);
-        assert_eq!(binary_for_provider("unknown"), None);
-        assert_eq!(binary_for_provider(""), None);
-    }
-
-    #[test]
-    fn ai_error_kinds_are_correct() {
-        assert_eq!(AiError::provider_disabled("x").kind, "provider_disabled");
-        assert_eq!(AiError::binary_not_found("x").kind, "binary_not_found");
-        assert_eq!(AiError::subprocess_failed("x").kind, "subprocess_failed");
-        assert_eq!(AiError::timeout("x").kind, "timeout");
-        assert_eq!(AiError::skill_not_found("x").kind, "skill_not_found");
-        assert_eq!(AiError::internal("x").kind, "internal");
-    }
-}

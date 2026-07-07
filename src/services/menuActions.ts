@@ -8,6 +8,7 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import { useShellStore } from "@/stores/shellStore";
+import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { cycleTheme } from "@/services/themeRuntime";
 import { createNote } from "@/services/createNote";
 
@@ -21,7 +22,7 @@ const MENU_HANDLERS: Record<string, () => void> = {
     // Triggers vault picker
   },
   "menu:settings": () => {
-    useShellStore.getState().setSettingsOpen(true);
+    useSettingsUiStore.getState().openSettings();
   },
   "menu:toggle-theme": () => {
     cycleTheme();

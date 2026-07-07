@@ -9,7 +9,10 @@ import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
 
 import { useShellStore } from "@/stores/shellStore";
+import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { useEditorStore } from "@/stores/editorStore";
+import { useAppSettingsStore } from "@/stores/appSettingsStore";
+import { getEditorView } from "@/cm/viewRef";
 import { cycleTheme } from "@/services/themeRuntime";
 import { createNote } from "@/services/createNote";
 
@@ -24,7 +27,7 @@ export function useShortcuts() {
       // ⌘, — Settings
       "$mod+Comma": (event) => {
         event.preventDefault();
-        useShellStore.getState().setSettingsOpen(true);
+        useSettingsUiStore.getState().openSettings();
       },
       // ⌘N — New note
       "$mod+KeyN": (event) => {
@@ -46,13 +49,25 @@ export function useShortcuts() {
         event.preventDefault();
         cycleTheme();
       },
-      // Escape — Close topmost overlay
-      Escape: () => {
+      // Escape — Close topmost overlay (but let vim handle it when editor is focused)
+      Escape: (event) => {
+        // When vim mode is on and the editor is focused, let CM6 vim handle
+        // Escape (e.g. INSERT→NORMAL). Only intercept when an overlay is open.
+        const vimOn = useAppSettingsStore.getState().settings.editor.vimMode;
+        const editorFocused = getEditorView()?.hasFocus;
+
         const shell = useShellStore.getState();
+        const settingsOpen = useSettingsUiStore.getState().open;
+        const hasOverlay =
+          shell.paletteOpen || settingsOpen || shell.helpOpen || shell.generateModalOpen;
+
+        if (vimOn && editorFocused && !hasOverlay) return;
+
+        event.preventDefault();
         if (shell.paletteOpen) {
           shell.setPaletteOpen(false);
-        } else if (shell.settingsOpen) {
-          shell.setSettingsOpen(false);
+        } else if (settingsOpen) {
+          useSettingsUiStore.getState().closeSettings();
         } else if (shell.helpOpen) {
           shell.setHelpOpen(false);
         } else if (shell.generateModalOpen) {

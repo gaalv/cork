@@ -75,32 +75,12 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
     // Focus editor
     view.focus();
 
-    // Observe vim mode changes via the CM6 vim status panel
-    let observer: MutationObserver | undefined;
+    // Track vim mode via getCM() vimState — much more reliable than DOM observation
     if (editorSettings.vimMode) {
-      const setMode = useVimModeStore.getState().setMode;
-      const detectVimMode = () => {
-        const panel = containerRef.current?.querySelector(".cm-vim-panel");
-        if (!panel) return;
-        const text = panel.textContent?.trim().toUpperCase() ?? "";
-        if (text.includes("INSERT")) setMode("INSERT");
-        else if (text.includes("VISUAL")) setMode("VISUAL");
-        else if (text.includes("REPLACE")) setMode("REPLACE");
-        else setMode("NORMAL");
-      };
-      observer = new MutationObserver(detectVimMode);
-      observer.observe(containerRef.current!, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-      // Also listen for keystrokes that change mode
-      view.dom.addEventListener("keyup", detectVimMode);
-      setMode("NORMAL");
+      useVimModeStore.getState().setMode("NORMAL");
     }
 
     return () => {
-      observer?.disconnect();
       view.destroy();
       viewRef.current = null;
       setEditorView(null);

@@ -11,6 +11,7 @@ import { Inspector } from "@/components/editor/inspector/Inspector";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
+import { useAppSettingsStore } from "@/stores/appSettingsStore";
 
 export function EditorPane({
   inspectorOpen,
@@ -21,12 +22,19 @@ export function EditorPane({
 }) {
   const view = useShellStore((s) => s.view);
   const notes = useVaultStore((s) => s.notes);
+  const openBuffer = useEditorStore((s) => s.openBuffer);
   const [preview, setPreview] = useState(false);
 
   const noteId = view.kind === "note" ? view.id : null;
+  const notePath = view.kind === "note" ? notes.find((n) => n.id === view.id)?.path : null;
+
+  // Reset preview mode on note switch and always load the buffer
+  // (MarkdownPreview reads from editorStore, so openBuffer must run even in preview)
   useEffect(() => {
-    setPreview(false);
-  }, [noteId]);
+    setPreview(useAppSettingsStore.getState().settings.editor.previewDefault);
+    if (noteId && notePath) void openBuffer(noteId, notePath);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId, notePath]);
 
   if (view.kind !== "note") {
     return <EmptyEditor />;

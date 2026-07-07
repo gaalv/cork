@@ -10,6 +10,12 @@ export function EditorSection({
 }) {
   return (
     <div className="space-y-5">
+      <SettingRow label="Open in preview" description="Open notes in preview mode by default">
+        <Toggle
+          checked={settings.editor.previewDefault}
+          onChange={(v) => update({ editor: { ...settings.editor, previewDefault: v } })}
+        />
+      </SettingRow>
       <SettingRow label="Font size" description="Editor font size in pixels">
         <input
           type="number"

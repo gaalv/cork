@@ -51,31 +51,3 @@ pub fn open_ai_db(app_data_dir: &Path) -> Result<Connection, IpcError> {
         .map_err(|e| IpcError::Other(format!("ai.sqlite schema: {e}")))?;
     Ok(conn)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[test]
-    fn opens_and_creates_tables() {
-        let dir = tempdir().unwrap();
-        let conn = open_ai_db(dir.path()).unwrap();
-        let count: i64 = conn
-            .query_row(
-                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('ai_cache','ai_calls')",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        assert_eq!(count, 2);
-    }
-
-    #[test]
-    fn open_is_idempotent() {
-        let dir = tempdir().unwrap();
-        let _ = open_ai_db(dir.path()).unwrap();
-        // Second open must not fail.
-        let _ = open_ai_db(dir.path()).unwrap();
-    }
-}

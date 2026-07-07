@@ -13,7 +13,7 @@ export function SidebarSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-3">
+    <div style={{ marginTop: "var(--density-section-mt)" }}>
       <div className="mb-1 flex items-center justify-between px-3">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-cork-subtle)]">
           {title}
@@ -41,7 +41,8 @@ export function SidebarRow({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-[10px] px-2 py-1.5 text-left ${
+      style={{ paddingTop: "var(--density-row-py)", paddingBottom: "var(--density-row-py)" }}
+      className={`flex w-full items-center gap-2 rounded-[10px] px-2 text-left ${
         active
           ? "bg-[var(--color-cork-accent-soft)] text-[var(--color-cork-accent)]"
           : "text-[var(--color-cork-ink)] hover:bg-[var(--color-cork-panel-2)]"

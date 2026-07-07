@@ -1,4 +1,5 @@
 import { setTheme } from "@/services/themeRuntime";
+import { setDensity } from "@/services/densityRuntime";
 import type { AppSettings } from "@/ipc/types";
 import { SettingRow } from "./SettingRow";
 
@@ -29,14 +30,11 @@ export function GeneralSection({
       <SettingRow label="Density" description="Comfortable or compact layout spacing">
         <select
           value={settings.appearance.density}
-          onChange={(e) =>
-            update({
-              appearance: {
-                ...settings.appearance,
-                density: e.target.value as "comfortable" | "compact",
-              },
-            })
-          }
+          onChange={(e) => {
+            const density = e.target.value as "comfortable" | "compact";
+            update({ appearance: { ...settings.appearance, density } });
+            setDensity(density);
+          }}
           className="rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-2 py-1 text-[13px]"
         >
           <option value="comfortable">Comfortable</option>

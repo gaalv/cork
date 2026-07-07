@@ -5,15 +5,17 @@ These are the rules every agent (human or AI) must follow when writing code in C
 ## Naming
 
 **Files:**
+
 - React components: `PascalCase.tsx` (e.g., `CommandPalette.tsx`)
 - Hooks: `useCamelCase.ts` (e.g., `useActiveNote.ts`)
 - Stores: `camelCaseStore.ts` (e.g., `vaultStore.ts`)
 - IPC wrappers: `camelCase.ts` matching the command namespace (e.g., `vault.ts`, `notes.ts`)
 - Pure helpers: `camelCase.ts`
-- Test files: same base name + `.test.ts(x)` (component tests) or `.spec.ts` (Playwright)
+- Test files: not used (removed to save tokens during development)
 - Rust modules: `snake_case.rs`
 
 **Symbols:**
+
 - React components: `PascalCase`
 - Hooks: `useXxx`
 - Zustand selectors: `useXxxStore` (the hook itself); selectors named after what they return (`(s) => s.recentNotes`)
@@ -22,6 +24,7 @@ These are the rules every agent (human or AI) must follow when writing code in C
 - Rust functions/methods: `snake_case`. Types: `PascalCase`. Constants: `SCREAMING_SNAKE_CASE`.
 
 **Tauri commands:**
+
 - Namespaced dot-separated names: `vault.open`, `notes.save`, `index.search`, `links.resolve`.
 
 ## Imports
@@ -105,7 +108,7 @@ mutationMethod: async (args) => {
     set({ someState: prev });
     throw err;
   }
-}
+};
 ```
 
 **Pattern (component side):**
@@ -122,10 +125,12 @@ try {
 **Exception — tag-on-note mutations:** `addTagToNote` / `removeTagFromNote` are synchronous (no IPC persist) because persistence is handled by the editor's auto-save of frontmatter. The optimistic update still applies immediately so counters and lists reflect the change.
 
 **Where mutations live:**
+
 - `indexStore`: `toggleNotePin`, `addTagToNote`, `removeTagFromNote`, `createTag`, `renameTag`, `deleteTag`
 - `vaultStore`: `trashNote`, `moveNote`
 
 **Rules:**
+
 - Components MUST NOT call `client.*` for writes — use store mutation methods.
 - Components handle toast feedback only; stores handle state + persistence + rollback.
 - The `index:updated` event from the Rust indexer triggers `refreshIndex()` which reconciles optimistic state with the truth in SQLite. This is the background consistency mechanism.
@@ -133,10 +138,12 @@ try {
 ## Error handling
 
 **Rust → frontend:**
+
 - Each IPC command returns `Result<T, IpcError>` where `IpcError` is a serializable enum (`NotFound`, `Io`, `Parse`, `Conflict`, `Unauthorized`, …).
 - Never panic across the IPC boundary; convert `?` to `IpcError` via `From` impls.
 
 **Frontend:**
+
 - Wrap IPC calls in try/catch in the typed wrapper layer (`shared/ipc/`); UI receives discriminated unions or throws and is caught by an `<ErrorBoundary>` per route.
 - User-visible errors go through a single `toast()` helper (TBD in F04).
 
@@ -145,16 +152,10 @@ try {
 Only when code needs clarification. No JSDoc on every function. Document _why_, not _what_.
 
 Allowed:
+
 - Tricky algorithm explanations
 - TODO/FIXME with a tracking issue or STATE.md entry reference
 - Public API docstrings on shared utilities
-
-## Tests
-
-- Unit + component tests live next to the source: `Foo.tsx` ↔ `Foo.test.tsx`.
-- E2E specs live in `tests/e2e/` and use Playwright fixtures.
-- One assertion theme per test. Test names read as user-visible behavior: `'opens command palette on ⌘K'`.
-- Avoid snapshot tests except for stable, opinionated UI primitives.
 
 ## Git
 

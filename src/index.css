@@ -59,6 +59,20 @@
   background: #555555;
 }
 
+/* --- Density --- */
+:root {
+  --density-row-py: 6px; /* py-1.5 */
+  --density-card-py: 12px; /* py-3 */
+  --density-section-gap: 20px; /* gap-5 */
+  --density-section-mt: 12px; /* mt-3 */
+}
+:root[data-density="compact"] {
+  --density-row-py: 3px; /* py-0.75 */
+  --density-card-py: 8px; /* py-2 */
+  --density-section-gap: 12px; /* gap-3 */
+  --density-section-mt: 8px; /* mt-2 */
+}
+
 /* --- Effects & textures --- */
 :root {
   --surface-charcoal: linear-gradient(155deg, #262626 0%, #1a1a1a 55%, #141414 100%);

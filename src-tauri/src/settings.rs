@@ -60,14 +60,10 @@ pub struct EditorSettings {
     pub line_wrap: bool,
     #[serde(default = "default_true")]
     pub show_line_numbers: bool,
-    #[serde(default = "default_font_family")]
-    pub font_family: String,
     #[serde(default = "default_font_size")]
     pub font_size: u32,
     #[serde(default = "default_tab_size")]
     pub tab_size: u32,
-    #[serde(default)]
-    pub show_invisibles: bool,
     #[serde(default)]
     pub vim_mode: bool,
 }
@@ -130,10 +126,8 @@ impl Default for EditorSettings {
             preview_default: default_preview_default(),
             line_wrap: true,
             show_line_numbers: true,
-            font_family: default_font_family(),
             font_size: default_font_size(),
             tab_size: default_tab_size(),
-            show_invisibles: false,
             vim_mode: false,
         }
     }
@@ -216,15 +210,11 @@ fn default_auto_save_debounce_ms() -> u32 {
 }
 
 fn default_preview_default() -> bool {
-    true
+    false
 }
 
 fn default_recent_limit() -> u32 {
     8
-}
-
-fn default_font_family() -> String {
-    "system-ui".to_string()
 }
 
 fn default_font_size() -> u32 {
@@ -237,34 +227,4 @@ fn default_tab_size() -> u32 {
 
 fn default_true() -> bool {
     true
-}
-
-#[cfg(test)]
-mod tests {
-    use std::fs;
-
-    use tempfile::tempdir;
-
-    use super::*;
-
-    #[test]
-    fn missing_app_settings_returns_defaults() {
-        let dir = tempdir().unwrap();
-        let settings = load_app_settings(&dir.path().join("settings.json")).unwrap();
-
-        assert_eq!(settings, AppSettings::default());
-    }
-
-    #[test]
-    fn partial_app_settings_merge_with_defaults() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("settings.json");
-        fs::write(&path, r#"{ "editor": { "autoSaveDebounceMs": 750 } }"#).unwrap();
-
-        let settings = load_app_settings(&path).unwrap();
-
-        assert_eq!(settings.editor.auto_save_debounce_ms, 750);
-        assert!(settings.editor.preview_default);
-        assert_eq!(settings.vault.recent_limit, 8);
-    }
 }

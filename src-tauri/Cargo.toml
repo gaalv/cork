@@ -3,6 +3,9 @@ name = "Cork"
 version = "0.1.0"
 description = "Cork — local-first Markdown notes"
 authors = ["Cork contributors"]
+license = "MIT"
+repository = "https://github.com/gaalv/cork"
+homepage = "https://github.com/gaalv/cork"
 edition = "2021"
 
 [lib]

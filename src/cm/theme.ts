@@ -14,7 +14,8 @@ export const corkEditorTheme = EditorView.theme(
   {
     "&": {
       fontSize: "14px",
-      fontFamily: "var(--font-mono)",
+      fontFamily:
+        "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif",
       color: "var(--color-cork-ink)",
       backgroundColor: "transparent",
       height: "100%",
@@ -35,6 +36,16 @@ export const corkEditorTheme = EditorView.theme(
     ".cm-cursor, .cm-dropCursor": {
       borderLeftColor: "var(--color-cork-accent)",
       borderLeftWidth: "2px",
+    },
+    // Vim fat cursor — override the default red with accent color
+    ".cm-fat-cursor": {
+      background: "var(--color-cork-accent) !important",
+      color: "white !important",
+      outline: "none !important",
+    },
+    "&:not(.cm-focused) .cm-fat-cursor": {
+      background: "none !important",
+      outline: "1px solid var(--color-cork-accent) !important",
     },
     ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground":
       {
@@ -71,12 +82,36 @@ export const corkEditorTheme = EditorView.theme(
     ".cm-tooltip": {
       backgroundColor: "var(--color-cork-panel)",
       border: "1px solid var(--color-cork-border)",
-      borderRadius: "8px",
-      boxShadow: "var(--shadow-md)",
+      borderRadius: "10px",
+      boxShadow: "var(--shadow-lg)",
+      overflow: "hidden",
+    },
+    ".cm-tooltip-autocomplete": {
+      minWidth: "220px",
+    },
+    ".cm-tooltip-autocomplete ul": {
+      fontFamily: "var(--font-sans)",
+      fontSize: "13px",
+      padding: "4px",
+    },
+    ".cm-tooltip-autocomplete ul li": {
+      padding: "6px 10px",
+      borderRadius: "6px",
+      lineHeight: "1.4",
+      color: "var(--color-cork-ink)",
     },
     ".cm-tooltip-autocomplete ul li[aria-selected]": {
       backgroundColor: "var(--color-cork-accent-soft)",
       color: "var(--color-cork-ink)",
+    },
+    ".cm-completionLabel": {
+      fontWeight: "500",
+    },
+    ".cm-completionDetail": {
+      fontStyle: "normal",
+      color: "var(--color-cork-muted)",
+      fontSize: "11px",
+      marginLeft: "8px",
     },
     ".cm-panels": {
       backgroundColor: "var(--color-cork-panel)",

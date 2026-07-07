@@ -8,7 +8,6 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
-import { useShellStore } from "@/stores/shellStore";
 import { useIndexStore } from "@/stores/indexStore";
 import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { startSyncPolling, useSyncStore } from "@/stores/syncStore";
@@ -117,7 +116,7 @@ function SyncStatusIcon() {
 }
 
 export function StatusBar() {
-  const setSettingsOpen = useShellStore((s) => s.setSettingsOpen);
+  const openSettings = useSettingsUiStore((s) => s.openSettings);
   const isIndexing = useIndexStore((s) => s.isIndexing);
   const indexProgress = useIndexStore((s) => s.indexProgress);
   return (
@@ -137,7 +136,7 @@ export function StatusBar() {
         <SyncStatusIcon />
         <NotificationsPopover />
         <button
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => openSettings()}
           className="rounded p-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
           title="Settings"
         >

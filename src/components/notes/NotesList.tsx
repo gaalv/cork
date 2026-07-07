@@ -6,6 +6,7 @@ import {
   DotsThreeVertical,
   FunnelSimple,
   MagnifyingGlass,
+  Plus,
   SidebarSimple,
   SortAscending,
   SortDescending,
@@ -25,6 +26,7 @@ import type { SidebarFilter } from "@/utils/triageHelpers";
 import { formatRelativeDate } from "@/utils/triageHelpers";
 import { NoteContextMenu, MoveToSubmenu } from "./NoteContextMenu";
 import type { ContextMenuState, MoveSubmenuState } from "./NoteContextMenu";
+import { createNote } from "@/services/createNote";
 
 export function NotesList({ filter }: { filter: SidebarFilter }) {
   const allNotes = useVaultStore((s) => s.notes);
@@ -275,6 +277,13 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
         </div>
         <div className="flex items-center gap-1">
           <button
+            onClick={() => void createNote("inbox")}
+            title="New note (⌘N)"
+            className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+          >
+            <Plus size={14} weight="bold" />
+          </button>
+          <button
             onClick={() => setPaletteOpen(true)}
             title="Search (⌘K)"
             className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
@@ -356,7 +365,13 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
           filter.kind === "archived" &&
           archivedNotes.map((n) => (
             <li key={n.path}>
-              <div className="group flex w-full flex-col gap-1.5 border-l-[3px] border-transparent px-4 py-3 text-left transition hover:bg-[var(--color-cork-panel-2)]">
+              <div
+                style={{
+                  paddingTop: "var(--density-card-py)",
+                  paddingBottom: "var(--density-card-py)",
+                }}
+                className="group flex w-full flex-col gap-1.5 border-l-[3px] border-transparent px-4 text-left transition hover:bg-[var(--color-cork-panel-2)]"
+              >
                 <div className="flex items-center justify-between">
                   <span className="truncate text-[13px] font-semibold text-[var(--color-cork-ink)]">
                     {n.title}
@@ -402,7 +417,11 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") openNote(n.id);
                   }}
-                  className={`group flex w-full flex-col gap-1.5 border-l-[3px] px-4 py-3 text-left transition cursor-pointer ${
+                  style={{
+                    paddingTop: "var(--density-card-py)",
+                    paddingBottom: "var(--density-card-py)",
+                  }}
+                  className={`group flex w-full flex-col gap-1.5 border-l-[3px] px-4 text-left transition cursor-pointer ${
                     isActive
                       ? "border-[var(--color-cork-accent)] bg-[var(--color-cork-accent-soft)]"
                       : "border-transparent hover:bg-[var(--color-cork-panel-2)]"

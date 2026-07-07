@@ -30,10 +30,8 @@ export type AppSettings = {
     previewDefault: boolean;
     lineWrap: boolean;
     showLineNumbers: boolean;
-    fontFamily: string;
     fontSize: number;
     tabSize: number;
-    showInvisibles: boolean;
     vimMode: boolean;
   };
   vault: Record<string, never>;

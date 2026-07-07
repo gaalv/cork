@@ -14,9 +14,16 @@ export async function createNote(folder = "") {
     const result = await client.notes.create({ folder });
     const created = result as VaultPath;
     await useVaultStore.getState().loadNotes();
-    // Find the note by matching the path suffix returned from the backend
     const notes = useVaultStore.getState().notes;
-    const note = notes.find((n) => created.path.endsWith(n.path));
+    // Match by checking if either path ends with the other (handles
+    // canonicalized vs non-canonicalized absolute paths).
+    const createdNorm = created.path.replace(/\\/g, "/");
+    const note = notes.find((n) => {
+      const notePath = (typeof n.path === "string" ? n.path : String(n.path)).replace(/\\/g, "/");
+      return (
+        notePath === createdNorm || notePath.endsWith(createdNorm) || createdNorm.endsWith(notePath)
+      );
+    });
     if (note) {
       useShellStore.getState().openNote(note.id);
     }

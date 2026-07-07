@@ -6,9 +6,10 @@
  */
 
 import { useEffect, useState } from "react";
+
 import { X } from "@phosphor-icons/react";
 
-import { useShellStore } from "@/stores/shellStore";
+import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { client } from "@/ipc/client";
 import type { AppSettings } from "@/ipc/types";
@@ -22,9 +23,9 @@ import { AiSection } from "./AiSection";
 import { AdvancedSection } from "./AdvancedSection";
 import { GitHubSyncSection } from "@/components/sync/GitHubSyncSection";
 
-type Section = "general" | "editor" | "files" | "markdown" | "ai" | "sync" | "advanced";
+import type { SettingsSectionId } from "@/stores/settingsUiStore";
 
-const SECTIONS: { id: Section; label: string }[] = [
+const SECTIONS: { id: SettingsSectionId; label: string }[] = [
   { id: "general", label: "General" },
   { id: "editor", label: "Editor" },
   { id: "files", label: "Files & Vaults" },
@@ -35,11 +36,12 @@ const SECTIONS: { id: Section; label: string }[] = [
 ];
 
 export function SettingsPanel() {
-  const open = useShellStore((s) => s.settingsOpen);
-  const close = useShellStore((s) => s.setSettingsOpen);
+  const open = useSettingsUiStore((s) => s.open);
+  const activeSection = useSettingsUiStore((s) => s.section);
+  const setActiveSection = useSettingsUiStore((s) => s.setSection);
+  const closeSettings = useSettingsUiStore((s) => s.closeSettings);
   const settings = useAppSettingsStore((s) => s.settings);
   const updateSettings = useAppSettingsStore((s) => s.updateSettings);
-  const [activeSection, setActiveSection] = useState<Section>("general");
   const [providers, setProviders] = useState<ProvidersAvailable | null>(null);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function SettingsPanel() {
   return (
     <div
       className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--color-cork-ink)]/30"
-      onClick={() => close(false)}
+      onClick={() => closeSettings()}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -88,7 +90,7 @@ export function SettingsPanel() {
               {SECTIONS.find((s) => s.id === activeSection)?.label}
             </h3>
             <button
-              onClick={() => close(false)}
+              onClick={() => closeSettings()}
               className="rounded p-1 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
             >
               <X size={14} />
@@ -114,7 +116,7 @@ function SectionContent({
   update,
   providers,
 }: {
-  section: Section;
+  section: SettingsSectionId;
   settings: AppSettings;
   update: (patch: Partial<AppSettings>) => void;
   providers: ProvidersAvailable | null;

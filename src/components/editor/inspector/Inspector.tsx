@@ -13,8 +13,11 @@ import { HistorySection } from "./HistorySection";
 
 export function Inspector({ noteMtime }: { noteMtime: number }) {
   return (
-    <aside className="flex h-full flex-col overflow-y-auto border-l border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-4 py-4">
-      <div className="flex flex-col gap-5">
+    <aside
+      style={{ paddingTop: "var(--density-card-py)", paddingBottom: "var(--density-card-py)" }}
+      className="flex h-full flex-col overflow-y-auto border-l border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-4"
+    >
+      <div style={{ gap: "var(--density-section-gap)" }} className="flex flex-col">
         <OutlineSection />
         <TagsSection />
         <PropertiesSection noteMtime={noteMtime} />

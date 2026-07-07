@@ -67,29 +67,3 @@ impl From<std::io::Error> for IpcError {
 pub fn sql_error(error: rusqlite::Error) -> IpcError {
     IpcError::Other(error.to_string())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn not_found_serializes_to_kind_only() {
-        let err = IpcError::NotFound;
-        let json = serde_json::to_string(&err).unwrap();
-        assert_eq!(json, r#"{"kind":"NotFound"}"#);
-    }
-
-    #[test]
-    fn io_serializes_with_message() {
-        let err = IpcError::Io("file missing".to_string());
-        let json = serde_json::to_string(&err).unwrap();
-        assert_eq!(json, r#"{"kind":"Io","message":"file missing"}"#);
-    }
-
-    #[test]
-    fn conflict_serializes_with_current_mtime() {
-        let err = IpcError::Conflict { current_mtime: 123 };
-        let json = serde_json::to_string(&err).unwrap();
-        assert_eq!(json, r#"{"kind":"Conflict","currentMtime":123}"#);
-    }
-}

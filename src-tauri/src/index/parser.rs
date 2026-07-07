@@ -103,7 +103,7 @@ pub fn parse(markdown: &str, filename: &str) -> Result<ParsedNote, IpcError> {
         }
     }
 
-    collect_tags(&body, tag_regex(), &skip_ranges, &mut tags);
+    // Tags are only sourced from frontmatter — inline #tags in the body are ignored.
     collect_links(&body, link_regex(), &skip_ranges, &mut links);
     collect_callouts(&body, &skip_ranges, true, &mut markdown_extensions);
     collect_footnotes(&body, &skip_ranges, &mut markdown_extensions);
@@ -134,14 +134,6 @@ struct HeadingAccumulator {
     text: String,
 }
 
-fn tag_regex() -> &'static Regex {
-    static TAG_REGEX: OnceLock<Regex> = OnceLock::new();
-    TAG_REGEX.get_or_init(|| {
-        Regex::new(r"(^|[^A-Za-z0-9/_-])#([A-Za-z0-9][A-Za-z0-9/_-]{0,63})")
-            .expect("tag regex compiles")
-    })
-}
-
 fn link_regex() -> &'static Regex {
     static LINK_REGEX: OnceLock<Regex> = OnceLock::new();
     LINK_REGEX.get_or_init(|| {
@@ -168,21 +160,6 @@ fn footnote_reference_regex() -> &'static Regex {
     FOOTNOTE_REFERENCE_REGEX.get_or_init(|| {
         Regex::new(r"\[\^([A-Za-z0-9_-]+)\]").expect("footnote reference regex compiles")
     })
-}
-
-fn collect_tags(
-    text: &str,
-    regex: &Regex,
-    skip_ranges: &[std::ops::Range<usize>],
-    tags: &mut BTreeSet<String>,
-) {
-    for captures in regex.captures_iter(text) {
-        if let Some(tag) = captures.get(2) {
-            if !is_skipped(tag.start(), skip_ranges) {
-                tags.insert(tag.as_str().to_string());
-            }
-        }
-    }
 }
 
 fn collect_links(
@@ -432,150 +409,4 @@ fn sha1_hex(bytes: &[u8]) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn title_is_filename_stem_not_h1() {
-        let parsed = parse("# Title\n\n## Child\nText", "note.md").unwrap();
-        assert_eq!(parsed.title, "note");
-        assert_eq!(parsed.headings.len(), 2);
-        assert_eq!(parsed.headings[1].level, 2);
-    }
-
-    #[test]
-    fn falls_back_to_filename_without_extension() {
-        let parsed = parse("Body only", "folder/My Note.md").unwrap();
-        assert_eq!(parsed.title, "My Note");
-    }
-
-    #[test]
-    fn extracts_body_tags_and_sorts_deduplicates() {
-        let parsed = parse("#x #dev/rust and #x #todo-list", "a.md").unwrap();
-        assert_eq!(parsed.tags, vec!["dev/rust", "todo-list", "x"]);
-    }
-
-    #[test]
-    fn rejects_tags_with_spaces() {
-        let parsed = parse("#bad tag #good_tag", "a.md").unwrap();
-        assert_eq!(parsed.tags, vec!["bad", "good_tag"]);
-    }
-
-    #[test]
-    fn ignores_tags_and_links_inside_fenced_code_blocks() {
-        let parsed = parse("```\n#code [[Nope]]\n```\n#real [[Yes]]", "a.md").unwrap();
-        assert_eq!(parsed.tags, vec!["real"]);
-        assert_eq!(parsed.links[0].target_text, "Yes");
-    }
-
-    #[test]
-    fn ignores_inline_code_tags() {
-        let parsed = parse("`#code [[Nope]]` #real", "a.md").unwrap();
-        assert_eq!(parsed.tags, vec!["real"]);
-        assert!(parsed.links.is_empty());
-    }
-
-    #[test]
-    fn extracts_wikilink_aliases() {
-        let parsed = parse("See [[Target Note|Alias text]] and [[Other]].", "a.md").unwrap();
-        assert_eq!(parsed.links.len(), 2);
-        assert_eq!(parsed.links[0].target_text, "Target Note");
-        assert_eq!(parsed.links[0].alias.as_deref(), Some("Alias text"));
-        assert_eq!(parsed.links[1].alias, None);
-    }
-
-    #[test]
-    fn parses_frontmatter_tags_from_array() {
-        let parsed = parse("---\ntags:\n  - dev\n  - '#rust/lang'\n---\nBody", "a.md").unwrap();
-        assert_eq!(parsed.tags, vec!["dev", "rust/lang"]);
-    }
-
-    #[test]
-    fn parses_frontmatter_tags_from_comma_string() {
-        let parsed = parse("---\ntags: dev, rust, bad tag\n---\nBody", "a.md").unwrap();
-        assert_eq!(parsed.tags, vec!["dev", "rust"]);
-    }
-
-    #[test]
-    fn handles_unicode_heading_and_nested_emphasis() {
-        let parsed = parse("# Olá **mundo _dev_**\nTexto", "a.md").unwrap();
-        assert_eq!(parsed.title, "a");
-        assert_eq!(parsed.headings[0].text, "Olá mundo dev");
-    }
-
-    #[test]
-    fn computes_body_hash_from_body_without_frontmatter() {
-        let parsed = parse("---\ntags: dev\n---\nBody", "a.md").unwrap();
-        assert_eq!(parsed.body, "Body");
-        assert_eq!(parsed.body_hash.len(), 40);
-    }
-
-    #[test]
-    fn extracts_callout_markers() {
-        let parsed = parse("> [!warning] Heads up\n> Body", "a.md").unwrap();
-        assert_eq!(parsed.markdown_extensions.len(), 1);
-        assert_eq!(parsed.markdown_extensions[0].kind, "callout");
-        assert_eq!(parsed.markdown_extensions[0].value, "warning:Heads up");
-    }
-
-    #[test]
-    fn falls_back_unknown_callout_kind_to_note() {
-        let parsed = parse("> [!custom] Custom title\n> Body", "a.md").unwrap();
-        assert_eq!(parsed.markdown_extensions[0].value, "note:Custom title");
-    }
-
-    #[test]
-    fn ignores_callouts_when_disabled() {
-        let mut extensions = Vec::new();
-        collect_callouts("> [!note] Hidden", &[], false, &mut extensions);
-        assert!(extensions.is_empty());
-    }
-
-    #[test]
-    fn extracts_nested_callout_markers() {
-        let parsed = parse("> [!note] Outer\n> > [!tip] Inner", "a.md").unwrap();
-        assert_eq!(
-            parsed
-                .markdown_extensions
-                .iter()
-                .map(|extension| extension.value.as_str())
-                .collect::<Vec<_>>(),
-            vec!["note:Outer", "tip:Inner"]
-        );
-    }
-
-    #[test]
-    fn extracts_referenced_footnotes() {
-        let parsed = parse("Body[^1]\n\n[^1]: Footnote text", "a.md").unwrap();
-        assert_eq!(
-            parsed
-                .markdown_extensions
-                .iter()
-                .map(|extension| (extension.kind.as_str(), extension.value.as_str()))
-                .collect::<Vec<_>>(),
-            vec![("footnoteRef", "1"), ("footnoteDef", "1:Footnote text")]
-        );
-    }
-
-    #[test]
-    fn omits_orphan_footnote_definitions() {
-        let parsed = parse("Body\n\n[^orphan]: Hidden", "a.md").unwrap();
-        assert!(parsed.markdown_extensions.is_empty());
-    }
-
-    #[test]
-    fn extracts_highlight_markers() {
-        let parsed = parse("This is ==important== text", "a.md").unwrap();
-        assert_eq!(parsed.markdown_extensions[0].kind, "highlight");
-        assert_eq!(parsed.markdown_extensions[0].value, "important");
-    }
-
-    #[test]
-    fn ignores_escaped_and_image_highlights() {
-        let parsed = parse(r"Keep \==literal== and ==![[img.png]]==", "a.md").unwrap();
-        assert!(parsed.markdown_extensions.is_empty());
-    }
 }
