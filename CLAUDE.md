@@ -24,27 +24,32 @@ pnpm format:check         # prettier check (CI)
 
 ### Frontend (`src/`)
 
-**Feature-folder architecture.** Each capability in `src/features/` owns its own `ui/`, `hooks/`, `services/`, `state/`, and `index.ts`.
+**Flat structure** (feature folders were removed in the `a1c5e06` flatten refactor):
 
-Actual feature folders: `ai/`, `assets/`, `editor/`, `folder-ops/`, `home/` (empty — not yet built), `index/`, `quick-capture/`, `settings/`, `shell/` (triage layout + command palette), `sync/`, `todos/` (backend only — no UI), `vault/`.
+- `app/App.tsx` — root composition
+- `screens/` — top-level surfaces (`Shell`, `TriageBody`, `EmptyVault`, `WelcomeScreen`, `LoginScreen`)
+- `components/` — UI grouped by domain: `editor/` (incl. `inspector/`), `notes/`, `sidebar/`, `folders/`, `modals/` (CommandPalette, HelpModal, …), `settings/`, `sync/`, `status/`, `auth/`, `ui/` (primitives)
+- `cm/` — CodeMirror 6 extensions (markdown, wikilinks, autocomplete, theme, dropPaste, imagePreview, checkboxes, viewRef)
+- `stores/` — Zustand stores
+- `ipc/` — typed IPC layer
+- `services/` — imperative flows (createNote, folderOps, bulkOps, menuActions, …)
+- `hooks/`, `types/`, `utils/`
 
-**Hard rule:** Feature folders must NOT import from other feature folders. Cross-feature communication goes through `src/shared/` (stores, types, IPC, UI primitives).
+**State management:** Zustand for cross-cutting state (`vaultStore`, `editorStore`, `indexStore`, `shellStore`, `appSettingsStore`, `settingsUiStore`, `syncStore`, `authStore`, `vimModeStore`). Local UI state uses `useState`/`useReducer`. No React Query.
 
-**State management:** Zustand for cross-feature state (`vaultStore`, `editorStore`, `indexStore`, `appSettingsStore`). Local UI state uses `useState`/`useReducer`. No React Query — IPC calls cached in feature-local hooks.
+**IPC layer:** `src/ipc/IpcContract.ts` is the single source of truth for all Tauri commands/events. `src/ipc/client.ts` wraps `tauri.invoke` with full type safety. IpcContract.ts and Rust handlers must always be edited in the same commit.
 
-**IPC layer:** `src/shared/ipc/IpcContract.ts` is the single source of truth for all Tauri commands/events. `src/shared/ipc/client.ts` wraps `tauri.invoke` with full type safety. IpcContract.ts and Rust handlers must always be edited in the same commit.
-
-**Styling:** Tailwind v4 with `@theme` tokens in `src/index.css`. Use `cn()` from `@/shared/ui/cn.ts` (clsx + tailwind-merge). No CSS Modules/styled-components. No hardcoded hex — use tokens.
+**Styling:** Tailwind v4 with `@theme` tokens in `src/index.css`. Use `cn()` from `@/utils/cn.ts` (clsx + tailwind-merge). No CSS Modules/styled-components. No hardcoded hex — use tokens.
 
 **Path alias:** `@/*` maps to `src/*` (use for cross-boundary imports; same-folder stays relative).
 
 ### Shell layout
 
-The app uses a **Triage layout** (3-column): `Sidebar` (folders/navigation, 260px) + `NotesList` (note cards, 340px) + `EditorPane` (editor + optional Inspector). Components live in `src/features/shell/ui/triage/`. There is no Rail, no TopBar, no Home Dashboard, no Drawers — those were an earlier layout concept that was never implemented.
+The app uses a **Triage layout** (3-column): `Sidebar` (folders/navigation, 260px) + `NotesList` (note cards, 340px) + `EditorPane` (editor + optional Inspector). Composition lives in `src/screens/TriageBody.tsx`; the columns live in `src/components/sidebar/`, `src/components/notes/`, and `src/components/editor/`. There is no Rail, no TopBar, no Home Dashboard, no Drawers — those were an earlier layout concept that was never implemented.
 
 ### Backend (`src-tauri/`)
 
-Rust modules: `vault/` (filesystem ops, scaffold, watcher, folders, bulk ops), `index/` (SQLite indexer with FTS5, WAL mode), `ai/` (skills, cache, runner), `assets/`, `todos/`, `vcs/` (git local + remote sync), `settings.rs`, `menu.rs`, `diagnostics.rs` (crash logging), `error.rs`. Each module defines `#[tauri::command]` handlers.
+Rust modules: `vault/` (filesystem ops, scaffold, watcher, folders, bulk ops, frontmatter, archive), `index/` (SQLite indexer with FTS5, WAL mode), `ai/` (skills, cache, runner), `assets/`, `vcs/` (git local + remote sync), `settings.rs`, `menu.rs`, `tray.rs`, `shortcuts.rs`, `window.rs`, `diagnostics.rs` (crash logging), `error.rs`. `lib.rs` registers all commands. Each module defines `#[tauri::command]` handlers.
 
 **Indexer flow:** Vault open → scan `.md` files → parse with `pulldown-cmark` → upsert SQLite. File watcher (`notify`, 200ms debounce) keeps index in sync. Emits `index:updated` events to frontend.
 

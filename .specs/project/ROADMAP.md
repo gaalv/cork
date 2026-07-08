@@ -1,7 +1,7 @@
 # Roadmap
 
 **Current Milestone:** M10 — Release prep
-**Status:** M0–M8 complete; M9 partially complete; M10 in progress; M11 planned
+**Status:** M0–M8 complete; M9 partially complete; M10 in progress; M11 planned; M12 (Templates & lifecycle) and M13 (Sync resilience) planned — both may execute ahead of M11 (smaller scope; M13 fixes a live defect)
 
 **Product arc:** v1 (desktop MVP) → v2 (CRDT real-time sync) → v3 (graph + deep AI) → future (mobile, plugins, hosted relay). See `PROJECT.md §Long-term Direction` and `§Strategic Decisions` for rationale.
 
@@ -286,6 +286,45 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 - Device management (list/revoke connected devices)
 - OS keychain storage for tokens (`keyring` crate)
 - Provider-agnostic JWT claims — architecture supports adding passkeys/email later
+
+---
+
+## M12 — Templates & note lifecycle
+
+**Goal:** Start notes from predefined structures and track their lifecycle state; everything stays plain `.md` + frontmatter.
+
+### Features
+
+**[F39 — Note Templates](../features/F39-templates/spec.md)** — PLANNED
+
+- Templates as plain `.md` notes in a configurable `Templates/` vault folder
+- 4 default templates seeded by scaffold (create-if-missing, never overwritten)
+- Single Rust variable renderer: `{{title}}`, `{{date}}`, `{{time}}`, `{{datetime}}`, `{{cursor}}`
+- New note from template + insert template at cursor (shared picker modal via ⌘K)
+- Settings → Templates section (folder config, list, "New template")
+
+**[F40 — Note Status](../features/F40-note-status/spec.md)** — PLANNED
+
+- Inkdrop-style per-note status: `active` / `on-hold` / `done`, absent by default
+- Plain `status:` frontmatter, mirroring the pinned architecture (AD-053) end-to-end
+- NotesList badge, sidebar Status filter group (hidden when unused), context-menu submenu, Inspector selector, palette entries
+- No kanban, no due dates, no custom statuses — Cork stays a notes app
+
+---
+
+## M13 — Sync resilience
+
+**Goal:** GitHub sync survives token expiry and transient failures without ever requiring a full re-setup.
+
+### Features
+
+**[F41 — Sync Resilience](../features/F41-sync-resilience/spec.md)** — PLANNED (root cause diagnosed 2026-07-07 from live vault)
+
+- Erase-proof credential helper — a spurious 401 (proxy/hibernation) can no longer wipe a valid PAT (git `credential-store` erase semantics were destroying it)
+- "Update token" in place — recovery without touching remote/URL/history
+- Error classification (auth vs offline) + heartbeat backoff + fetch-failure logging
+- Stop committing `.cork/sync.log` (fixes the 12s self-commit loop)
+- P3: token expiry capture with pre-expiry warning (incident token had no expiry — low priority)
 
 ---
 

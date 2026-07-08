@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-06-25T00:00-03:00
-**Current Work:** F38 Relay Auth & Identity spec/design/tasks authored (M11). GitHub OAuth + JWT for hosted relay, shared-secret HMAC for self-hosted.
+**Last Updated:** 2026-07-07T00:00-03:00
+**Current Work:** F39 Templates + F40 Status (M12) and F41 Sync Resilience (M13) spec/design/tasks authored; execution pending user go-ahead. F41 came from a live sync-loss incident (see AD-058) — likely first in the execution queue. AGENTS.md/CLAUDE.md refreshed to match the flattened frontend structure.
 
 ---
 
@@ -365,6 +365,27 @@ Scope classification rules: `notes` (only note files), `single` (one file), `mix
 **Trade-off:** The existing `drawers/*` components remain as reusable library-view bodies for now, and `toggleDrawer` remains a legacy compatibility path that navigates to the equivalent page.
 **Impact:** New Focus sidebar surfaces should be modeled as shell routes, not overlay drawers. Rail clicks, Home tag pills, "Reveal in Folders", TopBar breadcrumbs, menu actions, command palette tag items, and `Cmd+\` must navigate to these page views.
 
+### AD-056: Templates are vault-native `.md` files with a single Rust renderer (2026-07-07)
+
+**Decision:** F39 templates live as plain `.md` notes in a configurable per-vault `Templates/` folder (`templatesFolder` setting, default `"Templates"`). Default templates (Meeting, Project, Bug Report, Decision) are seeded by the F30 scaffold with **create-if-missing** semantics — unlike `SCAFFOLD_FILES`, they are never overwritten on a scaffold version refresh, because users are expected to edit them. Variable expansion (`{{title}}`, `{{date}}`, `{{time}}`, `{{datetime}}`, `{{cursor}}`) happens exclusively in Rust (`vault/templates.rs`); the frontend only consumes a UTF-16 `cursorOffset` for caret placement, so both the create-note and insert-at-cursor flows share one renderer.
+**Reason:** AD-004 (pure `.md` vault) and Obsidian compatibility rule out hidden/app-level storage; a single Rust renderer avoids a two-expander parity problem (lesson from AD-005/AD-014). User confirmed all three choices in discuss (2026-07-07).
+**Trade-off:** Templates appear in NotesList/search like normal notes (accepted — they're editable in-app for free). Global cross-vault templates are not supported in v1.
+**Impact:** New `templates.list` / `templates.render` / `notes.createFromTemplate` IPC commands; scaffold `SCAFFOLD_VERSION` bumps to 3 with a separate `TEMPLATE_FILES` const; the dormant `"templates"` settings section id gains its component. `dailyTemplatePath` stays dormant (daily-notes wiring out of scope).
+
+### AD-057: Note status is fixed-set frontmatter cloning the pinned architecture (2026-07-07)
+
+**Decision:** F40 adds a per-note `status` frontmatter key with a fixed value set (`active` / `on-hold` / `done`; absent = unset, "None" removes the key). The entire pipeline clones pinned (AD-053): indexed by the existing frontmatter worker, queried via new `notes.statuses`, held in an indexStore map, filtered client-side, mutated through the same optimistic frontmatter write path as `toggleNotePin`. Sidebar "Status" group is hidden when no note has a status. No kanban, due dates, custom statuses, or `dropped` (archive covers it); "done → suggest archive" nudge deferred.
+**Reason:** Completes the lifecycle gap between Inbox (entry) and archive (exit) with a mechanism the codebase already proved; fixed set keeps queries/UI trivial; F25's removal signals Cork must not drift into task management.
+**Trade-off:** Users wanting custom workflows must keep using tags; three statuses may feel limiting for heavy Inkdrop users.
+**Impact:** New `notes.statuses` IPC + `NoteStatus` TS type; `SidebarFilter` union gains `{ kind: "status" }`; NotesList/Sidebar/NoteContextMenu/PropertiesSection/CommandPalette each gain a small surface. See F40 spec/design/tasks.
+
+### AD-058: Sync credentials must be erase-proof; recovery is update-token-in-place (2026-07-07)
+
+**Decision:** F41 replaces the `credential.helper = store --file` setup with an inline read-only helper (`get` → cat the file; `store`/`erase` → no-op) over a protocol-format credential file. Token recovery becomes a dedicated `vcs.updateToken` command + UI that rewrites only the credential file. Sync errors are classified (`auth`/`network`/`other`) with heartbeat backoff, and `.cork/sync.log` is gitignored.
+**Reason:** Live incident (2026-07-07): a **transient HTTP 401** (token had no expiry, personal machine with no proxy — exact server-side cause undeterminable) hit one push, and git's `credential-store` helper erased the stored token file (0 bytes, mtime = the 401 minute, atomic, no stale lock) — a transient failure destroyed a valid credential and forced full re-setup. The trigger probability was pathologically amplified by the sync.log self-commit loop (since 2026-06-29, one push every ~12s; 5,848 junk commits in the vault), and fetch failures after the incident were silent with no recovery affordance.
+**Trade-off:** Inline shell helper depends on git's sh on Windows (quoted defensively); expiry check adds one authenticated HTTPS request to GitHub at token save (same service sync already talks to).
+**Impact:** Supersedes the credential-storage detail of AD-051 (auth model unchanged: repo-scoped fine-grained PAT). New `vcs.updateToken` IPC; `RemoteInfo` gains `errorKind`; vault settings gain `token_expires_at` metadata. See F41 spec/design/tasks.
+
 ---
 
 ## Active Blockers
@@ -452,8 +473,8 @@ _None._
 | 044 | Land M10 — F34 brand assets + icon matrix + NavPane/HelpModal/About wiring, F35 local crash log (Rust panic hook + JS boundary + redactor + Diagnostics panel), F33 Updates panel scaffold + `tauri-plugin-updater` dep; carve F36 out of F35 for remote opt-in | 2026-05-19 | pending  | ✅ Done    |
 | 045 | Re-enable F26 GitHub HTTPS sync with repo-scoped fine-grained PAT credentials, add second-device clone flow, and keep SSH Deploy Key fallback                                                                                                                   | 2026-05-22 | pending  | ✅ Done    |
 | 046 | Fix triage daily/Todos modal flow, untitled Inbox deletion, stale note switching buffers, and Pinned naming/list consistency                                                                                                                                    | 2026-05-22 | pending  | ✅ Done    |
-| 047 | Increase the default app window width and start note views with the right inspector sidebar collapsed                                                                                                                                                          | 2026-05-22 | pending  | ✅ Done    |
-| 048 | Replace Focus-mode overlay drawers with full-page Search/Folders/Pinned/Tags/Recent sidebar views while keeping triage behavior intact                                                                                                                        | 2026-05-22 | pending  | ✅ Done    |
+| 047 | Increase the default app window width and start note views with the right inspector sidebar collapsed                                                                                                                                                           | 2026-05-22 | pending  | ✅ Done    |
+| 048 | Replace Focus-mode overlay drawers with full-page Search/Folders/Pinned/Tags/Recent sidebar views while keeping triage behavior intact                                                                                                                          | 2026-05-22 | pending  | ✅ Done    |
 
 ---
 

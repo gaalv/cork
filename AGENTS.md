@@ -28,7 +28,7 @@ Every feature is broken into atomic, traceable tasks. Multiple agents can work i
 
 ### Boundaries (hard rules)
 
-- **Do not modify a feature folder you don't own** unless your task explicitly says so. Cross-feature collaboration goes through `src/shared/*`.
+- **Do not modify files outside your task's "Where" list** unless the task explicitly says so. Cross-cutting state lives in `src/stores/*`, IPC in `src/ipc/*`, imperative flows in `src/services/*`.
 - **Do not edit `IpcContract.ts` and the Rust IPC handler in different commits.** Same task = same commit.
 - **Do not invent dependencies.** If a library isn't in `package.json` or `Cargo.toml`, your task must include adding it AND the spec must allow it. Otherwise stop and flag.
 - **Do not change conventions** (`CONVENTIONS.md`, `STRUCTURE.md`). If you think a rule should change, write a STATE.md entry and stop.
@@ -89,21 +89,19 @@ pnpm lint                 # eslint
   project/               # PROJECT, ROADMAP, STATE
   codebase/              # STACK, ARCHITECTURE, CONVENTIONS, STRUCTURE
   features/Fxx-*/        # spec.md + design.md + tasks.md
-src/                     # frontend
-  features/
-    ai/                  # AI infrastructure + generate note modal (F21, F23)
-    assets/              # Asset ingest service (F11 — backend only, no UI)
-    editor/              # CodeMirror 6 editor + Inspector panel (F05, F08, F32)
-    folder-ops/          # Folder CRUD, drag-drop, bulk ops (F12)
-    home/                # Empty — not yet implemented
-    index/               # SQLite index frontend hooks (F03)
-    quick-capture/       # Inbox + tray capture service (F17)
-    settings/            # Settings panel + theme runtime (F13, F15)
-    shell/               # Triage layout, command palette, view router (F04, F31)
-    sync/                # GitHub sync service (F26)
-    todos/               # Todos service registration (F25 — backend only, no UI)
-    vault/               # Vault store, lifecycle, hooks (F02)
-  shared/                # Cross-feature: stores, IPC, UI primitives, types
+src/                     # frontend (flat structure — feature folders removed in a1c5e06)
+  app/                   # App.tsx root composition
+  screens/               # Top-level surfaces: Shell, TriageBody, EmptyVault, WelcomeScreen, LoginScreen
+  components/            # UI by domain: editor/ (+inspector/), notes/, sidebar/, folders/,
+                         #   modals/ (CommandPalette, HelpModal, …), settings/, sync/, status/, auth/, ui/ (primitives)
+  cm/                    # CodeMirror 6 extensions: markdown, wikilinks, autocomplete, theme,
+                         #   dropPaste, imagePreview, checkboxes, viewRef
+  stores/                # Zustand: vaultStore, editorStore, indexStore, shellStore, appSettingsStore,
+                         #   settingsUiStore, syncStore, authStore, vimModeStore
+  ipc/                   # IpcContract.ts (single source of truth) + client.ts + types.ts + errors.ts
+  services/              # Imperative flows: createNote, folderOps, bulkOps, menuActions, assetIngest, …
+  hooks/                 # useShortcuts, useBulkSelection, useDragDropFolder, useDragRegion
+  types/  utils/         # Shared TS types; cn(), markdown/tag/triage helpers
 src-tauri/               # Rust backend
   src/
     ai/                  # Skills, cache, runner, telemetry
@@ -111,11 +109,14 @@ src-tauri/               # Rust backend
     diagnostics.rs       # Crash logging + redactor
     error.rs             # IpcError type
     index/               # SQLite schema, worker, parser, FTS5
+    lib.rs               # Builder + command registration
     menu.rs              # Native OS menu
     settings.rs          # App + vault settings bridge
-    todos/               # Todo CRUD on .cork/todos.json
-    vault/               # FS ops, watcher, scaffold, folders, bulk
+    shortcuts.rs         # Global shortcuts (quick capture)
+    tray.rs              # Tray icon + lifecycle
+    vault/               # FS ops, watcher, scaffold, folders, bulk, frontmatter, archive
     vcs/                 # Git local + remote sync
+    window.rs            # Window helpers
 brand/                   # Logo SVGs, icon source
 AGENTS.md                # this file
 CLAUDE.md                # Claude Code guidance
