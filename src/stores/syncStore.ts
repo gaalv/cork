@@ -11,6 +11,7 @@ type SyncState = {
   enable: (input?: { url?: string; token?: string }) => Promise<RemoteInfo>;
   disable: () => Promise<RemoteInfo>;
   syncNow: () => Promise<RemoteInfo>;
+  updateToken: (token: string) => Promise<RemoteInfo>;
   generateDeployKey: () => Promise<DeployKeyInfo>;
 };
 
@@ -56,6 +57,20 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const remote = await client.vcs.remoteSyncNow();
+      await get().refresh();
+      return remote;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      set({ error: msg });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
+  updateToken: async (token: string) => {
+    set({ loading: true, error: null });
+    try {
+      const remote = await client.vcs.updateToken(token);
       await get().refresh();
       return remote;
     } catch (err) {

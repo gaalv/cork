@@ -65,6 +65,14 @@ pub struct EnableRemoteInput {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct UpdateTokenInput {
+    /// Fresh fine-grained GitHub PAT. Replaces only the repo-local
+    /// credential file — remote config, URL, and history stay untouched.
+    pub token: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CloneRemoteInput {
     /// GitHub HTTPS remote URL, e.g. `https://github.com/owner/repo.git`.
     pub url: String,
@@ -1680,6 +1688,37 @@ pub async fn vcs_remote_disable(
     Ok(remote_state.snapshot())
 }
 
+/// Run one pull(+push if ahead) cycle right now, updating the shared state
+/// via `finish_op`. No-op if another operation is already in flight (the
+/// caller still gets a consistent snapshot afterwards). Shared by
+/// `vcs_remote_sync_now` and `vcs_update_token`.
+async fn sync_now_inner(remote_state: &RemoteState, vault_root: PathBuf) -> Result<(), IpcError> {
+    {
+        let mut g = remote_state
+            .inner
+            .lock()
+            .expect("remote state mutex poisoned");
+        if g.in_flight {
+            return Ok(());
+        }
+        g.in_flight = true;
+        g.status = SyncStatus::Syncing;
+    }
+    let inner = remote_state.inner_arc();
+    tauri::async_runtime::spawn_blocking(move || {
+        let pull_res = pull_with_conflict_copy(&vault_root);
+        if pull_res.is_ok() && local_is_ahead(&vault_root) {
+            let push_res = git_push(&vault_root);
+            finish_op(&inner, push_res, OpKind::Push);
+        } else {
+            finish_op(&inner, pull_res.map(|_| ()), OpKind::Pull);
+        }
+    })
+    .await
+    .map_err(|e| IpcError::Other(format!("background task failed: {e}")))?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn vcs_remote_sync_now(
     vault_state: tauri::State<'_, VaultState>,
@@ -1689,30 +1728,61 @@ pub async fn vcs_remote_sync_now(
     if !remote_state.is_enabled() {
         return Err(IpcError::Other("sync is disabled".into()));
     }
+    sync_now_inner(&remote_state, vault_root).await?;
+    Ok(remote_state.snapshot())
+}
+
+/// F41/SYNC-03 — replace the stored GitHub token in place. Rewrites only the
+/// repo-local credential file (remote config, URL, vault settings, and git
+/// history are untouched — the inline read-only helper re-reads the file on
+/// every operation), then validates with an immediate sync so the user gets
+/// fast feedback. If the new token also fails auth, the file is kept (the
+/// erase-proof helper guarantees git can never wipe it) and the failure is
+/// returned in the snapshot's `last_error`.
+#[tauri::command]
+pub async fn vcs_update_token(
+    vault_state: tauri::State<'_, VaultState>,
+    remote_state: tauri::State<'_, RemoteState>,
+    input: UpdateTokenInput,
+) -> Result<RemoteInfo, IpcError> {
+    let vault_root = vault_state.current_path().ok_or(IpcError::NotFound)?;
+    if !remote_state.is_enabled() {
+        return Err(IpcError::Other("sync is disabled".into()));
+    }
+
+    // Same validation as `configure_https_auth`.
+    let token = input.token.trim().to_string();
+    if token.is_empty() {
+        return Err(IpcError::Other(
+            "HTTPS sync requires a fine-grained GitHub personal access token".into(),
+        ));
+    }
+    if token.chars().any(char::is_control) {
+        return Err(IpcError::Other(
+            "GitHub token contains unsupported control characters".into(),
+        ));
+    }
+
+    let cred_path = https_credential_store_path(&vault_root);
+    tauri::async_runtime::spawn_blocking(move || write_https_credential_file(&cred_path, &token))
+        .await
+        .map_err(|e| IpcError::Other(format!("background task failed: {e}")))?
+        .map_err(IpcError::Other)?;
+
+    let _ = append_log(&vault_root, "[remote] token updated");
+
+    // Clear the stale auth error before validating — the immediate sync
+    // below writes the fresh outcome (success or new error) via `finish_op`.
     {
         let mut g = remote_state
             .inner
             .lock()
             .expect("remote state mutex poisoned");
-        if g.in_flight {
-            return Ok(remote_state.snapshot());
-        }
-        g.in_flight = true;
-        g.status = SyncStatus::Syncing;
+        g.last_error = None;
+        g.status = SyncStatus::Idle;
     }
-    let inner = remote_state.inner_arc();
-    let vault_root_for_blocking = vault_root.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let pull_res = pull_with_conflict_copy(&vault_root_for_blocking);
-        if pull_res.is_ok() && local_is_ahead(&vault_root_for_blocking) {
-            let push_res = git_push(&vault_root_for_blocking);
-            finish_op(&inner, push_res, OpKind::Push);
-        } else {
-            finish_op(&inner, pull_res.map(|_| ()), OpKind::Pull);
-        }
-    })
-    .await
-    .map_err(|e| IpcError::Other(format!("background task failed: {e}")))?;
+
+    sync_now_inner(&remote_state, vault_root).await?;
     Ok(remote_state.snapshot())
 }
 

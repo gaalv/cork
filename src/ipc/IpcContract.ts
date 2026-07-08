@@ -331,6 +331,10 @@ export type IpcCommandMap = {
     args: undefined;
     result: RemoteInfo;
   };
+  "vcs.updateToken": {
+    args: { token: string };
+    result: RemoteInfo;
+  };
   "vcs.generateDeployKey": {
     args: undefined;
     result: DeployKeyInfo;

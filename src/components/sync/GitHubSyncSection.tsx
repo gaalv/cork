@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useSyncStore } from "@/stores/syncStore";
+import { UpdateTokenRow } from "./UpdateTokenRow";
 import type { DeployKeyInfo } from "@/ipc/types";
 
 function relTime(iso: string | null): string {
@@ -50,6 +51,8 @@ export function GitHubSyncSection() {
   const hasGh = status?.hasGh ?? false;
   const ghAccount = status?.ghAccount ?? null;
   const enabled = remote?.enabled ?? false;
+  const isHttpsRemote = remote?.url?.startsWith("http") ?? false;
+  const errorLooksAuth = remote?.lastError ? /401|403|token|auth/i.test(remote.lastError) : false;
 
   const onEnable = async (withUrl: boolean) => {
     try {
@@ -426,8 +429,15 @@ export function GitHubSyncSection() {
           {remote.lastError && (
             <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-700 dark:text-red-300">
               {remote.lastError}
+              {errorLooksAuth && isHttpsRemote && (
+                <div className="mt-1 font-medium">
+                  This looks like a token problem — paste a fresh token in{" "}
+                  <strong>Update token</strong> below.
+                </div>
+              )}
             </div>
           )}
+          {isHttpsRemote && <UpdateTokenRow autoOpen={errorLooksAuth} />}
           <div className="flex gap-2 pt-1">
             <button
               type="button"

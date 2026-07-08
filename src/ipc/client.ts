@@ -78,6 +78,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "vcs.remoteClone": "vcs_remote_clone",
   "vcs.remoteDisable": "vcs_remote_disable",
   "vcs.remoteSyncNow": "vcs_remote_sync_now",
+  "vcs.updateToken": "vcs_update_token",
   "vcs.generateDeployKey": "vcs_generate_deploy_key",
   // === F21 AI Infrastructure ===
   "ai.runSkill": "ai_run_skill",
@@ -223,6 +224,7 @@ export const client = {
       invokeCommand("vcs.remoteClone", input),
     remoteDisable: () => invokeCommand("vcs.remoteDisable", undefined),
     remoteSyncNow: () => invokeCommand("vcs.remoteSyncNow", undefined),
+    updateToken: (token: string) => invokeCommand("vcs.updateToken", { token }),
     generateDeployKey: () => invokeCommand("vcs.generateDeployKey", undefined),
   },
   ai: {
@@ -312,6 +314,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "vcs.restore":
     case "vcs.remoteEnable":
     case "vcs.remoteClone":
+    case "vcs.updateToken":
       return { input: args } as RustArgs;
     case "ai.runSkill": {
       const input = args as { skillId: string; variables: Record<string, string> };
