@@ -11,6 +11,7 @@ import { FileDashed, FileText, MagnifyingGlass, Plus } from "@phosphor-icons/rea
 
 import { client } from "@/ipc/client";
 import { createNoteFromTemplate, createTemplateNote } from "@/services/createNote";
+import { insertTemplate } from "@/services/insertTemplate";
 import { useShellStore } from "@/stores/shellStore";
 import type { TemplateEntry } from "@/ipc/types";
 import type { TemplatePickerMode } from "@/stores/shellStore";
@@ -146,8 +147,9 @@ export function TemplatePicker() {
 function pickTemplate(template: TemplateEntry, mode: TemplatePickerMode) {
   if (mode === "create") {
     void createNoteFromTemplate(template.path);
+  } else {
+    void insertTemplate(template.path);
   }
-  // insert mode wired in F39-T06
 }
 
 function EmptyState({ onClose }: { onClose: () => void }) {
