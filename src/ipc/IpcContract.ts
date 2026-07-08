@@ -3,6 +3,8 @@ import type {
   BulkMoveResult,
   BulkPathResult,
   CommitEntry,
+  CreateFromTemplateInput,
+  CreateFromTemplateResult,
   CreateNoteInput,
   FolderCreateInput,
   FolderMoveInput,
@@ -229,6 +231,10 @@ export type IpcCommandMap = {
   "templates.render": {
     args: { path: string; title?: string };
     result: RenderedTemplate;
+  };
+  "notes.createFromTemplate": {
+    args: CreateFromTemplateInput;
+    result: CreateFromTemplateResult;
   };
   // === F12 Bulk Ops ===
   "notes.move": {

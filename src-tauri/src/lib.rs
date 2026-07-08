@@ -111,6 +111,7 @@ pub fn run() {
             // === F39 Templates ===
             vault::templates::templates_list,
             vault::templates::templates_render,
+            vault::templates::notes_create_from_template,
             vault::notes_read,
             vault::notes_save,
             vault::notes_create,

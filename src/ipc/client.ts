@@ -10,6 +10,7 @@ import type {
   IpcEventPayload,
 } from "./IpcContract";
 import type {
+  CreateFromTemplateInput,
   CreateNoteInput,
   FolderCreateInput,
   FolderMoveInput,
@@ -52,6 +53,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.trash": "notes_trash",
   "templates.list": "templates_list",
   "templates.render": "templates_render",
+  "notes.createFromTemplate": "notes_create_from_template",
   "notes.move": "notes_move",
   "notes.bulkMove": "notes_bulk_move",
   "notes.bulkTrash": "notes_bulk_trash",
@@ -184,6 +186,8 @@ export const client = {
     read: (path: string) => invokeCommand("notes.read", { path }),
     save: (input: SaveInput) => invokeCommand("notes.save", input),
     create: (input: CreateNoteInput) => invokeCommand("notes.create", input),
+    createFromTemplate: (input: CreateFromTemplateInput) =>
+      invokeCommand("notes.createFromTemplate", input),
     rename: (input: RenameNoteInput) => invokeCommand("notes.rename", input),
     trash: (path: string) => invokeCommand("notes.trash", { path }),
     move: (input: MoveNoteInput) => invokeCommand("notes.move", input),
@@ -317,6 +321,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "archive.note":
     case "archive.restore":
     case "templates.render":
+    case "notes.createFromTemplate":
       return args as RustArgs;
     case "vcs.history":
     case "vcs.restore":

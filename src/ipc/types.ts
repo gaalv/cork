@@ -84,6 +84,17 @@ export type RenderedTemplate = {
   cursorOffset: number | null;
 };
 
+export type CreateFromTemplateInput = {
+  folder: string;
+  templatePath: string;
+  title?: string;
+};
+
+export type CreateFromTemplateResult = {
+  path: string;
+  cursorOffset: number | null;
+};
+
 export type NoteEntry = {
   id: string;
   path: string;

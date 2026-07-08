@@ -4,11 +4,14 @@ use std::path::{Path, PathBuf};
 use chrono::SecondsFormat;
 use serde::Serialize;
 use serde_json::{Map, Value};
+use tauri::Emitter;
 use walkdir::WalkDir;
 
-use crate::vault::io::{map_not_found, to_slash_string};
+use crate::vault::fingerprint::FingerprintCache;
+use crate::vault::io::{self, map_not_found, to_slash_string};
 use crate::vault::settings::load_vault_settings;
-use crate::vault::VaultState;
+use crate::vault::watcher::{FileChangeKind, FileChangeSource, VaultFileChangedEvent};
+use crate::vault::{SaveInput, VaultState};
 use crate::IpcError;
 
 pub const DEFAULT_TEMPLATES_FOLDER: &str = "Templates";
@@ -177,6 +180,79 @@ fn resolve_title(title: Option<&str>) -> &str {
     } else {
         trimmed
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateFromTemplateResult {
+    pub path: PathBuf,
+    pub cursor_offset: Option<usize>,
+}
+
+pub fn create_note_from_template(
+    folder: &Path,
+    template_path: &Path,
+    title: Option<&str>,
+) -> Result<CreateFromTemplateResult, IpcError> {
+    let content = read_template(template_path)?;
+    let title = resolve_title(title);
+    let rendered = render(&content, title)?;
+
+    let mut frontmatter = match rendered.frontmatter {
+        Value::Object(map) => map,
+        _ => Map::new(),
+    };
+    // Template keys are preserved; `created` wins on a key conflict.
+    frontmatter.insert("created".to_string(), Value::String(io::iso_utc_now()));
+
+    fs::create_dir_all(folder)?;
+    let path = io::unique_note_path(folder, title);
+    let save_input = SaveInput {
+        path: path.clone(),
+        frontmatter: Value::Object(frontmatter),
+        body: rendered.body,
+        expected_mtime: None,
+    };
+    io::write_new_note(&save_input, &FingerprintCache::new())?;
+
+    Ok(CreateFromTemplateResult {
+        path,
+        cursor_offset: rendered.cursor_offset,
+    })
+}
+
+#[tauri::command]
+pub async fn notes_create_from_template(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, VaultState>,
+    vcs_state: tauri::State<'_, crate::vcs::VcsState>,
+    folder: String,
+    template_path: PathBuf,
+    title: Option<String>,
+) -> Result<CreateFromTemplateResult, IpcError> {
+    let root = state.current_path().ok_or(IpcError::NotFound)?;
+    let folder_path = crate::vault::resolve_folder(&root, &folder);
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        create_note_from_template(&folder_path, &template_path, title.as_deref())
+    })
+    .await
+    .map_err(|err| IpcError::Other(err.to_string()))??;
+
+    let metadata = fs::metadata(&result.path)?;
+    let mtime = io::metadata_mtime_ms(&metadata)?;
+    app.emit(
+        "vault:fileChanged",
+        VaultFileChangedEvent {
+            path: result.path.clone(),
+            kind: FileChangeKind::Created,
+            source: FileChangeSource::Internal,
+            mtime,
+            size: metadata.len(),
+        },
+    )
+    .map_err(|err| IpcError::Other(err.to_string()))?;
+    crate::vcs::on_note_saved(&vcs_state, &state, &result.path, true);
+    Ok(result)
 }
 
 #[tauri::command]

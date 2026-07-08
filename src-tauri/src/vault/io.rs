@@ -128,7 +128,10 @@ pub fn trash_note(path: &Path) -> Result<(), IpcError> {
     trash::delete(path).map_err(|err| IpcError::Io(err.to_string()))
 }
 
-fn write_new_note(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveResult, IpcError> {
+pub(crate) fn write_new_note(
+    input: &SaveInput,
+    cache: &FingerprintCache,
+) -> Result<SaveResult, IpcError> {
     let dir = input
         .path
         .parent()
@@ -155,7 +158,7 @@ fn write_new_note(input: &SaveInput, cache: &FingerprintCache) -> Result<SaveRes
     })
 }
 
-fn unique_note_path(folder: &Path, title: &str) -> PathBuf {
+pub(crate) fn unique_note_path(folder: &Path, title: &str) -> PathBuf {
     let stem = sanitize_file_stem(title);
     let mut candidate = folder.join(format!("{stem}.md"));
     let mut index = 1;
@@ -237,7 +240,7 @@ pub fn to_slash_string(path: &Path) -> String {
         .join("/")
 }
 
-fn iso_utc_now() -> String {
+pub(crate) fn iso_utc_now() -> String {
     chrono::Utc::now()
         .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }

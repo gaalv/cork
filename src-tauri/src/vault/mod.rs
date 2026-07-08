@@ -543,7 +543,7 @@ pub struct VaultFileRenamedEvent {
     pub new_path: PathBuf,
 }
 
-fn resolve_folder(root: &Path, folder: &str) -> PathBuf {
+pub(crate) fn resolve_folder(root: &Path, folder: &str) -> PathBuf {
     let folder_path = PathBuf::from(folder);
     if folder_path.is_absolute() {
         folder_path
