@@ -6,13 +6,35 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MagnifyingGlass, NotePencil, Plus, SidebarSimple, Sparkle } from "@phosphor-icons/react";
+import {
+  FilePlus,
+  MagnifyingGlass,
+  NotePencil,
+  Plus,
+  SidebarSimple,
+  Sparkle,
+  TextIndent,
+} from "@phosphor-icons/react";
+import { toast } from "sonner";
 
+import { getEditorView } from "@/cm/viewRef";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
 
 const COMMANDS = [
   { id: "new-note", label: "Create new note", hint: "\u2318 N", icon: <Plus size={14} /> },
+  {
+    id: "new-from-template",
+    label: "New note from template",
+    hint: "Templates",
+    icon: <FilePlus size={14} />,
+  },
+  {
+    id: "insert-template",
+    label: "Insert template",
+    hint: "Templates",
+    icon: <TextIndent size={14} />,
+  },
   {
     id: "ai-generate",
     label: "Generate note from topic",
@@ -31,7 +53,12 @@ export function CommandPalette() {
   const open = useShellStore((s) => s.paletteOpen);
   const close = useShellStore((s) => s.setPaletteOpen);
   const openNote = useShellStore((s) => s.openNote);
+  const view = useShellStore((s) => s.view);
   const notes = useVaultStore((s) => s.notes);
+
+  // A template can only be inserted while a note is open in edit mode —
+  // the CM6 view only exists then (preview unmounts it).
+  const canInsertTemplate = view.kind === "note" && getEditorView() !== null;
 
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -68,11 +95,19 @@ export function CommandPalette() {
           useShellStore.getState().setGenerateModalOpen(true);
         } else if (cmd.id === "toggle-inspector") {
           useShellStore.getState().toggleInspector();
+        } else if (cmd.id === "new-from-template") {
+          useShellStore.getState().setTemplatePickerMode("create");
+        } else if (cmd.id === "insert-template") {
+          if (!canInsertTemplate) {
+            toast("Open a note in edit mode to insert a template");
+            return;
+          }
+          useShellStore.getState().setTemplatePickerMode("insert");
         }
         close(false);
       }
     },
-    [close, matches, openNote],
+    [canInsertTemplate, close, matches, openNote],
   );
 
   const handleKeyDown = useCallback(
@@ -148,6 +183,7 @@ export function CommandPalette() {
                 title={cmd.label}
                 hint={cmd.hint}
                 selected={selectedIndex === matches.length + i}
+                dimmed={cmd.id === "insert-template" && !canInsertTemplate}
                 onClick={() => handleSelect(matches.length + i)}
               />
             ))}
@@ -174,12 +210,14 @@ function PaletteRow({
   title,
   hint,
   selected,
+  dimmed,
   onClick,
 }: {
   icon: React.ReactNode;
   title: string;
   hint?: string;
   selected?: boolean;
+  dimmed?: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -187,7 +225,7 @@ function PaletteRow({
       onClick={onClick}
       className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left ${
         selected ? "bg-[var(--color-cork-accent-soft)]" : "hover:bg-[var(--color-cork-panel-2)]"
-      }`}
+      } ${dimmed ? "opacity-50" : ""}`}
     >
       <span className="text-[var(--color-cork-muted)]">{icon}</span>
       <span className="flex-1 truncate text-[var(--color-cork-ink)]">{title}</span>

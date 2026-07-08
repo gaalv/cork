@@ -8,6 +8,7 @@ import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { GenerateNoteModal } from "@/components/modals/GenerateNoteModal";
 import { BulkActionsBar } from "@/components/folders/BulkActionsBar";
 import { CommandPalette } from "@/components/modals/CommandPalette";
+import { TemplatePicker } from "@/components/modals/TemplatePicker";
 import { WelcomeScreen } from "@/screens/WelcomeScreen";
 import { HelpModal } from "@/components/modals/HelpModal";
 import { Toaster } from "@/components/ui/Toaster";
@@ -76,6 +77,7 @@ export function Shell() {
         <WelcomeScreen />
         <CommandPalette />
         <GenerateNoteModal />
+        <TemplatePicker />
         <HelpModal />
         <SettingsPanel />
         <Toaster />
@@ -92,6 +94,7 @@ export function Shell() {
       <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
       <CommandPalette />
       <GenerateNoteModal />
+      <TemplatePicker />
       <HelpModal />
       <SettingsPanel />
       <Toaster />

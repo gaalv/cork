@@ -11,12 +11,15 @@ type View = { kind: "home" } | { kind: "note"; id: string } | { kind: "daily" };
 
 type Drawer = null | "search" | "starred" | "tags" | "folders";
 
+export type TemplatePickerMode = "create" | "insert";
+
 type ShellState = {
   view: View;
   drawer: Drawer;
   paletteOpen: boolean;
   helpOpen: boolean;
   generateModalOpen: boolean;
+  templatePickerMode: TemplatePickerMode | null;
   inspectorOpen: boolean;
   sidebarOpen: boolean;
   forceEdit: boolean;
@@ -26,6 +29,7 @@ type ShellState = {
   setPaletteOpen: (open: boolean) => void;
   setHelpOpen: (open: boolean) => void;
   setGenerateModalOpen: (open: boolean) => void;
+  setTemplatePickerMode: (mode: TemplatePickerMode | null) => void;
   toggleInspector: () => void;
   toggleSidebar: () => void;
   openNote: (id: string) => void;
@@ -39,6 +43,7 @@ export const useShellStore = create<ShellState>((set) => ({
   paletteOpen: false,
   helpOpen: false,
   generateModalOpen: false,
+  templatePickerMode: null,
   inspectorOpen: false,
   sidebarOpen: true,
   forceEdit: false,
@@ -52,6 +57,7 @@ export const useShellStore = create<ShellState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setGenerateModalOpen: (generateModalOpen) => set({ generateModalOpen }),
+  setTemplatePickerMode: (templatePickerMode) => set({ templatePickerMode }),
 
   toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
@@ -67,6 +73,7 @@ export const useShellStore = create<ShellState>((set) => ({
       paletteOpen: false,
       helpOpen: false,
       generateModalOpen: false,
+      templatePickerMode: null,
       inspectorOpen: false,
       sidebarOpen: true,
     }),
