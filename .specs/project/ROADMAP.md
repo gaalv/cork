@@ -295,7 +295,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ### Features
 
-**[F39 — Note Templates](../features/F39-templates/spec.md)** — PLANNED
+**[F39 — Note Templates](../features/F39-templates/spec.md)** — COMPLETE (pending user UAT)
 
 - Templates as plain `.md` notes in a configurable `Templates/` vault folder
 - 4 default templates seeded by scaffold (create-if-missing, never overwritten)

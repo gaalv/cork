@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-07-07T00:00-03:00
-**Current Work:** F41 Sync Resilience T01–T04 implemented and merged (see AD-058, L-024/L-025); awaiting user UAT with a fresh PAT via the new Update-token flow. Next in queue: F39 Templates, then F40 Status (both spec'd, M12).
+**Current Work:** F41 Sync Resilience merged + user-validated (Update token flow confirmed working). F39 Templates T01–T07 merged, pending user UAT. F40 Status executing next.
 
 ---
 
@@ -478,6 +478,7 @@ _None._
 | 047 | Increase the default app window width and start note views with the right inspector sidebar collapsed                                                                                                                                                           | 2026-05-22 | pending  | ✅ Done    |
 | 048 | Replace Focus-mode overlay drawers with full-page Search/Folders/Pinned/Tags/Recent sidebar views while keeping triage behavior intact                                                                                                                          | 2026-05-22 | pending  | ✅ Done    |
 | 049 | Implement F41 Sync Resilience T01–T04 (erase-proof credential helper, sync log → app_log_dir, vcs.updateToken + UI, error classification/offline state/heartbeat backoff); T05 expiry-awareness deferred P3                                                     | 2026-07-08 | multiple | ✅ Done    |
+| 050 | Implement F39 Note Templates T01–T07 (Rust templates module + list/render/createFromTemplate IPC, scaffold v3 seeds 4 defaults create-if-missing, TemplatePicker modal + palette, cursor placement, insert at cursor, Settings → Templates)                     | 2026-07-08 | multiple | ✅ Done    |
 
 ---
 
