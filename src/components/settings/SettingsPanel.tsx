@@ -19,6 +19,7 @@ import { GeneralSection } from "./GeneralSection";
 import { EditorSection } from "./EditorSection";
 import { FilesSection } from "./FilesSection";
 import { MarkdownSection } from "./MarkdownSection";
+import { TemplatesSection } from "./TemplatesSection";
 import { AiSection } from "./AiSection";
 import { AdvancedSection } from "./AdvancedSection";
 import { GitHubSyncSection } from "@/components/sync/GitHubSyncSection";
@@ -30,6 +31,7 @@ const SECTIONS: { id: SettingsSectionId; label: string }[] = [
   { id: "editor", label: "Editor" },
   { id: "files", label: "Files & Vaults" },
   { id: "markdown", label: "Markdown" },
+  { id: "templates", label: "Templates" },
   { id: "ai", label: "AI" },
   { id: "sync", label: "Sync" },
   { id: "advanced", label: "Advanced" },
@@ -130,6 +132,8 @@ function SectionContent({
       return <FilesSection settings={settings} update={update} />;
     case "markdown":
       return <MarkdownSection settings={settings} update={update} />;
+    case "templates":
+      return <TemplatesSection />;
     case "ai":
       return <AiSection settings={settings} update={update} providers={providers} />;
     case "sync":
