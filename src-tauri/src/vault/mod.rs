@@ -288,6 +288,7 @@ pub fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or(30);
                 archive::cleanup_expired(&path, retention_days);
                 remote.configure(Some(path.clone()), settings.and_then(|s| s.git_remote));
+                remote.reconcile_https_credentials();
             }
             state.start_watcher(&app_handle)?;
             if let Some(path) = state.current_path() {
@@ -344,6 +345,7 @@ pub async fn vault_open(
             .unwrap_or(30);
         archive::cleanup_expired(&path, retention_days);
         remote.configure(Some(path.clone()), settings.and_then(|s| s.git_remote));
+        remote.reconcile_https_credentials();
         crate::diagnostics::set_vault_root(Some(&path));
     }
     state.start_watcher(&app)?;

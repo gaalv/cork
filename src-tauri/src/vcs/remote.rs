@@ -148,6 +148,66 @@ impl RemoteState {
             .expect("remote state mutex poisoned")
             .enabled
     }
+
+    /// F41 migration + health check, run whenever the remote is configured at
+    /// vault open. Repairs vaults set up before the erase-proof helper:
+    ///
+    /// 1. Old `store --file` helper in git config → replaced with the inline
+    ///    read-only helper (git's `store` helper erases the file on 401).
+    /// 2. Credential file still in the legacy URL format → rewritten in
+    ///    credential-protocol format.
+    /// 3. Credential file missing or empty (the state a `credential-store`
+    ///    erase leaves behind) while sync is enabled → surfaced as an auth
+    ///    error so the UI can offer token recovery. Sync stays enabled and
+    ///    settings are untouched.
+    pub fn reconcile_https_credentials(&self) {
+        let (root, enabled, url) = {
+            let g = self.inner.lock().expect("remote state mutex poisoned");
+            (g.vault_root.clone(), g.enabled, g.url.clone())
+        };
+        let Some(root) = root else { return };
+        if !enabled || url.as_deref().map(is_ssh_url).unwrap_or(false) {
+            return;
+        }
+
+        // 1. Erasable `store --file` helper → inline read-only helper.
+        let helpers = run_git(&root, &["config", "--local", "--get-all", "credential.helper"])
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+            .unwrap_or_default();
+        if helpers
+            .lines()
+            .any(|l| l.trim_start().starts_with("store "))
+        {
+            let _ = run_git(
+                &root,
+                &["config", "--local", "--unset-all", "credential.helper"],
+            );
+            if let Err(err) = configure_credential_helper_config(&root) {
+                eprintln!("cork sync: credential helper migration failed: {err}");
+            }
+        }
+
+        // 2 + 3. Credential file format migration / empty-file detection.
+        let cred_path = https_credential_store_path(&root);
+        let contents = std::fs::read_to_string(&cred_path).unwrap_or_default();
+        let trimmed = contents.trim();
+        if let Some(token) = trimmed
+            .starts_with("https://")
+            .then(|| token_from_url_credential_line(trimmed))
+            .flatten()
+        {
+            if let Err(err) = write_https_credential_file(&cred_path, &token) {
+                eprintln!("cork sync: credential file migration failed: {err}");
+            }
+        } else if trimmed.is_empty() {
+            let mut g = self.inner.lock().expect("remote state mutex poisoned");
+            g.last_error =
+                Some("GitHub token missing — use Update token in Settings → Sync".to_string());
+            g.status = SyncStatus::Error;
+        }
+    }
 }
 
 // ── Worker bootstrap ─────────────────────────────────────────────────────────
@@ -385,14 +445,12 @@ fn run_git_remote(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
         .env("SSH_ASKPASS", "");
 
     if cred_path.exists() {
-        let helper = format!(
-            "store --file {}",
-            shell_single_quote(&cred_path.to_string_lossy())
-        );
+        let helper = read_only_credential_helper(&cred_path);
         // Empty string resets the credential helper chain, then we add ours
-        cmd.arg("-c").arg("credential.helper=")
-            .arg("-c").arg(format!("credential.helper={helper}"))
-            .arg("-c").arg("credential.useHttpPath=true");
+        cmd.arg("-c")
+            .arg("credential.helper=")
+            .arg("-c")
+            .arg(format!("credential.helper={helper}"));
     }
 
     cmd.args(args).output().map_err(|e| e.to_string())
@@ -630,14 +688,50 @@ fn percent_encode_userinfo(value: &str) -> String {
     encoded
 }
 
-fn github_https_credential_line(url: &str, token: &str) -> Result<String, String> {
-    let rest = url
-        .strip_prefix("https://github.com/")
-        .ok_or_else(|| "expected normalized GitHub HTTPS URL".to_string())?;
-    let encoded_token = percent_encode_userinfo(token);
-    Ok(format!(
-        "https://x-access-token:{encoded_token}@github.com/{rest}\n"
-    ))
+fn percent_decode(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && bytes[i + 1].is_ascii_hexdigit()
+            && bytes[i + 2].is_ascii_hexdigit()
+        {
+            if let Ok(b) = u8::from_str_radix(&value[i + 1..i + 3], 16) {
+                out.push(b);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// Inline read-only credential helper. Answers `get` by printing the
+/// credential file and silently ignores `store`/`erase` — git's builtin
+/// `store` helper implements `erase`, so a single transient 401 used to
+/// wipe a perfectly valid token from disk (F41/SYNC-01). With this helper
+/// git can never modify the file.
+fn read_only_credential_helper(credential_path: &Path) -> String {
+    format!(
+        "!f() {{ test \"$1\" = get && cat {}; }}; f",
+        shell_single_quote(&credential_path.to_string_lossy())
+    )
+}
+
+/// Extract the raw token from a legacy URL-format credential line
+/// (`https://x-access-token:<encoded-token>@github.com/owner/repo.git`).
+fn token_from_url_credential_line(line: &str) -> Option<String> {
+    let rest = line.strip_prefix("https://")?;
+    let userinfo = rest.split('@').next()?;
+    let (_user, encoded_token) = userinfo.split_once(':')?;
+    if encoded_token.is_empty() {
+        return None;
+    }
+    Some(percent_decode(encoded_token))
 }
 
 fn clear_https_auth(vault_root: &Path) {
@@ -677,7 +771,7 @@ fn clear_ssh_auth(vault_root: &Path) {
     );
 }
 
-fn configure_https_auth(vault_root: &Path, url: &str, token: &str) -> Result<(), String> {
+fn configure_https_auth(vault_root: &Path, token: &str) -> Result<(), String> {
     let token = token.trim();
     if token.is_empty() {
         return Err("HTTPS sync requires a fine-grained GitHub personal access token".to_string());
@@ -689,51 +783,50 @@ fn configure_https_auth(vault_root: &Path, url: &str, token: &str) -> Result<(),
     clear_https_auth(vault_root);
     clear_ssh_auth(vault_root);
 
+    configure_credential_helper_config(vault_root)?;
+    write_https_credential_file(&https_credential_store_path(vault_root), token)
+}
+
+/// Write the repo-local credential helper config: an empty entry first (to
+/// disable any inherited helpers such as the macOS Keychain), then the
+/// erase-proof inline helper pointing at our credential file.
+fn configure_credential_helper_config(vault_root: &Path) -> Result<(), String> {
     run_git_check(
         vault_root,
         &["config", "--local", "--add", "credential.helper", ""],
     )?;
-    let credential_path = https_credential_store_path(vault_root);
-    let helper = format!(
-        "store --file {}",
-        shell_single_quote(&credential_path.to_string_lossy())
-    );
+    let helper = read_only_credential_helper(&https_credential_store_path(vault_root));
     run_git_check(
         vault_root,
         &["config", "--local", "--add", "credential.helper", &helper],
     )?;
-    run_git_check(
-        vault_root,
-        &["config", "--local", "credential.useHttpPath", "true"],
-    )?;
-
-    let line = github_https_credential_line(url, token)?;
-    std::fs::write(&credential_path, line)
-        .map_err(|e| format!("could not write local GitHub credentials: {e}"))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        if let Ok(meta) = std::fs::metadata(&credential_path) {
-            let mut perms = meta.permissions();
-            perms.set_mode(0o600);
-            let _ = std::fs::set_permissions(&credential_path, perms);
-        }
-    }
     Ok(())
 }
 
-fn write_https_credential_file(path: &Path, url: &str, token: &str) -> Result<(), String> {
-    let line = github_https_credential_line(url, token)?;
-    std::fs::write(path, line).map_err(|e| format!("could not write GitHub credentials: {e}"))?;
+/// Write the credential file in git credential-protocol format
+/// (`username=…\npassword=…`, raw token — no percent-encoding needed).
+/// Atomic: temp file in the same directory + rename, 0600 on unix, so a
+/// crash mid-write can never leave a truncated token behind.
+pub(crate) fn write_https_credential_file(path: &Path, token: &str) -> Result<(), String> {
+    use std::io::Write;
+    let dir = path
+        .parent()
+        .ok_or_else(|| "credential path has no parent directory".to_string())?;
+    let mut temp = tempfile::NamedTempFile::new_in(dir)
+        .map_err(|e| format!("could not create temporary credential file: {e}"))?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Ok(meta) = std::fs::metadata(path) {
-            let mut perms = meta.permissions();
-            perms.set_mode(0o600);
-            let _ = std::fs::set_permissions(path, perms);
-        }
+        temp.as_file()
+            .set_permissions(std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| format!("could not set credential file permissions: {e}"))?;
     }
+    temp.write_all(format!("username=x-access-token\npassword={token}\n").as_bytes())
+        .map_err(|e| format!("could not write GitHub credentials: {e}"))?;
+    temp.flush()
+        .map_err(|e| format!("could not write GitHub credentials: {e}"))?;
+    temp.persist(path)
+        .map_err(|e| format!("could not write GitHub credentials: {e}"))?;
     Ok(())
 }
 
@@ -1180,11 +1273,8 @@ fn clone_remote_blocking(parent_path: &Path, input: CloneRemoteInput) -> Result<
 
     let credential_file = tempfile::NamedTempFile::new()
         .map_err(|e| IpcError::Io(format!("could not create temporary credential file: {e}")))?;
-    write_https_credential_file(credential_file.path(), &url, token).map_err(IpcError::Other)?;
-    let helper = format!(
-        "store --file {}",
-        shell_single_quote(&credential_file.path().to_string_lossy())
-    );
+    write_https_credential_file(credential_file.path(), token).map_err(IpcError::Other)?;
+    let helper = read_only_credential_helper(credential_file.path());
     let helper_config = format!("credential.helper={helper}");
 
     let clone_out = Command::new("git")
@@ -1196,8 +1286,6 @@ fn clone_remote_blocking(parent_path: &Path, input: CloneRemoteInput) -> Result<
         .arg("credential.helper=")
         .arg("-c")
         .arg(&helper_config)
-        .arg("-c")
-        .arg("credential.useHttpPath=true")
         .arg("clone")
         .arg("--origin")
         .arg("origin")
@@ -1239,7 +1327,7 @@ fn clone_remote_blocking(parent_path: &Path, input: CloneRemoteInput) -> Result<
     }
 
     run_git_check(&destination, &["remote", "set-url", "origin", &url]).map_err(IpcError::Other)?;
-    configure_https_auth(&destination, &url, token).map_err(IpcError::Other)?;
+    configure_https_auth(&destination, token).map_err(IpcError::Other)?;
     ensure_local_git_identity(&destination).map_err(IpcError::Other)?;
 
     let mut settings = load_vault_settings(&destination)?;
@@ -1348,7 +1436,7 @@ fn ensure_head_exists(vault_root: &Path) {
 fn enable_https_remote_blocking(vault_root: &Path, url: &str, token: &str) -> Result<(), IpcError> {
     let _ = run_git(vault_root, &["remote", "remove", "origin"]);
     run_git_check(vault_root, &["remote", "add", "origin", url]).map_err(IpcError::Other)?;
-    configure_https_auth(vault_root, url, token).map_err(|err| {
+    configure_https_auth(vault_root, token).map_err(|err| {
         let _ = run_git(vault_root, &["remote", "remove", "origin"]);
         IpcError::Other(err)
     })?;
