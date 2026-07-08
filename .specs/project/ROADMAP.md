@@ -318,7 +318,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ### Features
 
-**[F41 — Sync Resilience](../features/F41-sync-resilience/spec.md)** — PLANNED (root cause diagnosed 2026-07-07 from live vault)
+**[F41 — Sync Resilience](../features/F41-sync-resilience/spec.md)** — COMPLETE (T05 expiry-awareness deferred as P3; pending user UAT on live vault)
 
 - Erase-proof credential helper — a spurious 401 (proxy/hibernation) can no longer wipe a valid PAT (git `credential-store` erase semantics were destroying it)
 - "Update token" in place — recovery without touching remote/URL/history

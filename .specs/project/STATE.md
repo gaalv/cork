@@ -1,7 +1,7 @@
 # State
 
 **Last Updated:** 2026-07-07T00:00-03:00
-**Current Work:** F39 Templates + F40 Status (M12) and F41 Sync Resilience (M13) spec/design/tasks authored; execution pending user go-ahead. F41 came from a live sync-loss incident (see AD-058) — likely first in the execution queue. AGENTS.md/CLAUDE.md refreshed to match the flattened frontend structure.
+**Current Work:** F41 Sync Resilience T01–T04 implemented and merged (see AD-058, L-024/L-025); awaiting user UAT with a fresh PAT via the new Update-token flow. Next in queue: F39 Templates, then F40 Status (both spec'd, M12).
 
 ---
 
@@ -419,6 +419,8 @@ _None._
 - **L-021:** Shelling out to the system `git` binary keeps Local History bundle-cheap; libgit2 (`git2` crate) was tempting but added megabytes for no user-visible win.
 - **L-022:** When a chrome topology has two valid shapes (rail+topbar vs. NavPane-owned), build the shared body components first and let chrome composition diverge; otherwise you end up duplicating drawer / palette wiring across modes.
 - **L-023:** Tag list rendering must not assume the index has emitted its first `index:updated` event before the component subscribes — derive a fallback from open buffer + recent notes, then reconcile when the real list arrives.
+- **L-024:** git's `credential-store` helper ERASES the stored credential when the server rejects it — a single transient 401 permanently destroys a valid PAT. For app-managed credentials, use an inline read-only helper (`get` answers, `store`/`erase` no-op) so git can never mutate the file.
+- **L-025:** Never write an app log inside a git-swept directory — the F26 sweep committed `.cork/sync.log`'s own growth every heartbeat, producing 5,848 junk commits and a push to GitHub every 12s (which amplified the odds of hitting the transient 401 in L-024). App logs belong in `app_log_dir`.
 
 ---
 
@@ -475,6 +477,7 @@ _None._
 | 046 | Fix triage daily/Todos modal flow, untitled Inbox deletion, stale note switching buffers, and Pinned naming/list consistency                                                                                                                                    | 2026-05-22 | pending  | ✅ Done    |
 | 047 | Increase the default app window width and start note views with the right inspector sidebar collapsed                                                                                                                                                           | 2026-05-22 | pending  | ✅ Done    |
 | 048 | Replace Focus-mode overlay drawers with full-page Search/Folders/Pinned/Tags/Recent sidebar views while keeping triage behavior intact                                                                                                                          | 2026-05-22 | pending  | ✅ Done    |
+| 049 | Implement F41 Sync Resilience T01–T04 (erase-proof credential helper, sync log → app_log_dir, vcs.updateToken + UI, error classification/offline state/heartbeat backoff); T05 expiry-awareness deferred P3                                                     | 2026-07-08 | multiple | ✅ Done    |
 
 ---
 
