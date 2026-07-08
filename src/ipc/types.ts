@@ -186,6 +186,8 @@ export type CommitEntry = {
 
 export type SyncStatus = "idle" | "syncing" | "error";
 
+export type SyncErrorKind = "auth" | "network" | "other";
+
 export type RemoteInfo = {
   enabled: boolean;
   url: string | null;
@@ -193,6 +195,8 @@ export type RemoteInfo = {
   lastPush: string | null;
   lastPull: string | null;
   lastError: string | null;
+  /** Optional: absent on snapshots from builds older than F41-T04. */
+  errorKind?: SyncErrorKind | null;
 };
 
 export type GhAccount = {

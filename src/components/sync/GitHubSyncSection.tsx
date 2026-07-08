@@ -52,7 +52,15 @@ export function GitHubSyncSection() {
   const ghAccount = status?.ghAccount ?? null;
   const enabled = remote?.enabled ?? false;
   const isHttpsRemote = remote?.url?.startsWith("http") ?? false;
-  const errorLooksAuth = remote?.lastError ? /401|403|token|auth/i.test(remote.lastError) : false;
+  // Prefer the backend's classification (F41/SYNC-04); the substring check
+  // only remains as a fallback for snapshots from builds without errorKind.
+  const errorKind = remote?.errorKind ?? null;
+  const errorLooksAuth =
+    errorKind === "auth" ||
+    (errorKind == null &&
+      remote?.lastError != null &&
+      /401|403|token|auth/i.test(remote.lastError));
+  const errorLooksOffline = errorKind === "network";
 
   const onEnable = async (withUrl: boolean) => {
     try {
@@ -426,7 +434,12 @@ export function GitHubSyncSection() {
           <Row label="Status" value={remote.syncStatus} />
           <Row label="Last push" value={relTime(remote.lastPush)} />
           <Row label="Last pull" value={relTime(remote.lastPull)} />
-          {remote.lastError && (
+          {remote.lastError && errorLooksOffline && (
+            <div className="rounded border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-3 py-2 text-[var(--color-cork-muted)]">
+              Offline — GitHub is unreachable right now. Sync will retry automatically.
+            </div>
+          )}
+          {remote.lastError && !errorLooksOffline && (
             <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-700 dark:text-red-300">
               {remote.lastError}
               {errorLooksAuth && isHttpsRemote && (

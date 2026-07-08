@@ -39,10 +39,23 @@ export function SyncIndicator() {
     className = "text-[var(--color-cork-primary)] animate-pulse";
     label = "Syncing…";
   } else if (remote.syncStatus === "error") {
-    Icon = Warning;
-    className = "text-red-500";
-    label = remote.lastError ? `Sync error: ${remote.lastError}` : "Sync error";
-    weight = "fill";
+    if (remote.errorKind === "network") {
+      // Being offline is not an error worth alarming over — calm, muted,
+      // the heartbeat retries (with backoff) on its own.
+      Icon = CloudSlash;
+      className = "text-[var(--color-cork-muted)] hover:text-[var(--color-cork-ink)]";
+      label = "Offline — will retry";
+    } else if (remote.errorKind === "auth") {
+      Icon = Warning;
+      className = "text-red-500";
+      label = "Sync auth failed — update your token";
+      weight = "fill";
+    } else {
+      Icon = Warning;
+      className = "text-red-500";
+      label = remote.lastError ? `Sync error: ${remote.lastError}` : "Sync error";
+      weight = "fill";
+    }
   } else if (!remote.url) {
     Icon = CloudSlash;
     label = "Sync enabled but no remote configured";

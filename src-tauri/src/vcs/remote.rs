@@ -4,7 +4,8 @@
 //! - **Push worker** — wakes on `mark_push_pending`, debounces 5 s, runs
 //!   `git push origin <branch>` and coalesces concurrent requests.
 //! - **Heartbeat worker** — every 12 s runs `pull_with_conflict_copy` and,
-//!   when local commits are ahead, triggers a push.
+//!   when local commits are ahead, triggers a push. Consecutive failures back
+//!   the interval off exponentially (12 s → 300 s cap); any success resets it.
 //!
 //! Conflict policy: 3-way merge first (default `git merge`), conflict-as-copy
 //! fallback. The remote version of any conflicted file is preserved as
@@ -41,6 +42,59 @@ impl Default for SyncStatus {
     }
 }
 
+/// F41/SYNC-04 — coarse classification of a failed sync operation, derived
+/// from the git error string. Drives distinct UI treatments: `Network` gets a
+/// calm "Offline — will retry" state, `Auth` gets an actionable
+/// "update your token" state, `Other` keeps generic error rendering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ErrorKind {
+    Auth,
+    Network,
+    Other,
+}
+
+impl ErrorKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            ErrorKind::Auth => "auth",
+            ErrorKind::Network => "network",
+            ErrorKind::Other => "other",
+        }
+    }
+}
+
+/// Classify a sync error string (case-insensitive substring match).
+fn classify_error(err: &str) -> ErrorKind {
+    const AUTH_MARKERS: &[&str] = &[
+        "401",
+        "403",
+        "authentication failed",
+        "permission",
+        "invalid username or token",
+        "token missing",
+    ];
+    const NETWORK_MARKERS: &[&str] = &[
+        "could not resolve",
+        "failed to connect",
+        "connection",
+        "timed out",
+        "unreachable",
+        "reset by peer",
+        "no route",
+        "ssl",
+        "network is",
+    ];
+    let lower = err.to_lowercase();
+    if AUTH_MARKERS.iter().any(|m| lower.contains(m)) {
+        ErrorKind::Auth
+    } else if NETWORK_MARKERS.iter().any(|m| lower.contains(m)) {
+        ErrorKind::Network
+    } else {
+        ErrorKind::Other
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoteInfo {
@@ -50,6 +104,7 @@ pub struct RemoteInfo {
     pub last_push: Option<String>,
     pub last_pull: Option<String>,
     pub last_error: Option<String>,
+    pub error_kind: Option<ErrorKind>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -91,6 +146,8 @@ pub(crate) struct RemoteInner {
     pub(crate) last_push: Option<String>,
     pub(crate) last_pull: Option<String>,
     pub(crate) last_error: Option<String>,
+    pub(crate) error_kind: Option<ErrorKind>,
+    pub(crate) consecutive_failures: u32,
     pub(crate) push_pending: bool,
     pub(crate) in_flight: bool,
     pub(crate) push_queued_at: Option<Instant>,
@@ -119,6 +176,7 @@ impl RemoteState {
             last_push: inner.last_push.clone(),
             last_pull: inner.last_pull.clone(),
             last_error: inner.last_error.clone(),
+            error_kind: inner.error_kind,
         }
     }
 
@@ -147,6 +205,8 @@ impl RemoteState {
         }
         inner.status = SyncStatus::Idle;
         inner.last_error = None;
+        inner.error_kind = None;
+        inner.consecutive_failures = 0;
     }
 
     /// Mark that a push is needed. Idempotent. Sets `push_queued_at` to now to
@@ -223,6 +283,7 @@ impl RemoteState {
             let mut g = self.inner.lock().expect("remote state mutex poisoned");
             g.last_error =
                 Some("GitHub token missing — use Update token in Settings → Sync".to_string());
+            g.error_kind = Some(ErrorKind::Auth);
             g.status = SyncStatus::Error;
         }
     }
@@ -232,6 +293,17 @@ impl RemoteState {
 
 const PUSH_DEBOUNCE: Duration = Duration::from_secs(5);
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(12);
+const HEARTBEAT_MAX_INTERVAL: Duration = Duration::from_secs(300);
+
+/// F41/SYNC-06 — exponential heartbeat backoff. `12s * 2^failures` capped at
+/// 300 s (12 → 24 → 48 → 96 → 192 → 300). Only the idle heartbeat backs off:
+/// the push worker still wakes on `mark_push_pending`, so a user save punches
+/// through immediately even while offline.
+fn heartbeat_interval(consecutive_failures: u32) -> Duration {
+    let base = HEARTBEAT_INTERVAL.as_secs();
+    let multiplier = 1u64 << consecutive_failures.min(5);
+    Duration::from_secs((base * multiplier).min(HEARTBEAT_MAX_INTERVAL.as_secs()))
+}
 
 pub fn start_workers(state: &RemoteState) {
     if state.workers_started.swap(true, Ordering::SeqCst) {
@@ -276,8 +348,21 @@ fn push_worker_loop(inner: Arc<Mutex<RemoteInner>>) {
 }
 
 fn heartbeat_worker_loop(inner: Arc<Mutex<RemoteInner>>) {
+    // Sleep in 1 s ticks instead of one long sleep so a backoff change
+    // (e.g. success resetting `consecutive_failures` from a punched-through
+    // push) takes effect immediately instead of after waiting out a
+    // minutes-long sleep.
+    let mut last_beat = Instant::now();
     loop {
-        std::thread::sleep(HEARTBEAT_INTERVAL);
+        std::thread::sleep(Duration::from_secs(1));
+        let interval = {
+            let g = inner.lock().expect("remote state mutex poisoned");
+            heartbeat_interval(g.consecutive_failures)
+        };
+        if last_beat.elapsed() < interval {
+            continue;
+        }
+        last_beat = Instant::now();
         let root: Option<PathBuf> = {
             let mut g = inner.lock().expect("remote state mutex poisoned");
             if !g.enabled || g.in_flight {
@@ -317,21 +402,52 @@ enum OpKind {
 
 fn finish_op(inner: &Arc<Mutex<RemoteInner>>, outcome: Result<(), String>, kind: OpKind) {
     let now_iso = chrono::Utc::now().to_rfc3339();
-    let mut g = inner.lock().expect("remote state mutex poisoned");
-    g.in_flight = false;
-    match outcome {
-        Ok(()) => {
-            g.last_error = None;
-            g.status = SyncStatus::Idle;
-            match kind {
-                OpKind::Push => g.last_push = Some(now_iso),
-                OpKind::Pull => g.last_pull = Some(now_iso),
+    // Error-kind transitions are logged once per change of state — never per
+    // repeat — so an offline night doesn't flood the log with one line per
+    // backoff cycle. The line is written after the lock is released.
+    let mut transition_log: Option<(PathBuf, String)> = None;
+    {
+        let mut g = inner.lock().expect("remote state mutex poisoned");
+        g.in_flight = false;
+        match outcome {
+            Ok(()) => {
+                if g.error_kind.is_some() {
+                    if let Some(root) = g.vault_root.clone() {
+                        transition_log = Some((
+                            root,
+                            format!(
+                                "[state] recovered after {} consecutive failure(s)",
+                                g.consecutive_failures
+                            ),
+                        ));
+                    }
+                }
+                g.last_error = None;
+                g.error_kind = None;
+                g.consecutive_failures = 0;
+                g.status = SyncStatus::Idle;
+                match kind {
+                    OpKind::Push => g.last_push = Some(now_iso),
+                    OpKind::Pull => g.last_pull = Some(now_iso),
+                }
+            }
+            Err(err) => {
+                let err_kind = classify_error(&err);
+                if g.error_kind != Some(err_kind) {
+                    if let Some(root) = g.vault_root.clone() {
+                        transition_log =
+                            Some((root, format!("[state] error ({}): {err}", err_kind.as_str())));
+                    }
+                }
+                g.last_error = Some(err);
+                g.error_kind = Some(err_kind);
+                g.consecutive_failures = g.consecutive_failures.saturating_add(1);
+                g.status = SyncStatus::Error;
             }
         }
-        Err(err) => {
-            g.last_error = Some(err);
-            g.status = SyncStatus::Error;
-        }
+    }
+    if let Some((root, line)) = transition_log {
+        let _ = append_log(&root, &line);
     }
 }
 
@@ -1779,6 +1895,8 @@ pub async fn vcs_update_token(
             .lock()
             .expect("remote state mutex poisoned");
         g.last_error = None;
+        g.error_kind = None;
+        g.consecutive_failures = 0;
         g.status = SyncStatus::Idle;
     }
 
