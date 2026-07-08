@@ -7,7 +7,7 @@ use serde::Serialize;
 use crate::vault::VaultState;
 use crate::IpcError;
 
-const SCAFFOLD_VERSION: u8 = 2;
+const SCAFFOLD_VERSION: u8 = 3;
 const MARKER_IGNORE_ENTRY: &str = ".cork/scaffold.json";
 const SCAFFOLD_FILES: &[(&str, &str)] = &[
     (
@@ -604,6 +604,131 @@ A small reminder that ships in every Cork vault. Edit it, delete it, replace it 
     ),
 ];
 
+/// Default note templates (F39). Kept OUT of `SCAFFOLD_FILES` on purpose:
+/// the version-refresh path overwrites scaffold files, but templates are
+/// user-owned after first seed — they are only ever created if missing,
+/// never overwritten or resurrected with different content.
+const TEMPLATE_FILES: &[(&str, &str)] = &[
+    (
+        "Templates/Meeting.md",
+        r#"---
+tags: [meeting]
+---
+
+# Meeting — {{date}}
+
+## Attendees
+
+-
+
+## Agenda
+
+1.
+
+## Notes
+
+{{cursor}}
+
+## Action items
+
+- [ ]
+- [ ] Log follow-ups in [[Daily/Today]]
+"#,
+    ),
+    (
+        "Templates/Project.md",
+        r#"---
+tags: [project]
+status: active
+---
+
+# {{title}}
+
+## Goal
+
+> One sentence describing what shipped looks like.
+
+## Context
+
+Why now? Link the notes that led here, e.g. [[Projects/Cork Roadmap]].
+
+## Milestones
+
+- [ ] Spike / prototype
+- [ ] First end-to-end slice
+- [ ] Polish + ship
+
+## Links
+
+- [[Daily/Today]]
+-
+"#,
+    ),
+    (
+        "Templates/Bug Report.md",
+        r#"---
+tags: [bug]
+---
+
+# {{title}}
+
+## Environment
+
+- App version:
+- OS:
+- Reproduces on: main? release?
+
+## Steps to reproduce
+
+1.
+
+## Expected
+
+-
+
+## Actual
+
+-
+
+## Hypothesis
+
+{{cursor}}
+
+> [!tip]
+> Resist "just trying things" — see [[Engineering/Debugging Playbook]].
+"#,
+    ),
+    (
+        "Templates/Decision.md",
+        r#"---
+tags: [decision]
+---
+
+# {{title}}
+
+- Date: {{date}}
+- Status: proposed
+
+## Context
+
+What forces are at play? Link the relevant notes, e.g. [[Engineering/Patterns]].
+
+## Options considered
+
+1. **Option A** —
+2. **Option B** —
+
+## Decision
+
+{{cursor}}
+
+## Consequences
+
+-
+"#,
+    ),
+];
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScaffoldResult {
@@ -651,6 +776,7 @@ pub(crate) fn scaffold_if_needed_at(
             fs::write(&target, content)?;
             refreshed_files.push((*relative_path).to_string());
         }
+        seed_templates(vault_root, &mut refreshed_files)?;
         ensure_marker_gitignored(vault_root)?;
         write_marker(&marker, created_at)?;
         return Ok(ScaffoldResult {
@@ -672,6 +798,7 @@ pub(crate) fn scaffold_if_needed_at(
         created_files.push((*relative_path).to_string());
     }
 
+    seed_templates(vault_root, &mut created_files)?;
     ensure_marker_gitignored(vault_root)?;
     write_marker(&marker, created_at)?;
 
@@ -679,6 +806,25 @@ pub(crate) fn scaffold_if_needed_at(
         created: true,
         files: created_files,
     })
+}
+
+/// Seed default templates create-if-missing. Runs on BOTH the fresh scaffold
+/// and the version-refresh path — an existing template file (edited or not)
+/// must never be overwritten, and a deleted one is only recreated by a
+/// version bump, matching the "user owns Templates/" rule from F39.
+fn seed_templates(vault_root: &Path, created_files: &mut Vec<String>) -> Result<(), IpcError> {
+    for (relative_path, content) in TEMPLATE_FILES {
+        let target = vault_root.join(relative_path);
+        if target.exists() {
+            continue;
+        }
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&target, content)?;
+        created_files.push((*relative_path).to_string());
+    }
+    Ok(())
 }
 
 fn read_marker_version(marker: &Path) -> Option<u8> {
