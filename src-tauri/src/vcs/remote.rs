@@ -115,6 +115,16 @@ impl RemoteState {
     }
 
     pub fn configure(&self, vault_root: Option<PathBuf>, settings: Option<GitRemoteSettings>) {
+        // F41 legacy cleanup: the sync log used to live inside the vault,
+        // where the heartbeat sweep committed the log's own growth every
+        // 12 s. Delete it once — the next sweep commits the deletion (the
+        // last sync.log commit ever).
+        if let Some(root) = &vault_root {
+            let legacy_log = root.join(".cork").join("sync.log");
+            if legacy_log.exists() {
+                let _ = std::fs::remove_file(&legacy_log);
+            }
+        }
         let mut inner = self.inner.lock().expect("remote state mutex poisoned");
         inner.vault_root = vault_root;
         match settings {
@@ -1071,12 +1081,21 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
     if !vault_root.join(".git").exists() {
         return Ok(PullOutcome::NotConfigured);
     }
-    let _ = append_log(vault_root, "[pull] fetch");
-    let fetch_out = run_git_remote(vault_root, &["fetch", "origin"])?;
+    // Routine heartbeat fetches are silent — only errors and real merges
+    // are worth a log line (SYNC-08 de-noise).
+    let fetch_out = match run_git_remote(vault_root, &["fetch", "origin"]) {
+        Ok(out) => out,
+        Err(err) => {
+            let _ = append_log(vault_root, &format!("[pull] error: {err}"));
+            return Err(err);
+        }
+    };
     if !fetch_out.status.success() {
-        return Err(String::from_utf8_lossy(&fetch_out.stderr)
+        let stderr = String::from_utf8_lossy(&fetch_out.stderr)
             .trim()
-            .to_string());
+            .to_string();
+        let _ = append_log(vault_root, &format!("[pull] error: {stderr}"));
+        return Err(stderr);
     }
 
     // Determine upstream branch ref. If none, abort gracefully.
@@ -1087,9 +1106,19 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
     .map(|s| s.trim().to_string())
     .unwrap_or_else(|_| "origin/main".to_string());
 
+    let head_before = run_git_check(vault_root, &["rev-parse", "HEAD"])
+        .map(|s| s.trim().to_string())
+        .ok();
     let merge = run_git(vault_root, &["merge", "--no-edit", "--no-ff", &upstream])?;
     if merge.status.success() {
-        let _ = append_log(vault_root, "[pull] merged cleanly");
+        // "Already up to date" also exits 0 — only log when HEAD actually
+        // moved, so routine no-op heartbeats stay silent.
+        let head_after = run_git_check(vault_root, &["rev-parse", "HEAD"])
+            .map(|s| s.trim().to_string())
+            .ok();
+        if head_before != head_after {
+            let _ = append_log(vault_root, "[pull] merged cleanly");
+        }
         return Ok(PullOutcome::Merged);
     }
 
@@ -1105,7 +1134,9 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
         // Some other failure — abort and bubble up
         let _ = run_git(vault_root, &["merge", "--abort"]);
         let stderr = String::from_utf8_lossy(&merge.stderr).to_string();
-        return Err(format!("merge failed without conflict list: {stderr}"));
+        let msg = format!("merge failed without conflict list: {stderr}");
+        let _ = append_log(vault_root, &format!("[pull] error: {msg}"));
+        return Err(msg);
     }
 
     let host = hostname();
@@ -1186,9 +1217,18 @@ fn hostname() -> String {
 
 const MAX_LOG_BYTES: u64 = 1_048_576;
 
+/// Append one line to `<app_log_dir>/sync.log` — NEVER a path inside the
+/// vault. A vault-resident log gets swept into the heartbeat commit, which
+/// commits the log's own growth and pushes every 12 s forever (F41/SYNC-08).
+///
+/// Lines are prefixed with the vault folder basename (multi-vault: one file,
+/// F35 parity) and every line goes through the F35 redactor before it
+/// reaches disk.
 fn append_log(vault_root: &Path, line: &str) -> std::io::Result<()> {
     use std::io::Write;
-    let dir = vault_root.join(".cork");
+    let dir = crate::diagnostics::log_dir().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, "app log dir not resolved")
+    })?;
     std::fs::create_dir_all(&dir)?;
     let path = dir.join("sync.log");
     if let Ok(meta) = std::fs::metadata(&path) {
@@ -1196,12 +1236,18 @@ fn append_log(vault_root: &Path, line: &str) -> std::io::Result<()> {
             let _ = std::fs::remove_file(&path);
         }
     }
+    let vault_name = vault_root
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "vault".to_string());
+    let vault_str = vault_root.to_string_lossy();
+    let redacted = crate::diagnostics::redact(line, Some(&vault_str));
     let mut f = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(path)?;
     let now = chrono::Utc::now().to_rfc3339();
-    writeln!(f, "{now} {line}")
+    writeln!(f, "{now} [{vault_name}] {redacted}")
 }
 
 // ── IPC commands ─────────────────────────────────────────────────────────────
@@ -1374,6 +1420,7 @@ pub async fn vcs_remote_enable(
     });
     save_vault_settings(&vault_root, &settings)?;
 
+    let _ = append_log(&vault_root, &format!("[remote] enabled {url_set}"));
     remote_state.configure(Some(vault_root), settings.git_remote.clone());
     Ok(remote_state.snapshot())
 }
@@ -1628,6 +1675,7 @@ pub async fn vcs_remote_disable(
         provider: Some("github".to_string()),
     });
     save_vault_settings(&vault_root, &settings)?;
+    let _ = append_log(&vault_root, "[remote] disabled");
     remote_state.configure(Some(vault_root), settings.git_remote);
     Ok(remote_state.snapshot())
 }

@@ -126,6 +126,13 @@ fn current_log_dir() -> Option<PathBuf> {
     STATE.get()?.lock().ok()?.log_dir.clone()
 }
 
+/// App log directory resolved during [`setup`]. Shared with the sync log
+/// (F41/SYNC-08) so all local logs live next to `crashes.log`, never inside
+/// a vault.
+pub fn log_dir() -> Option<PathBuf> {
+    current_log_dir()
+}
+
 fn current_vault_root() -> Option<String> {
     STATE.get()?.lock().ok()?.vault_root.clone()
 }
