@@ -25,6 +25,9 @@ pub struct VaultSettings {
     pub folder_colors: Option<HashMap<String, String>>,
     /// Days to keep archived notes before auto-deleting (0 = keep forever).
     pub archive_retention_days: Option<u32>,
+    /// Vault-relative folder scanned for note templates (F39). Defaults to
+    /// `"Templates"` — resolved in `vault::templates::templates_dir`.
+    pub templates_folder: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

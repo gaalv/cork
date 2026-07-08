@@ -108,6 +108,9 @@ pub fn run() {
             vault::folders::folders_rename,
             vault::folders::folders_move,
             vault::folders::folders_trash,
+            // === F39 Templates ===
+            vault::templates::templates_list,
+            vault::templates::templates_render,
             vault::notes_read,
             vault::notes_save,
             vault::notes_create,

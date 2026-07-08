@@ -50,6 +50,8 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.create": "notes_create",
   "notes.rename": "notes_rename",
   "notes.trash": "notes_trash",
+  "templates.list": "templates_list",
+  "templates.render": "templates_render",
   "notes.move": "notes_move",
   "notes.bulkMove": "notes_bulk_move",
   "notes.bulkTrash": "notes_bulk_trash",
@@ -196,6 +198,10 @@ export const client = {
     byId: (id: string) => invokeCommand("notes.byId", { id }),
     pinned: () => invokeCommand("notes.pinned", undefined),
   },
+  templates: {
+    list: () => invokeCommand("templates.list", undefined),
+    render: (path: string, title?: string) => invokeCommand("templates.render", { path, title }),
+  },
   tags: {
     create: (tag: string) => invokeCommand("tags.create", { tag }),
     list: () => invokeCommand("tags.list", undefined),
@@ -296,6 +302,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "ai.skillsList":
     case "ai.telemetryClear":
     case "diagnostics.crashLogPath":
+    case "templates.list":
       return undefined;
     case "vault.open":
     case "vault.removeRecent":
@@ -309,6 +316,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "index.search":
     case "archive.note":
     case "archive.restore":
+    case "templates.render":
       return args as RustArgs;
     case "vcs.history":
     case "vcs.restore":

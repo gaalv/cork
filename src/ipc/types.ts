@@ -67,6 +67,21 @@ export type VaultSettings = {
   folderIcons?: Record<string, string>;
   folderColors?: Record<string, string>;
   archiveRetentionDays?: number;
+  templatesFolder?: string;
+};
+
+// === F39 Templates ===
+export type TemplateEntry = {
+  name: string;
+  path: string;
+  relPath: string;
+};
+
+export type RenderedTemplate = {
+  frontmatter: JsonRecord;
+  body: string;
+  /** UTF-16 code-unit offset of the first `{{cursor}}` marker in `body`, null when absent. */
+  cursorOffset: number | null;
 };
 
 export type NoteEntry = {

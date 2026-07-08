@@ -8,6 +8,7 @@ pub mod list;
 pub mod rename_propagation;
 pub mod scaffold;
 pub mod settings;
+pub mod templates;
 pub mod watcher;
 
 use std::fs;

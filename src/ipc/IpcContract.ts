@@ -13,9 +13,11 @@ import type {
   NoteEntry,
   NoteFile,
   RenameNoteInput,
+  RenderedTemplate,
   SaveInput,
   SaveResult,
   RecentVault,
+  TemplateEntry,
   VaultClosedEvent,
   VaultFileChangedEvent,
   VaultFileRenamedEvent,
@@ -218,6 +220,15 @@ export type IpcCommandMap = {
   "notes.trash": {
     args: { path: string };
     result: void;
+  };
+  // === F39 Templates ===
+  "templates.list": {
+    args: undefined;
+    result: TemplateEntry[];
+  };
+  "templates.render": {
+    args: { path: string; title?: string };
+    result: RenderedTemplate;
   };
   // === F12 Bulk Ops ===
   "notes.move": {
