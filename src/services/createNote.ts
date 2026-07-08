@@ -5,8 +5,10 @@
 import { toast } from "sonner";
 
 import { client } from "@/ipc/client";
+import { useEditorStore } from "@/stores/editorStore";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
+import { loadFilter } from "@/utils/triageHelpers";
 import type { VaultPath } from "@/ipc/types";
 
 export async function createNote(folder = "") {
@@ -22,6 +24,34 @@ export async function createNote(folder = "") {
   } catch (err) {
     toast.error(`Failed to create note: ${err instanceof Error ? err.message : String(err)}`);
   }
+}
+
+/**
+ * Create a note from a template and open it in edit mode with the caret at
+ * the template's {{cursor}} position (start of note when absent).
+ * Targets the sidebar's active folder, falling back to Inbox.
+ */
+export async function createNoteFromTemplate(templatePath: string, folder?: string) {
+  try {
+    const target = folder ?? activeFolderTarget();
+    const result = await client.notes.createFromTemplate({ folder: target, templatePath });
+    await useVaultStore.getState().loadNotes();
+    const note = findNoteByPath(result.path);
+    if (note) {
+      useEditorStore.getState().setPendingCursorOffset(result.cursorOffset);
+      useShellStore.setState({ forceEdit: true });
+      useShellStore.getState().openNote(note.id);
+    }
+  } catch (err) {
+    toast.error(
+      `Failed to create note from template: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+function activeFolderTarget(): string {
+  const filter = loadFilter();
+  return filter.kind === "folder" ? filter.id : "inbox";
 }
 
 /**

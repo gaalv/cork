@@ -75,6 +75,16 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
     // Focus editor
     view.focus();
 
+    // Consume a one-shot caret target (template {{cursor}} position)
+    const pendingOffset = useEditorStore.getState().pendingCursorOffset;
+    if (pendingOffset !== null) {
+      view.dispatch({
+        selection: { anchor: Math.min(pendingOffset, view.state.doc.length) },
+        scrollIntoView: true,
+      });
+      useEditorStore.getState().setPendingCursorOffset(null);
+    }
+
     // Track vim mode via getCM() vimState — much more reliable than DOM observation
     if (editorSettings.vimMode) {
       useVimModeStore.getState().setMode("NORMAL");

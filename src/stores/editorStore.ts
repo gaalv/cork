@@ -29,9 +29,13 @@ type EditorState = {
   conflict: Conflict | null;
   loading: boolean;
   error: string | null;
+  /** One-shot caret target (UTF-16 offset) consumed by the editor on mount —
+   *  set by createNoteFromTemplate, cleared after the first consume. */
+  pendingCursorOffset: number | null;
 
   // Actions
   openBuffer: (noteId: string, path: string) => Promise<void>;
+  setPendingCursorOffset: (offset: number | null) => void;
   updateBody: (body: string) => void;
   updateFrontmatter: (frontmatter: JsonRecord) => void;
   save: () => Promise<void>;
@@ -121,6 +125,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
     conflict: null,
     loading: false,
     error: null,
+    pendingCursorOffset: null,
+
+    setPendingCursorOffset: (pendingCursorOffset) => set({ pendingCursorOffset }),
 
     openBuffer: async (noteId, path) => {
       // Flush pending saves before switching

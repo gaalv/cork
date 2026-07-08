@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileDashed, FileText, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 
 import { client } from "@/ipc/client";
-import { createTemplateNote } from "@/services/createNote";
+import { createNoteFromTemplate, createTemplateNote } from "@/services/createNote";
 import { useShellStore } from "@/stores/shellStore";
 import type { TemplateEntry } from "@/ipc/types";
 import type { TemplatePickerMode } from "@/stores/shellStore";
@@ -142,9 +142,12 @@ export function TemplatePicker() {
   );
 }
 
-// Dispatches a picked template to the create/insert flow (wired by F39-T05/T06).
-function pickTemplate(_template: TemplateEntry, _mode: TemplatePickerMode) {
-  // No-op until the create (T05) and insert (T06) services land.
+// Dispatches a picked template to the create/insert flow.
+function pickTemplate(template: TemplateEntry, mode: TemplatePickerMode) {
+  if (mode === "create") {
+    void createNoteFromTemplate(template.path);
+  }
+  // insert mode wired in F39-T06
 }
 
 function EmptyState({ onClose }: { onClose: () => void }) {
