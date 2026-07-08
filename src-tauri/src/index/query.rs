@@ -23,6 +23,13 @@ pub struct NoteTagPair {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct NoteStatusPair {
+    pub note_id: String,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LinkRow {
     pub src_note_id: String,
     pub target_text: String,
@@ -112,6 +119,27 @@ pub fn pinned(conn: &Connection) -> Result<Vec<NoteEntry>, IpcError> {
         .map_err(sql_error)?;
     let rows = stmt.query_map([], note_from_row).map_err(sql_error)?;
     collect_notes(rows)
+}
+
+pub fn statuses(conn: &Connection) -> Result<Vec<NoteStatusPair>, IpcError> {
+    let mut stmt = conn
+        .prepare("SELECT note_id, value FROM frontmatter WHERE key = 'status'")
+        .map_err(sql_error)?;
+    let rows = stmt
+        .query_map([], |row| {
+            let note_id: String = row.get(0)?;
+            let raw: String = row.get(1)?;
+            // Frontmatter values are stored JSON-serialized (e.g. `"active"`);
+            // unwrap JSON strings, pass anything else through raw — the
+            // frontend narrows unknown values to unset.
+            let status = serde_json::from_str::<serde_json::Value>(&raw)
+                .ok()
+                .and_then(|value| value.as_str().map(String::from))
+                .unwrap_or(raw);
+            Ok(NoteStatusPair { note_id, status })
+        })
+        .map_err(sql_error)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)
 }
 
 pub fn tags_create(conn: &Connection, tag: &str) -> Result<(), IpcError> {

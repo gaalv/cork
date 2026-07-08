@@ -96,6 +96,9 @@ export type CreateFromTemplateResult = {
   cursorOffset: number | null;
 };
 
+// === F40 Note Status ===
+export type NoteStatus = "active" | "on-hold" | "done";
+
 export type NoteEntry = {
   id: string;
   path: string;

@@ -128,6 +128,8 @@ pub fn run() {
             index::notes_by_id,
             // === F07 Drawers ===
             index::notes_pinned,
+            // === F40 Note Status ===
+            index::notes_statuses,
             index::notes_search,
             index::tags_create,
             index::tags_rename,

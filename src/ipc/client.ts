@@ -63,6 +63,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.byFolder": "notes_by_folder",
   "notes.byId": "notes_by_id",
   "notes.pinned": "notes_pinned",
+  "notes.statuses": "notes_statuses",
   "tags.create": "tags_create",
   "tags.list": "tags_list",
   "tags.noteMap": "tags_note_map",
@@ -201,6 +202,7 @@ export const client = {
     byFolder: (folder: string) => invokeCommand("notes.byFolder", { folder }),
     byId: (id: string) => invokeCommand("notes.byId", { id }),
     pinned: () => invokeCommand("notes.pinned", undefined),
+    statuses: () => invokeCommand("notes.statuses", undefined),
   },
   templates: {
     list: () => invokeCommand("templates.list", undefined),
@@ -295,6 +297,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "index.status":
     case "index.rebuild":
     case "notes.pinned":
+    case "notes.statuses":
     case "vcs.status":
     case "vcs.remoteDisable":
     case "vcs.remoteSyncNow":

@@ -44,6 +44,16 @@ export type NoteTagPair = {
   tag: string;
 };
 
+/**
+ * Raw (note, frontmatter `status`) pair from the index. `status` is the
+ * raw frontmatter value — unknown values are narrowed to unset on the
+ * frontend (STAT-07), never rejected here.
+ */
+export type NoteStatusPair = {
+  noteId: string;
+  status: string;
+};
+
 export type LinkRow = {
   srcNoteId: string;
   targetText: string;
@@ -274,6 +284,11 @@ export type IpcCommandMap = {
   "notes.pinned": {
     args: undefined;
     result: NoteEntry[];
+  };
+  // === F40 Note Status ===
+  "notes.statuses": {
+    args: undefined;
+    result: NoteStatusPair[];
   };
   "tags.create": {
     args: { tag: string };

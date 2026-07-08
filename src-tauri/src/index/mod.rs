@@ -16,7 +16,7 @@ use tauri::{AppHandle, Emitter, Listener, Manager};
 
 use crate::index::migrate::open_index_at;
 use crate::index::paths::index_db_path;
-use crate::index::query::{GraphData, LinkRow, NoteTagPair, TagCount};
+use crate::index::query::{GraphData, LinkRow, NoteStatusPair, NoteTagPair, TagCount};
 use crate::index::search::SearchResult;
 use crate::index::worker::IndexJob;
 use crate::vault::watcher::{FileChangeKind, VaultFileChangedEvent};
@@ -277,6 +277,15 @@ pub fn notes_pinned(
     state: tauri::State<'_, IndexState>,
 ) -> Result<Vec<NoteEntry>, IpcError> {
     state.with_conn(&app, &vault, query::pinned)
+}
+
+#[tauri::command]
+pub fn notes_statuses(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+) -> Result<Vec<NoteStatusPair>, IpcError> {
+    state.with_conn(&app, &vault, query::statuses)
 }
 
 #[tauri::command]
