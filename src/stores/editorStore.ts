@@ -39,6 +39,7 @@ type EditorState = {
   updateBody: (body: string) => void;
   updateFrontmatter: (frontmatter: JsonRecord) => void;
   save: () => Promise<void>;
+  syncExternalFrontmatter: (noteId: string, patch: JsonRecord) => Promise<void>;
   setPath: (path: string) => void;
   forceReload: () => Promise<void>;
   forceSave: () => Promise<void>;
@@ -184,6 +185,34 @@ export const useEditorStore = create<EditorState>((set, get) => {
     save: async () => {
       clearSaveTimer();
       await doSave();
+    },
+
+    // Reconcile the open buffer after an out-of-band frontmatter write
+    // (e.g. pin/status via notes.bulkSetFrontmatter). Merges the patch into
+    // the in-memory frontmatter (null deletes the key) WITHOUT touching the
+    // body or the dirty flag — unsaved edits survive — and refreshes
+    // loadedMtime from disk so the next auto-save doesn't false-conflict.
+    syncExternalFrontmatter: async (noteId, patch) => {
+      const { noteId: openId, path } = get();
+      if (openId !== noteId || !path) return;
+
+      const frontmatter = { ...get().frontmatter };
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null) delete frontmatter[key];
+        else frontmatter[key] = value;
+      }
+
+      let loadedMtime = get().loadedMtime;
+      try {
+        const onDisk = await client.notes.read(path);
+        loadedMtime = onDisk.mtime;
+      } catch {
+        // keep the previous mtime — worst case is a conflict prompt
+      }
+
+      // Bail if the buffer switched notes while we were reading.
+      if (get().noteId !== noteId) return;
+      set({ frontmatter, loadedMtime });
     },
 
     setPath: (path) => {

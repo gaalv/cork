@@ -19,7 +19,10 @@
 import { create } from "zustand";
 
 import { client } from "@/ipc/client";
-import type { NoteEntry } from "@/ipc/types";
+import { useEditorStore } from "@/stores/editorStore";
+import { narrowNoteStatus } from "@/utils/noteStatus";
+import type { NoteStatusPair } from "@/ipc/IpcContract";
+import type { NoteEntry, NoteStatus } from "@/ipc/types";
 
 type TagCount = { tag: string; count: number };
 type NoteTagPair = { noteId: string; tag: string };
@@ -42,11 +45,13 @@ type IndexState = {
   tags: TagCount[];
   noteTagMap: Map<string, string[]>;
   pinnedIds: Set<string>;
+  statusById: Map<string, NoteStatus>;
   startIndexIntegration: () => Promise<void>;
   refreshIndex: () => Promise<void>;
 
   // — Mutations (optimistic → persist → rollback on error) —
   toggleNotePin: (noteId: string, path: string) => Promise<void>;
+  setNoteStatus: (noteId: string, path: string, status: NoteStatus | null) => Promise<void>;
   addTagToNote: (noteId: string, tag: string) => void;
   removeTagFromNote: (noteId: string, tag: string) => void;
   createTag: (tag: string) => Promise<void>;
@@ -70,15 +75,17 @@ export const useIndexStore = create<IndexState>((set, get) => ({
   tags: [],
   noteTagMap: new Map(),
   pinnedIds: new Set(),
+  statusById: new Map(),
 
   startIndexIntegration: async () => {
     try {
       await client.index.status();
 
-      const [tagsResult, noteTagResult, pinnedResult] = await Promise.all([
+      const [tagsResult, noteTagResult, pinnedResult, statusResult] = await Promise.all([
         client.tags.list().catch(() => [] as TagCount[]),
         client.tags.noteMap().catch(() => [] as NoteTagPair[]),
         client.notes.pinned().catch(() => [] as NoteEntry[]),
+        client.notes.statuses().catch(() => [] as NoteStatusPair[]),
       ]);
 
       set({
@@ -87,6 +94,7 @@ export const useIndexStore = create<IndexState>((set, get) => ({
         tags: tagsResult as TagCount[],
         noteTagMap: buildNoteTagMap(noteTagResult as NoteTagPair[]),
         pinnedIds: new Set((pinnedResult as NoteEntry[]).map((n) => n.id)),
+        statusById: buildStatusMap(statusResult),
       });
 
       // Subscribe to index:updated — fires AFTER the Rust indexer has
@@ -108,10 +116,11 @@ export const useIndexStore = create<IndexState>((set, get) => ({
 
   refreshIndex: async () => {
     try {
-      const [tagsResult, noteTagResult, pinnedResult] = await Promise.all([
+      const [tagsResult, noteTagResult, pinnedResult, statusResult] = await Promise.all([
         client.tags.list().catch(() => [] as TagCount[]),
         client.tags.noteMap().catch(() => [] as NoteTagPair[]),
         client.notes.pinned().catch(() => [] as NoteEntry[]),
+        client.notes.statuses().catch(() => [] as NoteStatusPair[]),
       ]);
 
       let tags = tagsResult as TagCount[];
@@ -149,6 +158,7 @@ export const useIndexStore = create<IndexState>((set, get) => ({
         tags,
         noteTagMap,
         pinnedIds: new Set((pinnedResult as NoteEntry[]).map((n) => n.id)),
+        statusById: buildStatusMap(statusResult),
       });
     } catch {
       // silently fail — stale data is acceptable briefly
@@ -176,6 +186,32 @@ export const useIndexStore = create<IndexState>((set, get) => ({
     } catch (err) {
       // 3. Rollback
       set({ pinnedIds: prev });
+      throw err;
+    }
+  },
+
+  // — Status set/clear: optimistic → persist → rollback (STAT-01) —
+  // Reuses the exact frontmatter write path as toggleNotePin
+  // (notes.bulkSetFrontmatter) so a dirty open buffer never loses edits;
+  // the open buffer is then reconciled via syncExternalFrontmatter.
+  setNoteStatus: async (noteId, path, status) => {
+    const prev = new Map(get().statusById);
+
+    // 1. Optimistic update
+    set(() => {
+      const next = new Map(prev);
+      if (status) next.set(noteId, status);
+      else next.delete(noteId);
+      return { statusById: next };
+    });
+
+    // 2. Persist (null removes the `status` key — never writes "none")
+    try {
+      await client.notes.bulkSetFrontmatter([path], { status });
+      await useEditorStore.getState().syncExternalFrontmatter(noteId, { status });
+    } catch (err) {
+      // 3. Rollback
+      set({ statusById: prev });
       throw err;
     }
   },
@@ -285,6 +321,15 @@ export const useIndexStore = create<IndexState>((set, get) => ({
     return results as NoteEntry[];
   },
 }));
+
+function buildStatusMap(pairs: NoteStatusPair[]): Map<string, NoteStatus> {
+  const map = new Map<string, NoteStatus>();
+  for (const { noteId, status } of pairs) {
+    const narrowed = narrowNoteStatus(status);
+    if (narrowed) map.set(noteId, narrowed);
+  }
+  return map;
+}
 
 function buildNoteTagMap(pairs: NoteTagPair[]): Map<string, string[]> {
   const map = new Map<string, string[]>();
