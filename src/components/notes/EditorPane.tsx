@@ -28,16 +28,21 @@ export function EditorPane({
   const view = useShellStore((s) => s.view);
   const notes = useVaultStore((s) => s.notes);
   const openBuffer = useEditorStore((s) => s.openBuffer);
+  const livePreview = useAppSettingsStore((s) => s.settings.editor.livePreview);
   const [preview, setPreview] = useState(false);
 
   const noteId = view.kind === "note" ? view.id : null;
   const notePath = view.kind === "note" ? notes.find((n) => n.id === view.id)?.path : null;
 
   // Reset preview mode on note switch and always load the buffer
-  // (MarkdownPreview reads from editorStore, so openBuffer must run even in preview)
+  // (MarkdownPreview reads from editorStore, so openBuffer must run even in preview).
+  // With live preview on, the editor already renders inline — notes open
+  // straight into editable mode and the preview pane is not used.
   useEffect(() => {
     const { forceEdit } = useShellStore.getState();
-    setPreview(forceEdit ? false : useAppSettingsStore.getState().settings.editor.previewDefault);
+    const editorSettings = useAppSettingsStore.getState().settings.editor;
+    const wantsPreview = !editorSettings.livePreview && !forceEdit && editorSettings.previewDefault;
+    setPreview(wantsPreview);
     if (forceEdit) useShellStore.setState({ forceEdit: false });
     if (noteId && notePath) void openBuffer(noteId, notePath);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,6 +69,7 @@ export function EditorPane({
         onToggleInspector={onToggleInspector}
         preview={preview}
         onTogglePreview={() => setPreview((v) => !v)}
+        livePreview={livePreview}
       />
       {!preview && <EditorToolbar />}
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -96,12 +102,14 @@ function EditorHeader({
   onToggleInspector,
   preview,
   onTogglePreview,
+  livePreview,
 }: {
   note: { id: string; path: string; folder: string; title: string };
   inspectorOpen: boolean;
   onToggleInspector: () => void;
   preview: boolean;
   onTogglePreview: () => void;
+  livePreview: boolean;
 }) {
   const dragRef = useDragRegion<HTMLDivElement>();
   const loadNotes = useVaultStore((s) => s.loadNotes);
@@ -176,32 +184,38 @@ function EditorHeader({
         />
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <button
-          onClick={() => {
-            if (preview) onTogglePreview();
-          }}
-          title="Edit"
-          className={`rounded-md p-1.5 ${
-            !preview
-              ? "bg-[var(--color-cork-panel-2)] text-[var(--color-cork-ink)]"
-              : "text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
-          }`}
-        >
-          <Pencil size={14} />
-        </button>
-        <button
-          onClick={() => {
-            if (!preview) onTogglePreview();
-          }}
-          title="Preview"
-          className={`rounded-md p-1.5 ${
-            preview
-              ? "bg-[var(--color-cork-panel-2)] text-[var(--color-cork-ink)]"
-              : "text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
-          }`}
-        >
-          <Eye size={14} />
-        </button>
+        {/* View-mode toggle only when live preview is off — with it on the
+            editor already renders inline, so the preview pane is redundant. */}
+        {!livePreview && (
+          <>
+            <button
+              onClick={() => {
+                if (preview) onTogglePreview();
+              }}
+              title="Edit"
+              className={`rounded-md p-1.5 ${
+                !preview
+                  ? "bg-[var(--color-cork-panel-2)] text-[var(--color-cork-ink)]"
+                  : "text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
+              }`}
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              onClick={() => {
+                if (!preview) onTogglePreview();
+              }}
+              title="Preview"
+              className={`rounded-md p-1.5 ${
+                preview
+                  ? "bg-[var(--color-cork-panel-2)] text-[var(--color-cork-ink)]"
+                  : "text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
+              }`}
+            >
+              <Eye size={14} />
+            </button>
+          </>
+        )}
         <button
           onClick={() => void handleArchive()}
           title="Archive note"
