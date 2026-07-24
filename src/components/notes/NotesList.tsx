@@ -25,8 +25,9 @@ import type { ArchivedNoteEntry, NoteEntry } from "@/ipc/types";
 import type { SidebarFilter } from "@/utils/triageHelpers";
 import { formatRelativeDate } from "@/utils/triageHelpers";
 import { NOTE_STATUS_META } from "@/utils/noteStatus";
-import { NoteContextMenu, MoveToSubmenu } from "./NoteContextMenu";
+import { NoteContextMenu, MoveToSubmenu, StatusSubmenu } from "./NoteContextMenu";
 import type { ContextMenuState, MoveSubmenuState } from "./NoteContextMenu";
+import type { NoteStatus } from "@/ipc/types";
 import { StatusBadge } from "./StatusBadge";
 import { createNote } from "@/services/createNote";
 
@@ -40,6 +41,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   const pinnedIds = useIndexStore((s) => s.pinnedIds);
   const toggleNotePin = useIndexStore((s) => s.toggleNotePin);
   const statusById = useIndexStore((s) => s.statusById);
+  const setNoteStatus = useIndexStore((s) => s.setNoteStatus);
   const isIndexing = useIndexStore((s) => s.isIndexing);
   const indexProgress = useIndexStore((s) => s.indexProgress);
   const view = useShellStore((s) => s.view);
@@ -61,8 +63,10 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [moveSubmenu, setMoveSubmenu] = useState<MoveSubmenuState | null>(null);
+  const [statusSubmenu, setStatusSubmenu] = useState<{ x: number; y: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
+  const statusSubmenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (filter.kind === "archived") {
@@ -79,12 +83,15 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
       const target = e.target as Node;
       if (menuRef.current?.contains(target)) return;
       if (submenuRef.current?.contains(target)) return;
+      if (statusSubmenuRef.current?.contains(target)) return;
       setCtxMenu(null);
       setMoveSubmenu(null);
+      setStatusSubmenu(null);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (moveSubmenu) setMoveSubmenu(null);
+        else if (statusSubmenu) setStatusSubmenu(null);
         else setCtxMenu(null);
       }
     };
@@ -94,7 +101,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
       document.removeEventListener("mousedown", onClickOutside, true);
       document.removeEventListener("keydown", onKey);
     };
-  }, [ctxMenu, moveSubmenu]);
+  }, [ctxMenu, moveSubmenu, statusSubmenu]);
 
   useEffect(() => {
     if (!filterMenuOpen) return;
@@ -118,9 +125,28 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   const openCardMenu = useCallback((e: React.MouseEvent, note: NoteEntry) => {
     e.stopPropagation();
     setMoveSubmenu(null);
+    setStatusSubmenu(null);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setCtxMenu({ note, x: rect.right, y: rect.bottom + 4 });
   }, []);
+
+  const handleStatusTo = useCallback(() => {
+    if (!ctxMenu) return;
+    setMoveSubmenu(null);
+    const menuEl = menuRef.current;
+    const x = menuEl ? menuEl.getBoundingClientRect().right + 2 : ctxMenu.x + 160;
+    setStatusSubmenu({ x, y: ctxMenu.y });
+  }, [ctxMenu]);
+
+  const handleStatusSelect = useCallback(
+    async (status: NoteStatus | null) => {
+      if (!ctxMenu) return;
+      await setNoteStatus(ctxMenu.note.id, ctxMenu.note.path, status);
+      setCtxMenu(null);
+      setStatusSubmenu(null);
+    },
+    [ctxMenu, setNoteStatus],
+  );
 
   const handleMoveTo = useCallback(async () => {
     if (!ctxMenu) return;
@@ -501,9 +527,23 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
             y={ctxMenu.y}
             isPinned={pinnedIds.has(ctxMenu.note.id)}
             onTogglePin={() => void handleTogglePin()}
+            onStatus={handleStatusTo}
             onMoveTo={() => void handleMoveTo()}
             onArchive={() => void handleArchive()}
             onTrash={() => void handleTrash()}
+          />,
+          document.body,
+        )}
+
+      {statusSubmenu &&
+        ctxMenu &&
+        createPortal(
+          <StatusSubmenu
+            ref={statusSubmenuRef}
+            x={statusSubmenu.x}
+            y={statusSubmenu.y}
+            current={statusById.get(ctxMenu.note.id)}
+            onSelect={(status) => void handleStatusSelect(status)}
           />,
           document.body,
         )}

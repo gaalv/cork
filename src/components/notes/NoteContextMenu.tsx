@@ -1,7 +1,18 @@
 import { forwardRef } from "react";
-import { Archive, FolderSimple, Star, Trash } from "@phosphor-icons/react";
+import {
+  Archive,
+  CaretRight,
+  Check,
+  CircleDashed,
+  FolderSimple,
+  Star,
+  Trash,
+} from "@phosphor-icons/react";
 
+import { cn } from "@/utils/cn";
+import { NOTE_STATUSES, NOTE_STATUS_META } from "@/utils/noteStatus";
 import { clampMenuPosition } from "@/utils/triageHelpers";
+import type { NoteStatus } from "@/ipc/types";
 
 export type ContextMenuState = {
   note: {
@@ -25,12 +36,16 @@ export const NoteContextMenu = forwardRef<
     y: number;
     isPinned: boolean;
     onTogglePin: () => void;
+    onStatus: () => void;
     onMoveTo: () => void;
     onArchive: () => void;
     onTrash: () => void;
   }
->(function NoteContextMenu({ x, y, isPinned, onTogglePin, onMoveTo, onArchive, onTrash }, ref) {
-  const style = clampMenuPosition(x, y, 176, 152);
+>(function NoteContextMenu(
+  { x, y, isPinned, onTogglePin, onStatus, onMoveTo, onArchive, onTrash },
+  ref,
+) {
+  const style = clampMenuPosition(x, y, 176, 180);
 
   return (
     <div
@@ -48,6 +63,14 @@ export const NoteContextMenu = forwardRef<
           className="text-[var(--color-cork-muted)]"
         />
         {isPinned ? "Unpin" : "Pin"}
+      </button>
+      <button
+        onClick={onStatus}
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-cork-ink)] hover:bg-[var(--color-cork-panel-2)]"
+      >
+        <CircleDashed size={14} className="text-[var(--color-cork-muted)]" />
+        Status
+        <CaretRight size={12} className="ml-auto text-[var(--color-cork-subtle)]" />
       </button>
       <button
         onClick={onMoveTo}
@@ -70,6 +93,49 @@ export const NoteContextMenu = forwardRef<
       >
         <Trash size={14} />
         Delete
+      </button>
+    </div>
+  );
+});
+
+export const StatusSubmenu = forwardRef<
+  HTMLDivElement,
+  {
+    x: number;
+    y: number;
+    current: NoteStatus | undefined;
+    onSelect: (status: NoteStatus | null) => void;
+  }
+>(function StatusSubmenu({ x, y, current, onSelect }, ref) {
+  const style = clampMenuPosition(x, y, 160, 140);
+
+  return (
+    <div
+      ref={ref}
+      style={style}
+      className="fixed z-50 w-40 rounded-lg border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] py-1 shadow-xl"
+    >
+      {NOTE_STATUSES.map((s) => (
+        <button
+          key={s}
+          onClick={() => onSelect(s)}
+          className="flex w-full items-center gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-cork-ink)] hover:bg-[var(--color-cork-panel-2)]"
+        >
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", NOTE_STATUS_META[s].dotClass)} />
+          {NOTE_STATUS_META[s].label}
+          {current === s && <Check size={12} className="ml-auto text-[var(--color-cork-accent)]" />}
+        </button>
+      ))}
+      <div className="mx-2 border-t border-[var(--color-cork-border)]" />
+      <button
+        onClick={() => onSelect(null)}
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)]"
+      >
+        <span className="h-2 w-2 shrink-0 rounded-full border border-[var(--color-cork-subtle)]" />
+        None
+        {current === undefined && (
+          <Check size={12} className="ml-auto text-[var(--color-cork-accent)]" />
+        )}
       </button>
     </div>
   );
