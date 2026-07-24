@@ -6,7 +6,7 @@
 
 import { autocompletion } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, foldGutter, indentOnInput } from "@codemirror/language";
+import { bracketMatching, indentOnInput } from "@codemirror/language";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import {
   EditorView,
@@ -87,9 +87,6 @@ export function createExtensions(options: EditorOptions): Extension[] {
 
     // Inline image preview below ![](…) and ![[…]] lines
     imagePreviewExtension(),
-
-    // Fold gutter
-    foldGutter(),
 
     // Update listener — sends body changes to the store
     EditorView.updateListener.of((update) => {

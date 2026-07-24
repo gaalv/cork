@@ -14,8 +14,8 @@ export const corkEditorTheme = EditorView.theme(
   {
     "&": {
       fontSize: "14px",
-      fontFamily:
-        "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+      // Same token the preview uses, so edit and preview read identically.
+      fontFamily: "var(--font-sans)",
       color: "var(--color-cork-ink)",
       backgroundColor: "transparent",
       height: "100%",
@@ -32,6 +32,9 @@ export const corkEditorTheme = EditorView.theme(
       caretColor: "var(--color-cork-accent)",
       padding: "40px 0",
       lineHeight: "1.7",
+      // Match the preview's antialiased rendering (CM doesn't inherit it).
+      WebkitFontSmoothing: "antialiased",
+      MozOsxFontSmoothing: "grayscale",
     },
     ".cm-cursor, .cm-dropCursor": {
       borderLeftColor: "var(--color-cork-accent)",
@@ -125,9 +128,11 @@ export const corkEditorTheme = EditorView.theme(
 );
 
 const corkHighlightStyle = HighlightStyle.define([
-  { tag: tags.heading1, fontWeight: "700", fontSize: "1.5em", lineHeight: "1.3" },
-  { tag: tags.heading2, fontWeight: "700", fontSize: "1.3em", lineHeight: "1.3" },
-  { tag: tags.heading3, fontWeight: "600", fontSize: "1.15em", lineHeight: "1.4" },
+  // Sizes/weights mirror the preview headings (.cork-preview) so edit and
+  // preview render the same.
+  { tag: tags.heading1, fontWeight: "600", fontSize: "1.6em", lineHeight: "1.3" },
+  { tag: tags.heading2, fontWeight: "600", fontSize: "1.35em", lineHeight: "1.3" },
+  { tag: tags.heading3, fontWeight: "600", fontSize: "1.15em", lineHeight: "1.3" },
   { tag: tags.heading4, fontWeight: "600", fontSize: "1em" },
   { tag: tags.heading5, fontWeight: "600", fontSize: "0.95em" },
   { tag: tags.heading6, fontWeight: "600", fontSize: "0.9em", color: "var(--color-cork-muted)" },

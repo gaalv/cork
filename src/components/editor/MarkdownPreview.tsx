@@ -172,7 +172,7 @@ export function MarkdownPreview() {
 
   return (
     <div className="cork-preview-scroll absolute inset-0 overflow-y-auto">
-      <article className="cork-preview mx-auto max-w-[720px] px-10 py-6">{content}</article>
+      <article className="cork-preview mx-auto max-w-[960px] px-10 py-6">{content}</article>
     </div>
   );
 }

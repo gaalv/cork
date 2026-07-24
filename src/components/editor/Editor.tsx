@@ -140,7 +140,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className="absolute inset-0 mx-auto max-w-[720px] px-10"
+          className="absolute inset-0 mx-auto max-w-[960px] px-10"
           style={{ fontSize: `${editorSettings.fontSize}px` }}
         />
       </div>
