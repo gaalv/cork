@@ -10,7 +10,10 @@ import { useIndexStore } from "@/stores/indexStore";
 import { folderOps } from "@/services/folderOps";
 import { client } from "@/ipc/client";
 
+import { cn } from "@/utils/cn";
+import { NOTE_STATUSES, NOTE_STATUS_META } from "@/utils/noteStatus";
 import type { SidebarFilter } from "@/utils/triageHelpers";
+import type { NoteStatus } from "@/ipc/types";
 import {
   loadFolderIcons,
   saveFolderIcon,
@@ -35,6 +38,7 @@ export function Sidebar({
   const loadNotes = useVaultStore((s) => s.loadNotes);
   const tags = useIndexStore((s) => s.tags);
   const pinnedIds = useIndexStore((s) => s.pinnedIds);
+  const statusById = useIndexStore((s) => s.statusById);
   const createTag = useIndexStore((s) => s.createTag);
   const renameTag = useIndexStore((s) => s.renameTag);
   const deleteTag = useIndexStore((s) => s.deleteTag);
@@ -125,6 +129,15 @@ export function Sidebar({
     [notes],
   );
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<NoteStatus, number> = { active: 0, "on-hold": 0, done: 0 };
+    for (const status of statusById.values()) {
+      counts[status] += 1;
+    }
+    return counts;
+  }, [statusById]);
+  const hasStatuses = NOTE_STATUSES.some((s) => statusCounts[s] > 0);
+
   useEffect(() => {
     if (!folderCtx && !tagCtx) return;
     const onClickOutside = (e: MouseEvent) => {
@@ -185,6 +198,28 @@ export function Sidebar({
             onClick={() => setFilter({ kind: "archived" })}
           />
         </div>
+
+        {hasStatuses && (
+          <SidebarSection title="Status">
+            {NOTE_STATUSES.map((s) => (
+              <SidebarRow
+                key={s}
+                icon={
+                  <span
+                    className={cn(
+                      "inline-block h-2 w-2 rounded-full",
+                      NOTE_STATUS_META[s].dotClass,
+                    )}
+                  />
+                }
+                label={NOTE_STATUS_META[s].label}
+                badge={statusCounts[s] > 0 ? String(statusCounts[s]) : undefined}
+                active={filter.kind === "status" && filter.status === s}
+                onClick={() => setFilter({ kind: "status", status: s })}
+              />
+            ))}
+          </SidebarSection>
+        )}
 
         <SidebarSection
           title="Notebooks"
