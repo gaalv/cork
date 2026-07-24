@@ -16,7 +16,7 @@ use crate::error::sql_error;
 use crate::index::migrate::open_index_at;
 use crate::index::parser::{parse, ParsedNote};
 use crate::index::resolver;
-use crate::vault::io::{metadata_mtime_ms, to_slash_string};
+use crate::vault::io::{metadata_ctime_ms, metadata_mtime_ms, to_slash_string};
 use crate::vault::list::{asset_kind, is_markdown, sha1_hex};
 use crate::IpcError;
 
@@ -304,7 +304,13 @@ fn replace_note_rows(
             parsed.title,
             metadata.len() as i64,
             metadata_mtime_ms(metadata)?,
-            frontmatter_i64(&parsed.frontmatter, "created"),
+            // Prefer an explicit `created:` frontmatter; otherwise fall back to
+            // the filesystem birth time so notes authored outside Cork still get
+            // a real creation date (metadata_ctime_ms itself falls back to mtime
+            // where the OS has no birth time). Keeps the index path consistent
+            // with vault.list, which already uses metadata_ctime_ms.
+            frontmatter_i64(&parsed.frontmatter, "created")
+                .or_else(|| metadata_ctime_ms(metadata).ok()),
             frontmatter_i64(&parsed.frontmatter, "updated"),
             parsed.body_hash,
         ],
