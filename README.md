@@ -18,7 +18,16 @@ Built with **Tauri 2 + React 19 + Vite 7 + TypeScript 5 + Tailwind v4 + CodeMirr
 
 ### macOS
 
-After downloading the `.dmg`, drag Cork into `/Applications`, then run **once**:
+Via Homebrew (recommended):
+
+```bash
+brew tap gaalv/cork
+brew install --cask --no-quarantine cork
+```
+
+The `--no-quarantine` flag is required while builds are unsigned — without it Gatekeeper reports the app as damaged.
+
+Or manually: after downloading the `.dmg`, drag Cork into `/Applications`, then run **once**:
 
 ```bash
 xattr -d com.apple.quarantine /Applications/Cork.app
