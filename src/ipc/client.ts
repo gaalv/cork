@@ -97,6 +97,8 @@ const commandNames: Record<IpcCommandName, string> = {
   "archive.note": "archive_note",
   "archive.restore": "restore_note",
   "archive.list": "list_archived",
+  // === F45 Note Export ===
+  "export.write": "export_write",
   "diagnostics.reportError": "diagnostics_report_error",
   "diagnostics.crashLogPath": "diagnostics_crash_log_path",
   "diagnostics.recent": "diagnostics_recent",
@@ -249,6 +251,9 @@ export const client = {
     telemetryClear: () => invokeCommand("ai.telemetryClear", undefined),
     providersAvailable: () => invokeCommand("ai.providersAvailable", undefined),
   },
+  export: {
+    write: (path: string, contents: string) => invokeCommand("export.write", { path, contents }),
+  },
   archive: {
     note: (path: string) => invokeCommand("archive.note", { path }),
     restore: (path: string) => invokeCommand("archive.restore", { path }),
@@ -396,6 +401,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "notes.bulkMove":
     case "notes.bulkTrash":
     case "notes.bulkSetFrontmatter":
+    case "export.write":
     case "diagnostics.reportError":
     case "diagnostics.recent":
       return args as RustArgs;

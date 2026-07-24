@@ -2,6 +2,7 @@ pub mod ai;
 pub mod assets;
 pub mod diagnostics;
 pub mod error;
+pub mod export;
 pub mod index;
 pub mod menu;
 pub mod settings;
@@ -163,7 +164,9 @@ pub fn run() {
             // === F35 Diagnostics ===
             diagnostics::diagnostics_report_error,
             diagnostics::diagnostics_crash_log_path,
-            diagnostics::diagnostics_recent
+            diagnostics::diagnostics_recent,
+            // === F45 Note Export ===
+            export::export_write
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

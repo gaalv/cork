@@ -400,6 +400,11 @@ export type IpcCommandMap = {
     args: undefined;
     result: ProvidersAvailable;
   };
+  // === F45 Note Export ===
+  "export.write": {
+    args: { path: string; contents: string };
+    result: void;
+  };
   // === F35 Diagnostics ===
   "diagnostics.reportError": {
     args: {

@@ -9,6 +9,7 @@
     "core:window:allow-toggle-maximize",
     "opener:default",
     "global-shortcut:default",
-    "os:default"
+    "os:default",
+    "dialog:default"
   ]
 }
