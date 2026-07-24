@@ -4,12 +4,14 @@ import {
   CloudCheck,
   CloudSlash,
   GearSix,
+  Graph,
   Warning,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import { useIndexStore } from "@/stores/indexStore";
 import { useSettingsUiStore } from "@/stores/settingsUiStore";
+import { useShellStore } from "@/stores/shellStore";
 import { startSyncPolling, useSyncStore } from "@/stores/syncStore";
 import { VimIndicator } from "./VimIndicator";
 import { VaultIndicator } from "@/components/sidebar/VaultIndicator";
@@ -132,6 +134,13 @@ export function StatusBar() {
       </div>
       <div className="flex items-center gap-1.5">
         <VimIndicator />
+        <button
+          onClick={() => useShellStore.getState().setGraphOpen(true)}
+          className="rounded p-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+          title="Graph view (⌘⇧G)"
+        >
+          <Graph size={14} />
+        </button>
         <div className="mx-0.5 h-3 w-px bg-[var(--color-cork-border)]" />
         <SyncStatusIcon />
         <NotificationsPopover />
