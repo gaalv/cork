@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDragRegion } from "@/hooks/useDragRegion";
 import { toast } from "sonner";
-import { Archive, FolderSimple, NotePencil, Plus, Star, Tag, Tray } from "@phosphor-icons/react";
+import {
+  Archive,
+  FolderSimple,
+  NotePencil,
+  Plus,
+  SidebarSimple,
+  Star,
+  Tag,
+  Tray,
+} from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
 
 import { getIconComponent } from "@/components/ui/IconPicker";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useIndexStore } from "@/stores/indexStore";
+import { useShellStore } from "@/stores/shellStore";
 import { folderOps } from "@/services/folderOps";
 import { client } from "@/ipc/client";
 
@@ -42,6 +52,7 @@ export function Sidebar({
   const createTag = useIndexStore((s) => s.createTag);
   const renameTag = useIndexStore((s) => s.renameTag);
   const deleteTag = useIndexStore((s) => s.deleteTag);
+  const toggleSidebar = useShellStore((s) => s.toggleSidebar);
 
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [creatingTag, setCreatingTag] = useState(false);
@@ -165,8 +176,19 @@ export function Sidebar({
   const isFolderActive = (id: string) => filter.kind === "folder" && filter.id === id;
 
   return (
-    <aside className="flex min-h-0 flex-col border-r border-[var(--color-cork-border)] bg-[var(--color-cork-panel)]">
-      <div ref={dragRef} className="h-12 shrink-0" />
+    <aside className="flex h-full min-h-0 flex-col border-r border-[var(--color-cork-border)] bg-[var(--color-cork-panel)]">
+      <div
+        ref={dragRef}
+        className="flex h-12 shrink-0 items-center justify-end border-b border-[var(--color-cork-border)] px-3"
+      >
+        <button
+          onClick={toggleSidebar}
+          title="Hide sidebar"
+          className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+        >
+          <SidebarSimple size={14} className="scale-x-[-1]" />
+        </button>
+      </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-4 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex flex-col">

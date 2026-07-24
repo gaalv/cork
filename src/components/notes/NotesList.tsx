@@ -287,7 +287,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   });
 
   return (
-    <section className="flex min-h-0 flex-col border-r border-[var(--color-cork-border)]">
+    <section className="flex h-full min-h-0 flex-col border-r border-[var(--color-cork-border)]">
       <div
         ref={dragRef}
         className={`flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] px-3 ${
@@ -295,17 +295,15 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
         }`}
       >
         <div className="flex items-center gap-1">
-          <button
-            onClick={toggleSidebar}
-            title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-            className={`rounded-md p-1.5 ${
-              sidebarOpen
-                ? "text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
-                : "bg-[var(--color-cork-panel-2)] text-[var(--color-cork-ink)]"
-            }`}
-          >
-            <SidebarSimple size={14} className="scale-x-[-1]" />
-          </button>
+          {!sidebarOpen && (
+            <button
+              onClick={toggleSidebar}
+              title="Show sidebar"
+              className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+            >
+              <SidebarSimple size={14} className="scale-x-[-1]" />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -492,8 +490,9 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
                         {n.snippet}
                       </p>
                     )}
-                    {noteTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
+                    {(noteStatus || noteTags.length > 0) && (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {noteStatus && <StatusBadge status={noteStatus} />}
                         {noteTags.slice(0, 3).map((t) => (
                           <span
                             key={t}
@@ -511,10 +510,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
                       </div>
                     )}
                     <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        {noteStatus && <StatusBadge status={noteStatus} />}
-                        <span className="truncate">{formatRelativeDate(n.mtime)}</span>
-                      </span>
+                      <span className="min-w-0 truncate">{formatRelativeDate(n.mtime)}</span>
                       <span className="shrink-0">Created {formatRelativeDate(n.ctime)}</span>
                     </div>
                   </div>
