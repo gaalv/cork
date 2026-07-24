@@ -16,6 +16,12 @@ import type { VaultPath } from "@/ipc/types";
 
 const DEFAULT_DAILY_PATTERN = "Daily/YYYY-MM-DD.md";
 
+/** The configured daily-notes folder (default "Daily", "" for a flat pattern). */
+export async function resolveDailyFolder(): Promise<string> {
+  const settings = await client.settings.vaultLoad().catch(() => null);
+  return resolveDailyPath(settings?.dailyPathPattern, new Date()).folder;
+}
+
 /**
  * Open the daily note for `date` (default today), creating it first when
  * missing (idempotent). Uses the vault's `dailyTemplatePath` template when it

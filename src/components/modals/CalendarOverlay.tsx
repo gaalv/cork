@@ -12,9 +12,9 @@
  */
 
 import { useMemo, useState } from "react";
-import { CalendarBlank, CaretLeft, CaretRight, X } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, X } from "@phosphor-icons/react";
 
-import { openDailyNote } from "@/services/dailyNote";
+import { openDailyNote, resolveDailyFolder } from "@/services/dailyNote";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { cn } from "@/utils/cn";
@@ -97,9 +97,10 @@ export function CalendarOverlay() {
 
   async function onDayClick(day: number) {
     const date = new Date(view.year, view.month, day);
-    const key = localDateKey(date);
     close(false);
-    requestFilter({ kind: "date", date: key });
+    // Land in the Daily folder (so the list shows every day) and open this one.
+    const folder = await resolveDailyFolder();
+    if (folder) requestFilter({ kind: "folder", id: folder });
     await openDailyNote(date);
   }
 
@@ -110,22 +111,18 @@ export function CalendarOverlay() {
   }
 
   return (
-    <div
-      className="absolute inset-0 z-30 flex items-start justify-center bg-[var(--color-cork-ink)]/30 pt-[12vh]"
-      onClick={() => close(false)}
-    >
+    // Transparent click-catcher — the calendar is a popover anchored above its
+    // status-bar button, not a centered overlay (no dimming).
+    <div className="absolute inset-0 z-30" onClick={() => close(false)}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[380px] overflow-hidden rounded-2xl border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] shadow-2xl"
+        className="absolute bottom-11 right-2 w-[272px] overflow-hidden rounded-xl border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-[var(--color-cork-border)] px-4 py-3">
-          <div className="flex items-center gap-2">
-            <CalendarBlank size={16} className="text-[var(--color-cork-muted)]" />
-            <h2 className="text-[14px] font-semibold">
-              {MONTHS[view.month]} {view.year}
-            </h2>
-          </div>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between border-b border-[var(--color-cork-border)] px-3 py-2">
+          <h2 className="text-[13px] font-semibold">
+            {MONTHS[view.month]} {view.year}
+          </h2>
+          <div className="flex items-center gap-0.5">
             <button
               onClick={() => shiftMonth(-1)}
               className="rounded p-1 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
@@ -157,18 +154,18 @@ export function CalendarOverlay() {
           </div>
         </div>
 
-        <div className="p-3">
-          <div className="mb-1 grid grid-cols-7 gap-1">
+        <div className="p-2.5">
+          <div className="mb-1 grid grid-cols-7 gap-0.5">
             {WEEKDAYS.map((w) => (
               <div
                 key={w}
-                className="text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--color-cork-subtle)]"
+                className="text-center text-[9px] font-semibold uppercase tracking-wide text-[var(--color-cork-subtle)]"
               >
-                {w}
+                {w.slice(0, 1)}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-0.5">
             {cells.map((day, i) => {
               if (day === null) return <div key={`b${i}`} />;
               const key = localDateKey(new Date(view.year, view.month, day));
@@ -181,7 +178,7 @@ export function CalendarOverlay() {
                   onClick={() => void onDayClick(day)}
                   title={stat ? `${stat.count} note${stat.count === 1 ? "" : "s"}` : "No notes"}
                   className={cn(
-                    "relative flex h-9 flex-col items-center justify-center rounded-md text-[12px] transition",
+                    "relative flex h-7 flex-col items-center justify-center rounded-md text-[11px] transition",
                     h === 0 && "hover:bg-[var(--color-cork-panel-2)]",
                     h === 1 &&
                       "bg-[var(--color-cork-accent)]/10 hover:bg-[var(--color-cork-accent)]/20",
@@ -205,15 +202,12 @@ export function CalendarOverlay() {
                     {day}
                   </span>
                   {stat?.hasDaily && (
-                    <span className="absolute bottom-1 h-1 w-1 rounded-full bg-[var(--color-cork-accent)]" />
+                    <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-[var(--color-cork-accent)]" />
                   )}
                 </button>
               );
             })}
           </div>
-          <p className="mt-3 text-center text-[10px] text-[var(--color-cork-subtle)]">
-            Click a day to open its daily note and see that day&apos;s notes
-          </p>
         </div>
       </div>
     </div>

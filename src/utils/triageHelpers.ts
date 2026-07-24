@@ -14,8 +14,7 @@ export type SidebarFilter =
   | { kind: "archived" }
   | { kind: "folder"; id: string }
   | { kind: "tag"; tag: string }
-  | { kind: "status"; status: NoteStatus }
-  | { kind: "date"; date: string }; // local YYYY-MM-DD; notes authored that day
+  | { kind: "status"; status: NoteStatus };
 
 /** Local `YYYY-MM-DD` for a timestamp (ms) or Date — matches the daily-note convention. */
 export function localDateKey(value: number | Date): string {
@@ -24,17 +23,6 @@ export function localDateKey(value: number | Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
-}
-
-/** "2026-07-24" → "Jul 24, 2026" (parsed as a local date, not UTC). */
-export function formatDateLabel(key: string): string {
-  const [y, m, d] = key.split("-").map(Number);
-  if (!y || !m || !d) return key;
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 /* ------------------------------------------------------------------ */
