@@ -24,8 +24,10 @@ import type { ArchivedNoteEntry, NoteEntry } from "@/ipc/types";
 
 import type { SidebarFilter } from "@/utils/triageHelpers";
 import { formatRelativeDate } from "@/utils/triageHelpers";
+import { NOTE_STATUS_META } from "@/utils/noteStatus";
 import { NoteContextMenu, MoveToSubmenu } from "./NoteContextMenu";
 import type { ContextMenuState, MoveSubmenuState } from "./NoteContextMenu";
+import { StatusBadge } from "./StatusBadge";
 import { createNote } from "@/services/createNote";
 
 export function NotesList({ filter }: { filter: SidebarFilter }) {
@@ -37,6 +39,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   const noteTagMap = useIndexStore((s) => s.noteTagMap);
   const pinnedIds = useIndexStore((s) => s.pinnedIds);
   const toggleNotePin = useIndexStore((s) => s.toggleNotePin);
+  const statusById = useIndexStore((s) => s.statusById);
   const isIndexing = useIndexStore((s) => s.isIndexing);
   const indexProgress = useIndexStore((s) => s.indexProgress);
   const view = useShellStore((s) => s.view);
@@ -232,6 +235,10 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
         filtered = [];
         label = "Archived";
         break;
+      case "status":
+        filtered = allNotes.filter((n) => statusById.get(n.id) === filter.status);
+        label = NOTE_STATUS_META[filter.status].label;
+        break;
     }
 
     const sorted = [...filtered].sort((a, b) => {
@@ -252,7 +259,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
     });
 
     return { notes: sorted, scopeLabel: label };
-  }, [filter, allNotes, tags, noteTagMap, pinnedIds, sortOrder, sortAsc]);
+  }, [filter, allNotes, tags, noteTagMap, pinnedIds, statusById, sortOrder, sortAsc]);
 
   return (
     <section className="flex min-h-0 flex-col border-r border-[var(--color-cork-border)]">
@@ -408,6 +415,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
           notes.map((n) => {
             const isActive = view.kind === "note" && view.id === n.id;
             const noteTags = noteTagMap.get(n.id) ?? [];
+            const noteStatus = statusById.get(n.id);
             return (
               <li key={n.id}>
                 <div
@@ -468,8 +476,11 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
                     </div>
                   )}
                   <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
-                    <span>{formatRelativeDate(n.mtime)}</span>
-                    <span>Created {formatRelativeDate(n.ctime)}</span>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      {noteStatus && <StatusBadge status={noteStatus} />}
+                      <span className="truncate">{formatRelativeDate(n.mtime)}</span>
+                    </span>
+                    <span className="shrink-0">Created {formatRelativeDate(n.ctime)}</span>
                   </div>
                 </div>
               </li>

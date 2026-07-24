@@ -1,6 +1,7 @@
 import type React from "react";
 
 import { client } from "@/ipc/client";
+import type { NoteStatus } from "@/ipc/types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -12,7 +13,8 @@ export type SidebarFilter =
   | { kind: "inbox" }
   | { kind: "archived" }
   | { kind: "folder"; id: string }
-  | { kind: "tag"; tag: string };
+  | { kind: "tag"; tag: string }
+  | { kind: "status"; status: NoteStatus };
 
 /* ------------------------------------------------------------------ */
 /*  Folder icons & colors — persisted in .cork/config.json             */
