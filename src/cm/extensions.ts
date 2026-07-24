@@ -23,6 +23,7 @@ import type { Extension } from "@codemirror/state";
 
 import { vim, getCM } from "@replit/codemirror-vim";
 
+import { livePreviewExtension } from "./livePreview";
 import { markdownExtension } from "./markdown";
 import { corkEditorTheme, corkHighlighting } from "./theme";
 import { wikilinkCompletion } from "./autocomplete";
@@ -37,6 +38,7 @@ type EditorOptions = {
   showLineNumbers: boolean;
   tabSize: number;
   vimMode: boolean;
+  livePreview: boolean;
   onUpdate: (body: string) => void;
 };
 
@@ -96,6 +98,10 @@ export function createExtensions(options: EditorOptions): Extension[] {
       }
     }),
   ];
+
+  if (options.livePreview) {
+    extensions.push(livePreviewExtension());
+  }
 
   if (options.vimMode) {
     extensions.push(vim());

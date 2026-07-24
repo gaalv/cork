@@ -16,6 +16,15 @@ export function EditorSection({
           onChange={(v) => update({ editor: { ...settings.editor, previewDefault: v } })}
         />
       </SettingRow>
+      <SettingRow
+        label="Live preview"
+        description="Render markdown inline; the line under the caret shows raw syntax"
+      >
+        <Toggle
+          checked={settings.editor.livePreview}
+          onChange={(v) => update({ editor: { ...settings.editor, livePreview: v } })}
+        />
+      </SettingRow>
       <SettingRow label="Font size" description="Editor font size in pixels">
         <input
           type="number"

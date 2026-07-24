@@ -56,6 +56,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
       showLineNumbers: editorSettings.showLineNumbers,
       tabSize: editorSettings.tabSize,
       vimMode: editorSettings.vimMode,
+      livePreview: editorSettings.livePreview,
       onUpdate,
     });
 
@@ -103,6 +104,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
     editorSettings.showLineNumbers,
     editorSettings.tabSize,
     editorSettings.vimMode,
+    editorSettings.livePreview,
     onUpdate,
   ]);
 

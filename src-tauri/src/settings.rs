@@ -66,6 +66,8 @@ pub struct EditorSettings {
     pub tab_size: u32,
     #[serde(default)]
     pub vim_mode: bool,
+    #[serde(default = "default_true")]
+    pub live_preview: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -129,6 +131,7 @@ impl Default for EditorSettings {
             font_size: default_font_size(),
             tab_size: default_tab_size(),
             vim_mode: false,
+            live_preview: true,
         }
     }
 }

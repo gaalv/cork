@@ -33,6 +33,7 @@ export type AppSettings = {
     fontSize: number;
     tabSize: number;
     vimMode: boolean;
+    livePreview: boolean;
   };
   vault: Record<string, never>;
   markdown: {
