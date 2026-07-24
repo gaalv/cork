@@ -39,6 +39,144 @@ pub struct LinkRow {
     pub ambiguous: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Mention {
+    #[serde(flatten)]
+    pub note: NoteEntry,
+    pub snippet: String,
+}
+
+/// Notes that mention this note's title as plain text without a `[[wikilink]]`.
+/// Notes that already link here are excluded (they surface as backlinks).
+pub fn unlinked_mentions(conn: &Connection, note_id: &str) -> Result<Vec<Mention>, IpcError> {
+    let title: Option<String> = conn
+        .query_row("SELECT title FROM notes WHERE id = ?1", [note_id], |r| {
+            r.get(0)
+        })
+        .optional()
+        .map_err(sql_error)?;
+    let Some(title) = title else {
+        return Ok(Vec::new());
+    };
+    let title = title.trim().to_string();
+    // Too short / no searchable tokens → skip (avoids matching noise like "a").
+    if title.chars().count() < 2 || !title.chars().any(|c| c.is_alphanumeric()) {
+        return Ok(Vec::new());
+    }
+
+    // Notes already linking here are backlinks — exclude them wholesale.
+    let mut linked: std::collections::HashSet<String> = std::collections::HashSet::new();
+    {
+        let mut stmt = conn
+            .prepare("SELECT DISTINCT src_note_id FROM links WHERE target_id = ?1")
+            .map_err(sql_error)?;
+        let rows = stmt
+            .query_map([note_id], |r| r.get::<_, String>(0))
+            .map_err(sql_error)?;
+        for r in rows {
+            linked.insert(r.map_err(sql_error)?);
+        }
+    }
+
+    // FTS narrows the candidate set to notes containing the title phrase.
+    let phrase = format!("\"{}\"", title.replace('"', "\"\""));
+    let mut stmt = conn
+        .prepare(
+            "SELECT n.id, n.path, n.folder, n.title, n.size, n.mtime, n.created, notes_fts.body
+             FROM notes_fts JOIN notes n ON n.id = notes_fts.id
+             WHERE notes_fts MATCH ?1 AND n.id != ?2
+             ORDER BY n.mtime DESC
+             LIMIT 200",
+        )
+        .map_err(sql_error)?;
+    let rows = stmt
+        .query_map(params![phrase, note_id], |row| {
+            let note = note_from_row(row)?;
+            let body: String = row.get(7)?;
+            Ok((note, body))
+        })
+        .map_err(sql_error)?;
+
+    let mut out = Vec::new();
+    for row in rows {
+        let (note, body) = row.map_err(sql_error)?;
+        if linked.contains(&note.id) {
+            continue;
+        }
+        if let Some(snippet) = first_unlinked_snippet(&body, &title) {
+            out.push(Mention { note, snippet });
+        }
+    }
+    Ok(out)
+}
+
+fn is_word_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+/// Is `[start, end)` contained inside a `[[…]]` span?
+fn inside_wikilink(chars: &[char], start: usize, end: usize) -> bool {
+    let mut open: Option<usize> = None;
+    let mut i = 0;
+    while i + 1 < chars.len() {
+        if chars[i] == '[' && chars[i + 1] == '[' {
+            open = Some(i);
+            i += 2;
+            continue;
+        }
+        if chars[i] == ']' && chars[i + 1] == ']' {
+            if let Some(o) = open {
+                if o + 2 <= start && end <= i {
+                    return true;
+                }
+            }
+            open = None;
+            i += 2;
+            continue;
+        }
+        i += 1;
+    }
+    false
+}
+
+/// Find the first whole-word, non-wikilinked occurrence of `title` (ASCII
+/// case-insensitive) and return a trimmed snippet around it.
+fn first_unlinked_snippet(body: &str, title: &str) -> Option<String> {
+    let chars: Vec<char> = body.chars().collect();
+    let pat: Vec<char> = title.chars().map(|c| c.to_ascii_lowercase()).collect();
+    let (m, n) = (pat.len(), chars.len());
+    if m == 0 || m > n {
+        return None;
+    }
+    let mut i = 0;
+    while i + m <= n {
+        let matched = (0..m).all(|k| chars[i + k].to_ascii_lowercase() == pat[k]);
+        if matched {
+            let before_ok = i == 0 || !is_word_char(chars[i - 1]);
+            let after_ok = i + m >= n || !is_word_char(chars[i + m]);
+            if before_ok && after_ok && !inside_wikilink(&chars, i, i + m) {
+                let ctx = 40;
+                let from = i.saturating_sub(ctx);
+                let to = (i + m + ctx).min(n);
+                let core: String = chars[from..to].iter().collect();
+                let core = core.split_whitespace().collect::<Vec<_>>().join(" ");
+                let mut out = String::new();
+                if from > 0 {
+                    out.push('…');
+                }
+                out.push_str(&core);
+                if to < n {
+                    out.push('…');
+                }
+                return Some(out);
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
 pub fn all_paged(
     conn: &Connection,
     offset: usize,

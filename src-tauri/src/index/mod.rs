@@ -373,6 +373,18 @@ pub fn links_incoming(
 }
 
 #[tauri::command]
+pub fn links_unlinked_mentions(
+    app: AppHandle,
+    vault: tauri::State<'_, VaultState>,
+    state: tauri::State<'_, IndexState>,
+    note_id: String,
+) -> Result<Vec<query::Mention>, IpcError> {
+    state.with_conn(&app, &vault, |conn| {
+        query::unlinked_mentions(conn, &note_id)
+    })
+}
+
+#[tauri::command]
 pub fn links_graph(
     app: AppHandle,
     vault: tauri::State<'_, VaultState>,

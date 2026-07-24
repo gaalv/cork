@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { CaretUpDown, FolderSimple, Plus, Trash } from "@phosphor-icons/react";
+import { CaretUpDown, FolderSimple, Plus, SignOut, Trash } from "@phosphor-icons/react";
 
 import { useVaultStore } from "@/stores/vaultStore";
 import { client } from "@/ipc/client";
@@ -13,6 +13,7 @@ import type { RecentVault } from "@/ipc/types";
 export function VaultIndicator() {
   const vaultPath = useVaultStore((s) => s.path);
   const openVault = useVaultStore((s) => s.openVault);
+  const closeVault = useVaultStore((s) => s.closeVault);
   const [open, setOpen] = useState(false);
   const [recentVaults, setRecentVaults] = useState<RecentVault[]>([]);
   const ref = useRef<HTMLDivElement>(null);
@@ -46,6 +47,11 @@ export function VaultIndicator() {
   const handleOpenNew = () => {
     setOpen(false);
     void openVault();
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    void closeVault();
   };
 
   const handleRemoveRecent = async (e: React.MouseEvent, path: string) => {
@@ -105,6 +111,13 @@ export function VaultIndicator() {
           >
             <Plus size={14} />
             Open another vault
+          </button>
+          <button
+            onClick={handleClose}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+          >
+            <SignOut size={14} />
+            Close vault
           </button>
         </div>
       )}

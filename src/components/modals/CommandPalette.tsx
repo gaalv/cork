@@ -11,6 +11,7 @@ import {
   CalendarBlank,
   CircleDashed,
   ClipboardText,
+  DownloadSimple,
   FileArrowDown,
   FilePdf,
   FilePlus,
@@ -19,6 +20,7 @@ import {
   NotePencil,
   Plus,
   SidebarSimple,
+  SignOut,
   Sparkle,
   TextIndent,
 } from "@phosphor-icons/react";
@@ -32,6 +34,7 @@ import { openDailyNote } from "@/services/dailyNote";
 import { useIndexStore } from "@/stores/indexStore";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
+import { client } from "@/ipc/client";
 import { cn } from "@/utils/cn";
 import { NOTE_STATUSES, NOTE_STATUS_META, narrowNoteStatus } from "@/utils/noteStatus";
 
@@ -85,6 +88,24 @@ const COMMANDS: readonly PaletteCommand[] = [
     label: "Toggle inspector",
     hint: "\u2318 .",
     icon: <SidebarSimple size={14} />,
+  },
+  {
+    id: "replace-in-vault",
+    label: "Replace in vault\u2026",
+    hint: "Edit",
+    icon: <MagnifyingGlass size={14} />,
+  },
+  {
+    id: "import-folder",
+    label: "Import folder (Obsidian, notes\u2026)",
+    hint: "Import",
+    icon: <DownloadSimple size={14} />,
+  },
+  {
+    id: "close-vault",
+    label: "Close vault (back to Welcome)",
+    hint: "Vault",
+    icon: <SignOut size={14} />,
   },
 ];
 
@@ -210,6 +231,23 @@ export function CommandPalette() {
           useShellStore.getState().setGraphOpen(true);
         } else if (cmd.id === "open-calendar") {
           useShellStore.getState().setCalendarOpen(true);
+        } else if (cmd.id === "replace-in-vault") {
+          useShellStore.getState().setReplaceOpen(true);
+        } else if (cmd.id === "close-vault") {
+          void useVaultStore.getState().closeVault();
+        } else if (cmd.id === "import-folder") {
+          void (async () => {
+            try {
+              const res = await client.vault.importFolder();
+              await useVaultStore.getState().loadNotes();
+              toast.success(
+                `Imported ${res.imported} file${res.imported === 1 ? "" : "s"}` +
+                  (res.skipped ? ` · skipped ${res.skipped}` : ""),
+              );
+            } catch {
+              // Folder picker cancelled or import failed — stay quiet on cancel.
+            }
+          })();
         } else if (cmd.id === "export-html") {
           void exportNoteAsHtml();
         } else if (cmd.id === "export-pdf") {

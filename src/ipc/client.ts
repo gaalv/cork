@@ -26,6 +26,7 @@ import type {
 const commandNames: Record<IpcCommandName, string> = {
   health: "health",
   "vault.open": "vault_open",
+  "vault.importFolder": "vault_import_folder",
   "vault.current": "vault_current",
   "vault.list": "vault_list",
   "vault.watcherStart": "vault_watcher_start",
@@ -58,6 +59,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "notes.bulkMove": "notes_bulk_move",
   "notes.bulkTrash": "notes_bulk_trash",
   "notes.bulkSetFrontmatter": "notes_bulk_set_frontmatter",
+  "notes.replaceInVault": "notes_replace_in_vault",
   "notes.allPaged": "notes_all_paged",
   "notes.byTag": "notes_by_tag",
   "notes.byFolder": "notes_by_folder",
@@ -71,6 +73,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "tags.delete": "tags_delete",
   "links.outgoing": "links_outgoing",
   "links.incoming": "links_incoming",
+  "links.unlinkedMentions": "links_unlinked_mentions",
   "links.graph": "links_graph",
   "index.search": "index_search",
   "index.status": "index_status",
@@ -153,6 +156,8 @@ export const client = {
   health: () => invokeCommand("health", undefined),
   vault: {
     open: (path?: string) => invokeCommand("vault.open", path ? { path } : undefined),
+    importFolder: (source?: string) =>
+      invokeCommand("vault.importFolder", source ? { source } : undefined),
     current: () => invokeCommand("vault.current", undefined),
     list: () => invokeCommand("vault.list", undefined),
     watcherStart: () => invokeCommand("vault.watcherStart", undefined),
@@ -199,6 +204,8 @@ export const client = {
     bulkTrash: (paths: string[]) => invokeCommand("notes.bulkTrash", { paths }),
     bulkSetFrontmatter: (paths: string[], patch: JsonRecord) =>
       invokeCommand("notes.bulkSetFrontmatter", { paths, patch }),
+    replaceInVault: (find: string, replaceWith: string, caseSensitive: boolean, apply: boolean) =>
+      invokeCommand("notes.replaceInVault", { find, replaceWith, caseSensitive, apply }),
     allPaged: (offset: number, limit: number) => invokeCommand("notes.allPaged", { offset, limit }),
     byTag: (tag: string) => invokeCommand("notes.byTag", { tag }),
     byFolder: (folder: string) => invokeCommand("notes.byFolder", { folder }),
@@ -220,6 +227,7 @@ export const client = {
   links: {
     outgoing: (noteId: string) => invokeCommand("links.outgoing", { noteId }),
     incoming: (noteId: string) => invokeCommand("links.incoming", { noteId }),
+    unlinkedMentions: (noteId: string) => invokeCommand("links.unlinkedMentions", { noteId }),
     graph: () => invokeCommand("links.graph", undefined),
   },
   index: {
@@ -317,6 +325,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "templates.list":
       return undefined;
     case "vault.open":
+    case "vault.importFolder":
     case "vault.removeRecent":
     case "folders.trash":
     case "notes.read":
@@ -325,6 +334,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "notes.byId":
     case "links.outgoing":
     case "links.incoming":
+    case "links.unlinkedMentions":
     case "index.search":
     case "archive.note":
     case "archive.restore":
@@ -401,6 +411,7 @@ function toRustArgs<Name extends IpcCommandName>(
     case "notes.bulkMove":
     case "notes.bulkTrash":
     case "notes.bulkSetFrontmatter":
+    case "notes.replaceInVault":
     case "export.write":
     case "diagnostics.reportError":
     case "diagnostics.recent":

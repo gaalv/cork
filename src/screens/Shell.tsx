@@ -6,6 +6,7 @@ import { useShortcuts } from "@/hooks/useShortcuts";
 import { startMenuActionListener, stopMenuActionListener } from "@/services/menuActions";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { GenerateNoteModal } from "@/components/modals/GenerateNoteModal";
+import { ReplaceInVaultModal } from "@/components/modals/ReplaceInVaultModal";
 import { BulkActionsBar } from "@/components/folders/BulkActionsBar";
 import { CommandPalette } from "@/components/modals/CommandPalette";
 import { TemplatePicker } from "@/components/modals/TemplatePicker";
@@ -116,6 +117,7 @@ export function Shell() {
       )}
       <CommandPalette />
       <GenerateNoteModal />
+      <ReplaceInVaultModal />
       <TemplatePicker />
       <HelpModal />
       <SettingsPanel />

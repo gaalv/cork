@@ -85,6 +85,28 @@ export type SearchResult = NoteEntry & {
   rank: number;
 };
 
+export type Mention = NoteEntry & {
+  snippet: string;
+};
+
+export type ReplaceHit = {
+  path: string;
+  title: string;
+  folder: string;
+  count: number;
+};
+
+export type ReplaceResult = {
+  files: ReplaceHit[];
+  total: number;
+  applied: boolean;
+};
+
+export type ImportResult = {
+  imported: number;
+  skipped: number;
+};
+
 export type ScaffoldResult = {
   created: boolean;
   files: string[];
@@ -119,6 +141,10 @@ export type IpcCommandMap = {
   "vault.current": {
     args: undefined;
     result: VaultPath | null;
+  };
+  "vault.importFolder": {
+    args: { source?: string } | undefined;
+    result: ImportResult;
   };
   "vault.list": {
     args: undefined;
@@ -263,6 +289,10 @@ export type IpcCommandMap = {
     args: { paths: string[]; patch: JsonRecord };
     result: BulkFrontmatterResult;
   };
+  "notes.replaceInVault": {
+    args: { find: string; replaceWith: string; caseSensitive: boolean; apply: boolean };
+    result: ReplaceResult;
+  };
   // === F06/F08 ===
   "notes.allPaged": {
     args: { offset: number; limit: number };
@@ -317,6 +347,10 @@ export type IpcCommandMap = {
   "links.incoming": {
     args: { noteId: string };
     result: LinkRow[];
+  };
+  "links.unlinkedMentions": {
+    args: { noteId: string };
+    result: Mention[];
   };
   "links.graph": {
     args: undefined;

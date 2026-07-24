@@ -23,6 +23,7 @@ type ShellState = {
   generateModalOpen: boolean;
   graphOpen: boolean;
   calendarOpen: boolean;
+  replaceOpen: boolean;
   // A filter the calendar (or other overlay) asks TriageBody to apply, since
   // the active NotesList filter is TriageBody-local state.
   pendingFilter: SidebarFilter | null;
@@ -38,6 +39,7 @@ type ShellState = {
   setGenerateModalOpen: (open: boolean) => void;
   setGraphOpen: (open: boolean) => void;
   setCalendarOpen: (open: boolean) => void;
+  setReplaceOpen: (open: boolean) => void;
   requestFilter: (filter: SidebarFilter | null) => void;
   setTemplatePickerMode: (mode: TemplatePickerMode | null) => void;
   toggleInspector: () => void;
@@ -55,6 +57,7 @@ export const useShellStore = create<ShellState>((set) => ({
   generateModalOpen: false,
   graphOpen: false,
   calendarOpen: false,
+  replaceOpen: false,
   pendingFilter: null,
   templatePickerMode: null,
   inspectorOpen: false,
@@ -72,6 +75,7 @@ export const useShellStore = create<ShellState>((set) => ({
   setGenerateModalOpen: (generateModalOpen) => set({ generateModalOpen }),
   setGraphOpen: (graphOpen) => set({ graphOpen }),
   setCalendarOpen: (calendarOpen) => set({ calendarOpen }),
+  setReplaceOpen: (replaceOpen) => set({ replaceOpen }),
   requestFilter: (pendingFilter) => set({ pendingFilter }),
   setTemplatePickerMode: (templatePickerMode) => set({ templatePickerMode }),
 
@@ -91,6 +95,7 @@ export const useShellStore = create<ShellState>((set) => ({
       generateModalOpen: false,
       graphOpen: false,
       calendarOpen: false,
+      replaceOpen: false,
       pendingFilter: null,
       templatePickerMode: null,
       inspectorOpen: false,

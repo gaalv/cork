@@ -25,6 +25,7 @@ type VaultState = {
   isLoading: boolean;
   error: string | null;
   openVault: (path?: string) => Promise<void>;
+  closeVault: () => Promise<void>;
   loadNotes: () => Promise<void>;
   startWatcherIntegration: () => Promise<void>;
 
@@ -56,6 +57,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  // — Close: drop the active vault and fall back to the Welcome screen —
+  closeVault: async () => {
+    try {
+      await client.vault.close();
+    } catch {
+      // Even if the backend close fails, reset the UI so the user isn't stuck.
+    }
+    set({ path: null, notes: [], error: null });
   },
 
   loadNotes: async () => {
