@@ -15,6 +15,7 @@ import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { getEditorView } from "@/cm/viewRef";
 import { cycleTheme } from "@/services/themeRuntime";
 import { createNote } from "@/services/createNote";
+import { openDailyNote } from "@/services/dailyNote";
 
 export function useShortcuts() {
   useEffect(() => {
@@ -49,6 +50,17 @@ export function useShortcuts() {
         event.preventDefault();
         cycleTheme();
       },
+      // ⌘⇧T — Open today's daily note
+      "$mod+Shift+KeyT": (event) => {
+        event.preventDefault();
+        void openDailyNote();
+      },
+      // ⌘⇧G — Toggle graph view
+      "$mod+Shift+KeyG": (event) => {
+        event.preventDefault();
+        const shell = useShellStore.getState();
+        shell.setGraphOpen(!shell.graphOpen);
+      },
       // Escape — Close topmost overlay (but let vim handle it when editor is focused)
       Escape: (event) => {
         // When vim mode is on and the editor is focused, let CM6 vim handle
@@ -59,7 +71,11 @@ export function useShortcuts() {
         const shell = useShellStore.getState();
         const settingsOpen = useSettingsUiStore.getState().open;
         const hasOverlay =
-          shell.paletteOpen || settingsOpen || shell.helpOpen || shell.generateModalOpen;
+          shell.paletteOpen ||
+          settingsOpen ||
+          shell.helpOpen ||
+          shell.generateModalOpen ||
+          shell.graphOpen;
 
         if (vimOn && editorFocused && !hasOverlay) return;
 
@@ -72,6 +88,8 @@ export function useShortcuts() {
           shell.setHelpOpen(false);
         } else if (shell.generateModalOpen) {
           shell.setGenerateModalOpen(false);
+        } else if (shell.graphOpen) {
+          shell.setGraphOpen(false);
         } else if (shell.drawer) {
           shell.setDrawer(null);
         }
