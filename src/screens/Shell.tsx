@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { toast } from "sonner";
 
 import { useIndexStore } from "@/stores/indexStore";
@@ -15,11 +15,18 @@ import { Toaster } from "@/components/ui/Toaster";
 import { TriageBody } from "@/screens/TriageBody";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { useVaultStore } from "@/stores/vaultStore";
+import { useShellStore } from "@/stores/shellStore";
 import { client } from "@/ipc/client";
+
+// Lazy — keeps d3-force out of the main chunk (F46).
+const GraphView = lazy(() =>
+  import("@/components/modals/GraphView").then((m) => ({ default: m.GraphView })),
+);
 
 export function Shell() {
   useShortcuts();
   const vaultPath = useVaultStore((state) => state.path);
+  const graphOpen = useShellStore((state) => state.graphOpen);
   const notes = useVaultStore((state) => state.notes);
   const loadNotes = useVaultStore((state) => state.loadNotes);
   const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration);
@@ -92,6 +99,11 @@ export function Shell() {
     >
       <TriageBody />
       <BulkActionsBar folders={toFolders(notes)} onDone={loadNotes} />
+      {graphOpen && (
+        <Suspense fallback={null}>
+          <GraphView />
+        </Suspense>
+      )}
       <CommandPalette />
       <GenerateNoteModal />
       <TemplatePicker />

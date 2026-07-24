@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDragRegion } from "@/hooks/useDragRegion";
 import { toast } from "sonner";
-import { Archive, FolderSimple, NotePencil, Plus, Star, Tag, Tray } from "@phosphor-icons/react";
+import {
+  Archive,
+  FolderSimple,
+  Graph,
+  NotePencil,
+  Plus,
+  Star,
+  Tag,
+  Tray,
+} from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
 
 import { getIconComponent } from "@/components/ui/IconPicker";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useIndexStore } from "@/stores/indexStore";
+import { useShellStore } from "@/stores/shellStore";
 import { folderOps } from "@/services/folderOps";
 import { client } from "@/ipc/client";
 
@@ -196,6 +206,11 @@ export function Sidebar({
             label="Archived"
             active={filter.kind === "archived"}
             onClick={() => setFilter({ kind: "archived" })}
+          />
+          <SidebarRow
+            icon={<Graph size={14} />}
+            label="Graph"
+            onClick={() => useShellStore.getState().setGraphOpen(true)}
           />
         </div>
 

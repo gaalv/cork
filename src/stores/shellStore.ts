@@ -19,6 +19,7 @@ type ShellState = {
   paletteOpen: boolean;
   helpOpen: boolean;
   generateModalOpen: boolean;
+  graphOpen: boolean;
   templatePickerMode: TemplatePickerMode | null;
   inspectorOpen: boolean;
   sidebarOpen: boolean;
@@ -29,6 +30,7 @@ type ShellState = {
   setPaletteOpen: (open: boolean) => void;
   setHelpOpen: (open: boolean) => void;
   setGenerateModalOpen: (open: boolean) => void;
+  setGraphOpen: (open: boolean) => void;
   setTemplatePickerMode: (mode: TemplatePickerMode | null) => void;
   toggleInspector: () => void;
   toggleSidebar: () => void;
@@ -43,6 +45,7 @@ export const useShellStore = create<ShellState>((set) => ({
   paletteOpen: false,
   helpOpen: false,
   generateModalOpen: false,
+  graphOpen: false,
   templatePickerMode: null,
   inspectorOpen: false,
   sidebarOpen: true,
@@ -57,6 +60,7 @@ export const useShellStore = create<ShellState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setGenerateModalOpen: (generateModalOpen) => set({ generateModalOpen }),
+  setGraphOpen: (graphOpen) => set({ graphOpen }),
   setTemplatePickerMode: (templatePickerMode) => set({ templatePickerMode }),
 
   toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
@@ -73,6 +77,7 @@ export const useShellStore = create<ShellState>((set) => ({
       paletteOpen: false,
       helpOpen: false,
       generateModalOpen: false,
+      graphOpen: false,
       templatePickerMode: null,
       inspectorOpen: false,
       sidebarOpen: true,
