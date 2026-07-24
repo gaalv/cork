@@ -303,7 +303,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 - New note from template + insert template at cursor (shared picker modal via ⌘K)
 - Settings → Templates section (folder config, list, "New template")
 
-**[F40 — Note Status](../features/F40-note-status/spec.md)** — PLANNED
+**[F40 — Note Status](../features/F40-note-status/spec.md)** — COMPLETE (pending user UAT)
 
 - Inkdrop-style per-note status: `active` / `on-hold` / `done`, absent by default
 - Plain `status:` frontmatter, mirroring the pinned architecture (AD-053) end-to-end

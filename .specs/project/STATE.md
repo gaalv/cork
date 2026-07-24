@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-07-07T00:00-03:00
-**Current Work:** F41 Sync Resilience merged + user-validated (Update token flow confirmed working). F39 Templates T01–T07 merged, pending user UAT. F40 Status executing next.
+**Last Updated:** 2026-07-24T00:00-03:00
+**Current Work:** F41 Sync Resilience merged + user-validated (Update token flow confirmed working). F39 Templates T01–T07 merged, pending user UAT. F40 Status T01–T06 complete, pending user UAT.
 
 ---
 
@@ -479,6 +479,7 @@ _None._
 | 048 | Replace Focus-mode overlay drawers with full-page Search/Folders/Pinned/Tags/Recent sidebar views while keeping triage behavior intact                                                                                                                          | 2026-05-22 | pending  | ✅ Done    |
 | 049 | Implement F41 Sync Resilience T01–T04 (erase-proof credential helper, sync log → app_log_dir, vcs.updateToken + UI, error classification/offline state/heartbeat backoff); T05 expiry-awareness deferred P3                                                     | 2026-07-08 | multiple | ✅ Done    |
 | 050 | Implement F39 Note Templates T01–T07 (Rust templates module + list/render/createFromTemplate IPC, scaffold v3 seeds 4 defaults create-if-missing, TemplatePicker modal + palette, cursor placement, insert at cursor, Settings → Templates)                     | 2026-07-08 | multiple | ✅ Done    |
+| 051 | Implement F40 Note Status T01–T06 (notes.statuses IPC + statusById map + optimistic setNoteStatus, NotesList badge + status filter, Sidebar Status group, context-menu submenu + Inspector selector, palette Set-status entries)                                | 2026-07-24 | multiple | ✅ Done    |
 
 ---
 

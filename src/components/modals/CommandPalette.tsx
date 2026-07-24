@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  CircleDashed,
   FilePlus,
   MagnifyingGlass,
   NotePencil,
@@ -18,10 +19,20 @@ import {
 import { toast } from "sonner";
 
 import { getEditorView } from "@/cm/viewRef";
+import { useIndexStore } from "@/stores/indexStore";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
+import { cn } from "@/utils/cn";
+import { NOTE_STATUSES, NOTE_STATUS_META, narrowNoteStatus } from "@/utils/noteStatus";
 
-const COMMANDS = [
+type PaletteCommand = {
+  id: string;
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+};
+
+const COMMANDS: readonly PaletteCommand[] = [
   { id: "new-note", label: "Create new note", hint: "\u2318 N", icon: <Plus size={14} /> },
   {
     id: "new-from-template",
@@ -47,7 +58,24 @@ const COMMANDS = [
     hint: "\u2318 .",
     icon: <SidebarSimple size={14} />,
   },
-] as const;
+];
+
+const STATUS_COMMANDS: readonly PaletteCommand[] = [
+  ...NOTE_STATUSES.map((s) => ({
+    id: `set-status-${s}`,
+    label: `Set status: ${NOTE_STATUS_META[s].label}`,
+    hint: "Status",
+    icon: (
+      <span className={cn("inline-block h-2 w-2 rounded-full", NOTE_STATUS_META[s].dotClass)} />
+    ),
+  })),
+  {
+    id: "set-status-none",
+    label: "Set status: None",
+    hint: "Status",
+    icon: <CircleDashed size={14} />,
+  },
+];
 
 export function CommandPalette() {
   const open = useShellStore((s) => s.paletteOpen);
@@ -59,6 +87,16 @@ export function CommandPalette() {
   // A template can only be inserted while a note is open in edit mode —
   // the CM6 view only exists then (preview unmounts it).
   const canInsertTemplate = view.kind === "note" && getEditorView() !== null;
+
+  // Status commands only make sense with an open note
+  const openNoteEntry = useMemo(
+    () => (view.kind === "note" ? notes.find((n) => n.id === view.id) : undefined),
+    [view, notes],
+  );
+  const commands = useMemo(
+    () => (openNoteEntry ? [...COMMANDS, ...STATUS_COMMANDS] : COMMANDS),
+    [openNoteEntry],
+  );
 
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -82,7 +120,7 @@ export function CommandPalette() {
       .slice(0, 10);
   }, [notes, query]);
 
-  const totalItems = matches.length + COMMANDS.length;
+  const totalItems = matches.length + commands.length;
 
   const handleSelect = useCallback(
     (index: number) => {
@@ -90,8 +128,15 @@ export function CommandPalette() {
         openNote(matches[index].id);
         close(false);
       } else {
-        const cmd = COMMANDS[index - matches.length];
-        if (cmd.id === "ai-generate") {
+        const cmd = commands[index - matches.length];
+        if (cmd.id.startsWith("set-status-")) {
+          if (openNoteEntry) {
+            const status = narrowNoteStatus(cmd.id.slice("set-status-".length)) ?? null;
+            void useIndexStore
+              .getState()
+              .setNoteStatus(openNoteEntry.id, openNoteEntry.path, status);
+          }
+        } else if (cmd.id === "ai-generate") {
           useShellStore.getState().setGenerateModalOpen(true);
         } else if (cmd.id === "toggle-inspector") {
           useShellStore.getState().toggleInspector();
@@ -107,7 +152,7 @@ export function CommandPalette() {
         close(false);
       }
     },
-    [canInsertTemplate, close, matches, openNote],
+    [canInsertTemplate, close, commands, matches, openNote, openNoteEntry],
   );
 
   const handleKeyDown = useCallback(
@@ -176,7 +221,7 @@ export function CommandPalette() {
             </div>
           )}
           <PaletteSection title="Commands">
-            {COMMANDS.map((cmd, i) => (
+            {commands.map((cmd, i) => (
               <PaletteRow
                 key={cmd.id}
                 icon={cmd.icon}
