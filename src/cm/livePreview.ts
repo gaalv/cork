@@ -24,13 +24,40 @@ import {
   type ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import type { EditorState, Range } from "@codemirror/state";
+import { StateEffect, type EditorState, type Range } from "@codemirror/state";
 
 const TASK_LINE_RE = /^\s*[-*+]\s\[[ xX]\]/;
 const WIKILINK_RE = /\[\[([^[\]|]+?)(?:\|([^[\]]+?))?\]\]/g;
 const HIGHLIGHT_RE = /==([^=\n]+?)==/g;
 const CALLOUT_RE = /^(?:>\s*)+\[!([A-Za-z][\w-]*)\]/;
 const FENCE_LINE_RE = /^\s*(?:`{3,}|~{3,})/;
+// Single-line display math `$$…$$` and inline math `$…$` (remark-math parity:
+// inline delimiters must not hug whitespace). Multi-line `$$` blocks render in
+// the preview pane; the editor styles them via code-fence handling.
+const BLOCK_MATH_RE = /\$\$([^\n]+?)\$\$/g;
+const INLINE_MATH_RE = /\$([^$\n]+?)\$/g;
+
+// KaTeX is ~280 kB — lazy-load it so it stays out of the main editor chunk
+// (shares the chunk the preview pipeline already creates). Until it resolves,
+// math shows raw; on load, mounted editors rebuild their decorations.
+type KatexModule = { renderToString: (tex: string, opts?: unknown) => string };
+let katexMod: KatexModule | null = null;
+let katexLoading = false;
+const katexWaiters = new Set<() => void>();
+
+/** Refresh signal dispatched to a view once KaTeX has loaded. */
+const katexLoadedEffect = StateEffect.define<null>();
+
+function loadKatex(): void {
+  if (katexMod || katexLoading) return;
+  katexLoading = true;
+  void import("katex").then((m) => {
+    katexMod = m.default as unknown as KatexModule;
+    katexLoading = false;
+    for (const cb of katexWaiters) cb();
+    katexWaiters.clear();
+  });
+}
 
 type CalloutFamily = "note" | "tip" | "warning";
 
@@ -85,6 +112,40 @@ class HrWidget extends WidgetType {
   }
   eq() {
     return true;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
+/** Renders `$…$` / `$$…$$` via KaTeX once it has lazy-loaded. */
+class MathWidget extends WidgetType {
+  constructor(
+    private readonly tex: string,
+    private readonly display: boolean,
+  ) {
+    super();
+  }
+  eq(other: MathWidget) {
+    return other.tex === this.tex && other.display === this.display;
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = this.display ? "cm-cork-lp-math cm-cork-lp-math-display" : "cm-cork-lp-math";
+    if (katexMod) {
+      try {
+        span.innerHTML = katexMod.renderToString(this.tex, {
+          throwOnError: false,
+          displayMode: this.display,
+        });
+      } catch {
+        span.textContent = this.display ? `$$${this.tex}$$` : `$${this.tex}$`;
+      }
+    } else {
+      // KaTeX still loading — show raw until the refresh rebuild lands.
+      span.textContent = this.display ? `$$${this.tex}$$` : `$${this.tex}$`;
+    }
+    return span;
   }
   ignoreEvent() {
     return false;
@@ -275,6 +336,34 @@ function buildDecorations(view: EditorView): DecorationSet {
       conceals.push(Decoration.replace({}).range(start, start + 2));
       conceals.push(Decoration.replace({}).range(end - 2, end));
     }
+
+    // Math ($$…$$ single-line first, then $…$) — regex, KaTeX widgets.
+    const mathRanges: { from: number; to: number }[] = [];
+    BLOCK_MATH_RE.lastIndex = 0;
+    while ((match = BLOCK_MATH_RE.exec(text)) !== null) {
+      const start = from + match.index;
+      const end = start + match[0].length;
+      if (codeRanges.some((r) => start < r.to && end > r.from)) continue;
+      mathRanges.push({ from: start, to: end });
+      if (!katexMod) loadKatex();
+      if (selectionOnLines(state, start, end)) continue;
+      conceals.push(
+        Decoration.replace({ widget: new MathWidget(match[1].trim(), true) }).range(start, end),
+      );
+    }
+    INLINE_MATH_RE.lastIndex = 0;
+    while ((match = INLINE_MATH_RE.exec(text)) !== null) {
+      const inner = match[1];
+      // remark-math parity: inline delimiters must not hug whitespace.
+      if (/^\s|\s$/.test(inner)) continue;
+      const start = from + match.index;
+      const end = start + match[0].length;
+      if (codeRanges.some((r) => start < r.to && end > r.from)) continue;
+      if (mathRanges.some((r) => start < r.to && end > r.from)) continue;
+      if (!katexMod) loadKatex();
+      if (selectionOnLines(state, start, end)) continue;
+      conceals.push(Decoration.replace({ widget: new MathWidget(inner, false) }).range(start, end));
+    }
   }
 
   for (const lineFrom of quoteLines) {
@@ -321,13 +410,23 @@ function buildDecorations(view: EditorView): DecorationSet {
 const livePreviewPlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
+    private readonly refresh: () => void;
     constructor(view: EditorView) {
       this.decorations = buildDecorations(view);
+      // Rebuild once KaTeX finishes loading so raw math swaps to rendered.
+      this.refresh = () => view.dispatch({ effects: katexLoadedEffect.of(null) });
+      if (!katexMod) katexWaiters.add(this.refresh);
     }
     update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+      const katexRefresh = update.transactions.some((tr) =>
+        tr.effects.some((e) => e.is(katexLoadedEffect)),
+      );
+      if (update.docChanged || update.viewportChanged || update.selectionSet || katexRefresh) {
         this.decorations = buildDecorations(update.view);
       }
+    }
+    destroy() {
+      katexWaiters.delete(this.refresh);
     }
   },
   { decorations: (v) => v.decorations },
@@ -344,6 +443,15 @@ const livePreviewTheme = EditorView.baseTheme({
     width: "100%",
     verticalAlign: "middle",
     borderTop: "1px solid var(--color-cork-border)",
+  },
+  ".cm-cork-lp-math": {
+    cursor: "text",
+  },
+  ".cm-cork-lp-math-display": {
+    display: "inline-block",
+    width: "100%",
+    textAlign: "center",
+    padding: "0.3em 0",
   },
   ".cm-cork-lp-inline-code": {
     fontFamily: "var(--font-mono)",
