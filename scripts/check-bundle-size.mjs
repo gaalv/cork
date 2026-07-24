@@ -30,9 +30,19 @@ try {
   process.exit(1);
 }
 
-const mains = entries.filter((name) => /^index-.*\.js$/.test(name));
+// The entry chunk is the one referenced by dist/index.html — lazy chunks from
+// dynamic imports (mermaid internals, preview, graph) also emit index-*.js
+// names and must NOT count against the entry budget.
+let mains;
+try {
+  const html = readFileSync(join(process.cwd(), "dist", "index.html"), "utf8");
+  const matches = [...html.matchAll(/assets\/(index-[^"']+\.js)/g)].map((m) => m[1]);
+  mains = [...new Set(matches)].filter((name) => entries.includes(name));
+} catch {
+  mains = [];
+}
 if (mains.length === 0) {
-  console.error("bundle-size: no index-*.js entry found in dist/assets.");
+  console.error("bundle-size: no entry index-*.js referenced by dist/index.html.");
   process.exit(1);
 }
 

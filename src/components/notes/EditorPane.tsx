@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useDragRegion } from "@/hooks/useDragRegion";
 import { Eye, NotePencil, Pencil, SidebarSimple, Trash } from "@phosphor-icons/react";
@@ -8,10 +8,15 @@ import { Editor } from "@/components/editor/Editor";
 import { useEditorStore } from "@/stores/editorStore";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { Inspector } from "@/components/editor/inspector/Inspector";
-import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
+
+// Lazy — the preview pipeline (mermaid, KaTeX, unified) is heavy and must
+// stay out of the main chunk (500 kB gzip budget, R-006).
+const MarkdownPreview = lazy(() =>
+  import("@/components/editor/MarkdownPreview").then((m) => ({ default: m.MarkdownPreview })),
+);
 
 export function EditorPane({
   inspectorOpen,
@@ -62,7 +67,13 @@ export function EditorPane({
       />
       {!preview && <EditorToolbar />}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {preview ? <MarkdownPreview /> : <Editor noteId={note.id} path={note.path} />}
+        {preview ? (
+          <Suspense fallback={null}>
+            <MarkdownPreview />
+          </Suspense>
+        ) : (
+          <Editor noteId={note.id} path={note.path} />
+        )}
       </div>
     </main>
   );
