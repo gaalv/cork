@@ -24,7 +24,7 @@ import {
   type ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import { StateEffect, type EditorState, type Range } from "@codemirror/state";
+import { StateEffect, StateField, type EditorState, type Range } from "@codemirror/state";
 
 const TASK_LINE_RE = /^\s*[-*+]\s\[[ xX]\]/;
 const WIKILINK_RE = /\[\[([^[\]|]+?)(?:\|([^[\]]+?))?\]\]/g;
@@ -152,6 +152,81 @@ class MathWidget extends WidgetType {
   }
 }
 
+type TableAlign = "left" | "center" | "right" | null;
+
+/** Parse a GFM markdown table block into headers/alignment/rows, or null. */
+function parseMarkdownTable(
+  md: string,
+): { headers: string[]; aligns: TableAlign[]; rows: string[][] } | null {
+  const lines = md
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (lines.length < 2) return null;
+  const splitRow = (line: string): string[] => {
+    let s = line.trim();
+    if (s.startsWith("|")) s = s.slice(1);
+    if (s.endsWith("|")) s = s.slice(0, -1);
+    return s.split("|").map((c) => c.trim());
+  };
+  const delim = splitRow(lines[1]);
+  if (delim.length === 0 || !delim.every((c) => /^:?-+:?$/.test(c))) return null;
+  const aligns: TableAlign[] = delim.map((c) => {
+    const left = c.startsWith(":");
+    const right = c.endsWith(":");
+    if (left && right) return "center";
+    if (right) return "right";
+    if (left) return "left";
+    return null;
+  });
+  const headers = splitRow(lines[0]);
+  const rows = lines.slice(2).map(splitRow);
+  return { headers, aligns, rows };
+}
+
+/** Renders a GFM table block as a real `<table>` while the caret is elsewhere. */
+class TableWidget extends WidgetType {
+  constructor(private readonly md: string) {
+    super();
+  }
+  eq(other: TableWidget) {
+    return other.md === this.md;
+  }
+  toDOM() {
+    const table = document.createElement("table");
+    table.className = "cm-cork-lp-table";
+    const parsed = parseMarkdownTable(this.md);
+    if (!parsed) {
+      table.textContent = this.md;
+      return table;
+    }
+    const applyAlign = (cell: HTMLTableCellElement, align: TableAlign) => {
+      if (align) cell.style.textAlign = align;
+    };
+    const thead = table.createTHead();
+    const headRow = thead.insertRow();
+    parsed.headers.forEach((h, i) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      applyAlign(th, parsed.aligns[i] ?? null);
+      headRow.appendChild(th);
+    });
+    const tbody = table.createTBody();
+    for (const row of parsed.rows) {
+      const tr = tbody.insertRow();
+      for (let i = 0; i < parsed.headers.length; i += 1) {
+        const td = tr.insertCell();
+        td.textContent = row[i] ?? "";
+        applyAlign(td, parsed.aligns[i] ?? null);
+      }
+    }
+    return table;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
 /** True when any selection range touches the lines spanned by [from, to]. */
 function selectionOnLines(state: EditorState, from: number, to: number): boolean {
   const start = state.doc.lineAt(from).from;
@@ -178,6 +253,23 @@ function buildDecorations(view: EditorView): DecorationSet {
   const highlightMark = Decoration.mark({ class: "cm-cork-lp-highlight" });
 
   for (const { from, to } of view.visibleRanges) {
+    const text = state.sliceDoc(from, to);
+
+    // Wikilinks aren't in the Lezer tree — collect their spans up front so the
+    // Link handler can skip the `[target]` the markdown parser sees nested
+    // inside `[[target]]` (otherwise its `]` conceal wins the overlap dedup and
+    // leaves a stray trailing `]`).
+    const wikilinks: { from: number; to: number; targetLen: number; hasAlias: boolean }[] = [];
+    WIKILINK_RE.lastIndex = 0;
+    for (let m = WIKILINK_RE.exec(text); m !== null; m = WIKILINK_RE.exec(text)) {
+      wikilinks.push({
+        from: from + m.index,
+        to: from + m.index + m[0].length,
+        targetLen: m[1].length,
+        hasAlias: Boolean(m[2]),
+      });
+    }
+
     syntaxTree(state).iterate({
       from,
       to,
@@ -212,12 +304,32 @@ function buildDecorations(view: EditorView): DecorationSet {
               const isFence =
                 (line.from === firstFrom || line.from === lastFrom) &&
                 FENCE_LINE_RE.test(line.text);
-              codeLines.set(line.from, isFence && !selectionOnLines(state, line.from, line.to));
+              const focused = selectionOnLines(state, line.from, line.to);
+              if (isFence && !focused && line.to > line.from) {
+                // Conceal the ``` marker line; the code-block background becomes
+                // the block's top/bottom padding.
+                conceals.push(Decoration.replace({}).range(line.from, line.to));
+              }
+              codeLines.set(line.from, isFence && focused);
               pos = line.to + 1;
             }
             return;
           }
           case "Table": {
+            const start = state.doc.lineAt(node.from).from;
+            const end = state.doc.lineAt(Math.min(node.to, state.doc.length)).to;
+            // Block-level replace decorations (the rendered table) are illegal
+            // from a view plugin — they live in `tableField`. Here we only cover
+            // the two other states: when the rendered table will show, skip the
+            // interior entirely (no inline decos to overlap the block widget);
+            // otherwise fall back to raw markdown with striped rows.
+            if (
+              !selectionOnLines(state, start, end) &&
+              parseMarkdownTable(state.sliceDoc(start, end))
+            ) {
+              codeRanges.push({ from: start, to: end });
+              return false;
+            }
             let row = 0;
             for (let pos = node.from; pos <= node.to; ) {
               const line = state.doc.lineAt(pos);
@@ -258,6 +370,9 @@ function buildDecorations(view: EditorView): DecorationSet {
             return;
           }
           case "Link": {
+            // A `[target]` nested inside a wikilink is owned by the wikilink
+            // conceal pass — leave it alone.
+            if (wikilinks.some((w) => node.from >= w.from && node.to <= w.to)) return false;
             if (selectionOnLines(state, node.from, node.to)) return;
             // Hide every structural child ([, ], (, url, )) — the visible
             // remainder is the link text, already styled by the highlighter.
@@ -306,26 +421,21 @@ function buildDecorations(view: EditorView): DecorationSet {
       },
     });
 
-    // Wikilinks are not part of the Lezer tree — conceal via regex
-    const text = state.sliceDoc(from, to);
-    WIKILINK_RE.lastIndex = 0;
-    let match;
-    while ((match = WIKILINK_RE.exec(text)) !== null) {
-      const start = from + match.index;
-      const end = start + match[0].length;
-      if (selectionOnLines(state, start, end)) continue;
-      if (match[2]) {
+    // Conceal wikilink markers (spans were collected before the tree walk).
+    for (const w of wikilinks) {
+      if (selectionOnLines(state, w.from, w.to)) continue;
+      if (w.hasAlias) {
         // [[target|alias]] → show alias
-        conceals.push(Decoration.replace({}).range(start, start + 2 + match[1].length + 1));
-        conceals.push(Decoration.replace({}).range(end - 2, end));
+        conceals.push(Decoration.replace({}).range(w.from, w.from + 2 + w.targetLen + 1));
       } else {
         // [[target]] → show target
-        conceals.push(Decoration.replace({}).range(start, start + 2));
-        conceals.push(Decoration.replace({}).range(end - 2, end));
+        conceals.push(Decoration.replace({}).range(w.from, w.from + 2));
       }
+      conceals.push(Decoration.replace({}).range(w.to - 2, w.to));
     }
 
     // ==highlight== is not part of the Lezer tree either — regex, skipping code
+    let match;
     HIGHLIGHT_RE.lastIndex = 0;
     while ((match = HIGHLIGHT_RE.exec(text)) !== null) {
       const start = from + match.index;
@@ -432,6 +542,54 @@ const livePreviewPlugin = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
+/**
+ * Rendered tables live in a state field, not the view plugin: CM6 forbids
+ * block / line-break-spanning replace decorations from plugins (it throws
+ * "Block decorations may not be specified via plugins" and disables the
+ * plugin). A table under the caret is left raw so it stays editable.
+ */
+// Only descend through block containers when hunting for tables — never into
+// inline nodes — so a keystroke doesn't walk the whole tree of a large note.
+const TABLE_CONTAINERS = new Set([
+  "Document",
+  "Blockquote",
+  "ListItem",
+  "BulletList",
+  "OrderedList",
+]);
+
+function buildTableDecorations(state: EditorState): DecorationSet {
+  const deco: Range<Decoration>[] = [];
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name === "Table") {
+        const start = state.doc.lineAt(node.from).from;
+        const end = state.doc.lineAt(Math.min(node.to, state.doc.length)).to;
+        if (selectionOnLines(state, start, end)) return false;
+        const md = state.sliceDoc(start, end);
+        if (!parseMarkdownTable(md)) return false;
+        deco.push(
+          Decoration.replace({ widget: new TableWidget(md), block: true }).range(start, end),
+        );
+        return false;
+      }
+      return TABLE_CONTAINERS.has(node.name);
+    },
+  });
+  return Decoration.set(deco, true);
+}
+
+const tableField = StateField.define<DecorationSet>({
+  create(state) {
+    return buildTableDecorations(state);
+  },
+  update(value, tr) {
+    if (tr.docChanged || tr.selection) return buildTableDecorations(tr.state);
+    return value;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
 const livePreviewTheme = EditorView.baseTheme({
   ".cm-cork-lp-bullet": {
     color: "var(--color-cork-muted)",
@@ -508,8 +666,23 @@ const livePreviewTheme = EditorView.baseTheme({
   ".cm-cork-lp-table-stripe": {
     backgroundColor: "var(--color-cork-panel-2)",
   },
+  ".cm-cork-lp-table": {
+    borderCollapse: "collapse",
+    margin: "0.3em 0",
+    fontSize: "0.95em",
+    lineHeight: "1.4",
+  },
+  ".cm-cork-lp-table th, .cm-cork-lp-table td": {
+    border: "1px solid var(--color-cork-border)",
+    padding: "4px 10px",
+    textAlign: "left",
+  },
+  ".cm-cork-lp-table th": {
+    backgroundColor: "var(--color-cork-panel-2)",
+    fontWeight: "600",
+  },
 });
 
 export function livePreviewExtension() {
-  return [livePreviewPlugin, livePreviewTheme];
+  return [tableField, livePreviewPlugin, livePreviewTheme];
 }
