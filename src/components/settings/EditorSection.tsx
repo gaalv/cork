@@ -67,6 +67,12 @@ export function EditorSection({
           onChange={(v) => update({ editor: { ...settings.editor, vimMode: v } })}
         />
       </SettingRow>
+      <SettingRow label="Spell check" description="Underline misspelled words as you type">
+        <Toggle
+          checked={settings.editor.spellCheck}
+          onChange={(v) => update({ editor: { ...settings.editor, spellCheck: v } })}
+        />
+      </SettingRow>
       <SettingRow label="Auto-save delay" description="Milliseconds to wait before saving">
         <input
           type="number"

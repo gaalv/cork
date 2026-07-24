@@ -57,6 +57,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
       tabSize: editorSettings.tabSize,
       vimMode: editorSettings.vimMode,
       livePreview: editorSettings.livePreview,
+      spellCheck: editorSettings.spellCheck,
       onUpdate,
     });
 
@@ -105,6 +106,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
     editorSettings.tabSize,
     editorSettings.vimMode,
     editorSettings.livePreview,
+    editorSettings.spellCheck,
     onUpdate,
   ]);
 

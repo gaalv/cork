@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     tabSize: 2,
     vimMode: false,
     livePreview: true,
+    spellCheck: true,
   },
   vault: {},
   markdown: { callouts: true, footnotes: true, highlight: true },

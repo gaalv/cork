@@ -68,6 +68,8 @@ pub struct EditorSettings {
     pub vim_mode: bool,
     #[serde(default = "default_true")]
     pub live_preview: bool,
+    #[serde(default = "default_true")]
+    pub spell_check: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -132,6 +134,7 @@ impl Default for EditorSettings {
             tab_size: default_tab_size(),
             vim_mode: false,
             live_preview: true,
+            spell_check: true,
         }
     }
 }

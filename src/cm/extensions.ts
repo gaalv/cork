@@ -39,6 +39,7 @@ type EditorOptions = {
   tabSize: number;
   vimMode: boolean;
   livePreview: boolean;
+  spellCheck: boolean;
   onUpdate: (body: string) => void;
 };
 
@@ -62,6 +63,13 @@ export function createExtensions(options: EditorOptions): Extension[] {
     // Theme
     corkEditorTheme,
     corkHighlighting,
+
+    // Native browser spellcheck on the writing surface (toggle in Settings)
+    EditorView.contentAttributes.of({
+      spellcheck: options.spellCheck ? "true" : "false",
+      autocorrect: "off",
+      autocapitalize: "off",
+    }),
 
     // Autocomplete (wikilinks + tags)
     autocompletion({
