@@ -34,7 +34,6 @@ import { createNote } from "@/services/createNote";
 export function NotesList({ filter }: { filter: SidebarFilter }) {
   const allNotes = useVaultStore((s) => s.notes);
   const isLoading = useVaultStore((s) => s.isLoading);
-  const trashNote = useVaultStore((s) => s.trashNote);
   const moveNote = useVaultStore((s) => s.moveNote);
   const tags = useIndexStore((s) => s.tags);
   const noteTagMap = useIndexStore((s) => s.noteTagMap);
@@ -174,18 +173,6 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
     },
     [ctxMenu, moveNote],
   );
-
-  const handleTrash = useCallback(async () => {
-    if (!ctxMenu) return;
-    try {
-      await trashNote(ctxMenu.note.path);
-      toast.success("Note moved to trash");
-    } catch {
-      toast.error("Failed to delete note");
-    }
-    setCtxMenu(null);
-    setMoveSubmenu(null);
-  }, [ctxMenu, trashNote]);
 
   const handleArchive = useCallback(async () => {
     if (!ctxMenu) return;
@@ -530,7 +517,6 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
             onStatus={handleStatusTo}
             onMoveTo={() => void handleMoveTo()}
             onArchive={() => void handleArchive()}
-            onTrash={() => void handleTrash()}
           />,
           document.body,
         )}

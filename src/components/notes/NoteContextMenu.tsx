@@ -6,7 +6,6 @@ import {
   CircleDashed,
   FolderSimple,
   Star,
-  Trash,
 } from "@phosphor-icons/react";
 
 import { cn } from "@/utils/cn";
@@ -39,13 +38,9 @@ export const NoteContextMenu = forwardRef<
     onStatus: () => void;
     onMoveTo: () => void;
     onArchive: () => void;
-    onTrash: () => void;
   }
->(function NoteContextMenu(
-  { x, y, isPinned, onTogglePin, onStatus, onMoveTo, onArchive, onTrash },
-  ref,
-) {
-  const style = clampMenuPosition(x, y, 176, 180);
+>(function NoteContextMenu({ x, y, isPinned, onTogglePin, onStatus, onMoveTo, onArchive }, ref) {
+  const style = clampMenuPosition(x, y, 176, 150);
 
   return (
     <div
@@ -85,14 +80,6 @@ export const NoteContextMenu = forwardRef<
       >
         <Archive size={14} className="text-[var(--color-cork-muted)]" />
         Archive
-      </button>
-      <div className="mx-2 border-t border-[var(--color-cork-border)]" />
-      <button
-        onClick={onTrash}
-        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-[12px] text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-      >
-        <Trash size={14} />
-        Delete
       </button>
     </div>
   );

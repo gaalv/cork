@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useDragRegion } from "@/hooks/useDragRegion";
-import { Eye, NotePencil, Pencil, SidebarSimple, Trash } from "@phosphor-icons/react";
+import { Archive, Eye, NotePencil, Pencil, SidebarSimple } from "@phosphor-icons/react";
 
 import { client } from "@/ipc/client";
 import { Editor } from "@/components/editor/Editor";
@@ -104,7 +104,6 @@ function EditorHeader({
   onTogglePreview: () => void;
 }) {
   const dragRef = useDragRegion<HTMLDivElement>();
-  const trashNote = useVaultStore((s) => s.trashNote);
   const loadNotes = useVaultStore((s) => s.loadNotes);
   const goHome = useShellStore((s) => s.goHome);
   const navigate = useShellStore((s) => s.navigate);
@@ -115,13 +114,16 @@ function EditorHeader({
     setEditingTitle(note.title);
   }, [note.title]);
 
-  const handleTrash = async () => {
+  // Archive-first model: notes are never deleted directly — they go to the
+  // archive (restorable, auto-expired by retention). See ROADMAP M14.
+  const handleArchive = async () => {
     try {
-      await trashNote(note.path);
+      await client.archive.note(note.path);
+      await loadNotes();
       goHome();
-      toast.success("Note moved to trash");
+      toast.success("Note archived");
     } catch {
-      toast.error("Failed to delete note");
+      toast.error("Failed to archive note");
     }
   };
 
@@ -201,11 +203,11 @@ function EditorHeader({
           <Eye size={14} />
         </button>
         <button
-          onClick={() => void handleTrash()}
-          title="Move to trash"
-          className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-danger-tint)] hover:text-[var(--color-cork-danger)]"
+          onClick={() => void handleArchive()}
+          title="Archive note"
+          className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
         >
-          <Trash size={14} />
+          <Archive size={14} />
         </button>
         <div className="mx-1 h-4 w-px bg-[var(--color-cork-border)]" />
         <button
