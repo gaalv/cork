@@ -61,6 +61,12 @@ export function useShortcuts() {
         const shell = useShellStore.getState();
         shell.setGraphOpen(!shell.graphOpen);
       },
+      // ⌘⇧Y — Toggle calendar
+      "$mod+Shift+KeyY": (event) => {
+        event.preventDefault();
+        const shell = useShellStore.getState();
+        shell.setCalendarOpen(!shell.calendarOpen);
+      },
       // Escape — Close topmost overlay (but let vim handle it when editor is focused)
       Escape: (event) => {
         // When vim mode is on and the editor is focused, let CM6 vim handle
@@ -75,7 +81,8 @@ export function useShortcuts() {
           settingsOpen ||
           shell.helpOpen ||
           shell.generateModalOpen ||
-          shell.graphOpen;
+          shell.graphOpen ||
+          shell.calendarOpen;
 
         if (vimOn && editorFocused && !hasOverlay) return;
 
@@ -90,6 +97,8 @@ export function useShortcuts() {
           shell.setGenerateModalOpen(false);
         } else if (shell.graphOpen) {
           shell.setGraphOpen(false);
+        } else if (shell.calendarOpen) {
+          shell.setCalendarOpen(false);
         } else if (shell.drawer) {
           shell.setDrawer(null);
         }

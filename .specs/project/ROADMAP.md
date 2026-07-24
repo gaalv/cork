@@ -354,7 +354,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 - Canvas force-directed graph over the existing `links.graph` IPC, overlay modal, ⌘⇧G
 
-**[F47 — Calendar](../features/F47-calendar/spec.md)** — PLANNED
+**[F47 — Calendar](../features/F47-calendar/spec.md)** — COMPLETE (pending user UAT)
 
 - Month-grid overlay from the status bar (like Graph); day markers for daily notes + `ctime` activity; click a day opens/creates its daily note and filters the list to that date. Sidebar stays filters-only; no events/scheduling.
 

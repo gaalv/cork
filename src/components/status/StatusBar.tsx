@@ -1,4 +1,5 @@
 import {
+  CalendarBlank,
   CircleNotch,
   CloudArrowUp,
   CloudCheck,
@@ -134,6 +135,13 @@ export function StatusBar() {
       </div>
       <div className="flex items-center gap-1.5">
         <VimIndicator />
+        <button
+          onClick={() => useShellStore.getState().setCalendarOpen(true)}
+          className="rounded p-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
+          title="Calendar (⌘⇧Y)"
+        >
+          <CalendarBlank size={14} />
+        </button>
         <button
           onClick={() => useShellStore.getState().setGraphOpen(true)}
           className="rounded p-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"

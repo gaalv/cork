@@ -6,7 +6,7 @@
  * @see F31 — Triage Fidelity spec
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { SidebarFilter } from "@/utils/triageHelpers";
 import { loadFilter, saveFilter } from "@/utils/triageHelpers";
@@ -26,6 +26,14 @@ export function TriageBody() {
     setFilterRaw(f);
     saveFilter(f);
   }, []);
+
+  // Apply a filter requested by an overlay (e.g. the calendar day click).
+  const pendingFilter = useShellStore((s) => s.pendingFilter);
+  useEffect(() => {
+    if (!pendingFilter) return;
+    setFilter(pendingFilter);
+    useShellStore.getState().requestFilter(null);
+  }, [pendingFilter, setFilter]);
 
   return (
     <div className="flex h-full w-full flex-col bg-[var(--color-cork-bg)]">

@@ -75,6 +75,12 @@ const COMMANDS: readonly PaletteCommand[] = [
     icon: <Graph size={14} />,
   },
   {
+    id: "open-calendar",
+    label: "Open calendar",
+    hint: "\u2318 \u21e7 Y",
+    icon: <CalendarBlank size={14} />,
+  },
+  {
     id: "toggle-inspector",
     label: "Toggle inspector",
     hint: "\u2318 .",
@@ -202,6 +208,8 @@ export function CommandPalette() {
           void openDailyNote();
         } else if (cmd.id === "open-graph") {
           useShellStore.getState().setGraphOpen(true);
+        } else if (cmd.id === "open-calendar") {
+          useShellStore.getState().setCalendarOpen(true);
         } else if (cmd.id === "export-html") {
           void exportNoteAsHtml();
         } else if (cmd.id === "export-pdf") {

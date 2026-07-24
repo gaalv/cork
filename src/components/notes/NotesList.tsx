@@ -24,7 +24,7 @@ import { client } from "@/ipc/client";
 import type { ArchivedNoteEntry, NoteEntry } from "@/ipc/types";
 
 import type { SidebarFilter } from "@/utils/triageHelpers";
-import { formatRelativeDate } from "@/utils/triageHelpers";
+import { formatRelativeDate, formatDateLabel, localDateKey } from "@/utils/triageHelpers";
 import { NOTE_STATUS_META } from "@/utils/noteStatus";
 import { NoteContextMenu, MoveToSubmenu, StatusSubmenu } from "./NoteContextMenu";
 import type { ContextMenuState, MoveSubmenuState } from "./NoteContextMenu";
@@ -252,6 +252,10 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
       case "status":
         filtered = allNotes.filter((n) => statusById.get(n.id) === filter.status);
         label = NOTE_STATUS_META[filter.status].label;
+        break;
+      case "date":
+        filtered = allNotes.filter((n) => localDateKey(n.ctime) === filter.date);
+        label = formatDateLabel(filter.date);
         break;
     }
 

@@ -22,11 +22,16 @@ import { client } from "@/ipc/client";
 const GraphView = lazy(() =>
   import("@/components/modals/GraphView").then((m) => ({ default: m.GraphView })),
 );
+// Lazy — the calendar is an occasional overlay (F47).
+const CalendarOverlay = lazy(() =>
+  import("@/components/modals/CalendarOverlay").then((m) => ({ default: m.CalendarOverlay })),
+);
 
 export function Shell() {
   useShortcuts();
   const vaultPath = useVaultStore((state) => state.path);
   const graphOpen = useShellStore((state) => state.graphOpen);
+  const calendarOpen = useShellStore((state) => state.calendarOpen);
   const notes = useVaultStore((state) => state.notes);
   const loadNotes = useVaultStore((state) => state.loadNotes);
   const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration);
@@ -102,6 +107,11 @@ export function Shell() {
       {graphOpen && (
         <Suspense fallback={null}>
           <GraphView />
+        </Suspense>
+      )}
+      {calendarOpen && (
+        <Suspense fallback={null}>
+          <CalendarOverlay />
         </Suspense>
       )}
       <CommandPalette />

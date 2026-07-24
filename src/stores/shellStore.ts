@@ -7,6 +7,8 @@
 
 import { create } from "zustand";
 
+import type { SidebarFilter } from "@/utils/triageHelpers";
+
 type View = { kind: "home" } | { kind: "note"; id: string } | { kind: "daily" };
 
 type Drawer = null | "search" | "starred" | "tags" | "folders";
@@ -20,6 +22,10 @@ type ShellState = {
   helpOpen: boolean;
   generateModalOpen: boolean;
   graphOpen: boolean;
+  calendarOpen: boolean;
+  // A filter the calendar (or other overlay) asks TriageBody to apply, since
+  // the active NotesList filter is TriageBody-local state.
+  pendingFilter: SidebarFilter | null;
   templatePickerMode: TemplatePickerMode | null;
   inspectorOpen: boolean;
   sidebarOpen: boolean;
@@ -31,6 +37,8 @@ type ShellState = {
   setHelpOpen: (open: boolean) => void;
   setGenerateModalOpen: (open: boolean) => void;
   setGraphOpen: (open: boolean) => void;
+  setCalendarOpen: (open: boolean) => void;
+  requestFilter: (filter: SidebarFilter | null) => void;
   setTemplatePickerMode: (mode: TemplatePickerMode | null) => void;
   toggleInspector: () => void;
   toggleSidebar: () => void;
@@ -46,6 +54,8 @@ export const useShellStore = create<ShellState>((set) => ({
   helpOpen: false,
   generateModalOpen: false,
   graphOpen: false,
+  calendarOpen: false,
+  pendingFilter: null,
   templatePickerMode: null,
   inspectorOpen: false,
   sidebarOpen: true,
@@ -61,6 +71,8 @@ export const useShellStore = create<ShellState>((set) => ({
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setGenerateModalOpen: (generateModalOpen) => set({ generateModalOpen }),
   setGraphOpen: (graphOpen) => set({ graphOpen }),
+  setCalendarOpen: (calendarOpen) => set({ calendarOpen }),
+  requestFilter: (pendingFilter) => set({ pendingFilter }),
   setTemplatePickerMode: (templatePickerMode) => set({ templatePickerMode }),
 
   toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
@@ -78,6 +90,8 @@ export const useShellStore = create<ShellState>((set) => ({
       helpOpen: false,
       generateModalOpen: false,
       graphOpen: false,
+      calendarOpen: false,
+      pendingFilter: null,
       templatePickerMode: null,
       inspectorOpen: false,
       sidebarOpen: true,

@@ -17,14 +17,15 @@ import type { VaultPath } from "@/ipc/types";
 const DEFAULT_DAILY_PATTERN = "Daily/YYYY-MM-DD.md";
 
 /**
- * Open today's daily note, creating it first when missing (idempotent).
- * Uses the vault's `dailyTemplatePath` template when it points to an existing
- * template; otherwise creates a plain note with a `# YYYY-MM-DD` heading.
+ * Open the daily note for `date` (default today), creating it first when
+ * missing (idempotent). Uses the vault's `dailyTemplatePath` template when it
+ * points to an existing template; otherwise creates a plain note with a
+ * `# YYYY-MM-DD` heading.
  */
-export async function openDailyNote() {
+export async function openDailyNote(date: Date = new Date()) {
   try {
     const settings = await client.settings.vaultLoad().catch(() => null);
-    const { folder, fileName } = resolveDailyPath(settings?.dailyPathPattern);
+    const { folder, fileName } = resolveDailyPath(settings?.dailyPathPattern, date);
     const relPath = folder ? `${folder}/${fileName}` : fileName;
     const title = fileName.replace(/\.md$/i, "");
 
@@ -74,27 +75,29 @@ async function openCreatedNote(path: string, cursorOffset: number | null) {
  * AD-052: a single top-level folder plus a flat filename — nested date
  * segments from legacy patterns are dropped.
  */
-function resolveDailyPath(pattern?: string): { folder: string; fileName: string } {
+function resolveDailyPath(
+  pattern: string | undefined,
+  date: Date,
+): { folder: string; fileName: string } {
   const raw = pattern?.trim() || DEFAULT_DAILY_PATTERN;
-  const segments = expandDateTokens(raw)
+  const segments = expandDateTokens(raw, date)
     .replace(/\\/g, "/")
     .split("/")
     .map((s) => s.trim())
     .filter(Boolean);
   if (segments.length === 0) {
-    return resolveDailyPath(DEFAULT_DAILY_PATTERN);
+    return resolveDailyPath(DEFAULT_DAILY_PATTERN, date);
   }
   const last = segments[segments.length - 1];
   const fileName = last.toLowerCase().endsWith(".md") ? last : `${last}.md`;
   return { folder: segments.length > 1 ? segments[0] : "", fileName };
 }
 
-/** Replace YYYY / MM / DD tokens with today's zero-padded local date. */
-function expandDateTokens(pattern: string): string {
-  const now = new Date();
-  const yyyy = String(now.getFullYear()).padStart(4, "0");
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
+/** Replace YYYY / MM / DD tokens with the target date's zero-padded local date. */
+function expandDateTokens(pattern: string, date: Date): string {
+  const yyyy = String(date.getFullYear()).padStart(4, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
   return pattern.replaceAll("YYYY", yyyy).replaceAll("MM", mm).replaceAll("DD", dd);
 }
 
