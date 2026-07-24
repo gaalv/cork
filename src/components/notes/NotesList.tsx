@@ -309,7 +309,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => void createNote("inbox")}
+            onClick={() => void createNote()}
             title="New note (⌘N)"
             className="rounded-md p-1.5 text-[var(--color-cork-muted)] hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
           >

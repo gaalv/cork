@@ -11,9 +11,15 @@ import { useVaultStore } from "@/stores/vaultStore";
 import { loadFilter } from "@/utils/triageHelpers";
 import type { VaultPath } from "@/ipc/types";
 
-export async function createNote(folder = "") {
+/**
+ * Create a new note and open it. When `folder` is omitted the note lands in
+ * the sidebar's active folder (Inbox when not inside one); pass an explicit
+ * folder to override (e.g. quick capture always targets Inbox).
+ */
+export async function createNote(folder?: string) {
   try {
-    const result = await client.notes.create({ folder });
+    const target = folder ?? activeFolderTarget();
+    const result = await client.notes.create({ folder: target });
     const created = result as VaultPath;
     await useVaultStore.getState().loadNotes();
     const note = findNoteByPath(created.path);

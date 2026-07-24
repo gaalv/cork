@@ -26,6 +26,7 @@ import { toast } from "sonner";
 
 import { getEditorView } from "@/cm/viewRef";
 import { parseSnippet, usePaletteSearch } from "@/hooks/usePaletteSearch";
+import { createNote } from "@/services/createNote";
 import { copyNoteAsMarkdown, exportNoteAsHtml, exportNoteAsPdf } from "@/services/exportNote";
 import { openDailyNote } from "@/services/dailyNote";
 import { useIndexStore } from "@/stores/indexStore";
@@ -193,6 +194,8 @@ export function CommandPalette() {
               .getState()
               .setNoteStatus(openNoteEntry.id, openNoteEntry.path, status);
           }
+        } else if (cmd.id === "new-note") {
+          void createNote();
         } else if (cmd.id === "ai-generate") {
           useShellStore.getState().setGenerateModalOpen(true);
         } else if (cmd.id === "open-daily-note") {
