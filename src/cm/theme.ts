@@ -35,6 +35,8 @@ export const corkEditorTheme = EditorView.theme(
       // Match the preview's antialiased rendering (CM doesn't inherit it).
       WebkitFontSmoothing: "antialiased",
       MozOsxFontSmoothing: "grayscale",
+      // Break long unbreakable tokens when line wrap is on.
+      overflowWrap: "anywhere",
     },
     ".cm-cursor, .cm-dropCursor": {
       borderLeftColor: "var(--color-cork-accent)",

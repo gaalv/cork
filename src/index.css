@@ -161,6 +161,8 @@ body {
   color: var(--color-cork-ink);
   font-size: 14px;
   line-height: 1.7;
+  /* Break long unbreakable tokens (URLs, hashes) instead of overflowing. */
+  overflow-wrap: break-word;
 }
 
 .cork-preview h1,
