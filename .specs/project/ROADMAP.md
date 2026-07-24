@@ -328,6 +328,40 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ---
 
+## M14 — Notes-app completeness
+
+**Goal:** Close the table-stakes gaps identified in the 2026-07-24 product review: content search, daily habit, editor rendering parity, export, graph — plus virtualization, archive-first deletion and bundle-budget fixes as quick tasks.
+
+### Features
+
+**[F42 — Full-text Search UI](../features/F42-search-ui/spec.md)** — IN PROGRESS
+
+- Palette "Content matches" section backed by the existing FTS5 `index.search`
+
+**[F43 — Daily Notes](../features/F43-daily-notes/spec.md)** — IN PROGRESS
+
+- `Daily/YYYY-MM-DD.md` flat format (AD-052), template-aware via F39, ⌘⇧T
+
+**[F44 — Editor-side Markdown Extension Rendering](../features/F44-editor-markdown/spec.md)** — IN PROGRESS
+
+- Live-preview decorations for highlights, callouts, code fences, tables (closes the F14 editor half)
+
+**[F45 — Note Export](../features/F45-note-export/spec.md)** — IN PROGRESS
+
+- Self-contained HTML export, PDF via print dialog, copy as Markdown
+
+**[F46 — Graph View](../features/F46-graph-view/spec.md)** — IN PROGRESS
+
+- Canvas force-directed graph over the existing `links.graph` IPC, overlay modal, ⌘⇧G
+
+### Quick tasks
+
+- NotesList virtualization (1k-note vaults)
+- Archive-first deletion model (Delete leaves the note context menu; Archive is the removal path, permanent delete only from the Archived view)
+- Bundle code-splitting to restore the 500 kB budget (CI red since 2026-07-24)
+
+---
+
 ## Removed features (specs deleted)
 
 These features had specs marked COMPLETE but were never implemented. They were part of an earlier layout concept (Layout C with Rail + TopBar + Home Dashboard + Drawers) that was replaced by the current Triage layout.
