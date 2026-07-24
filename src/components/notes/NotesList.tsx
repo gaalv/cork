@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { toast } from "sonner";
 import {
   ArrowCounterClockwise,
@@ -274,6 +275,17 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
     return { notes: sorted, scopeLabel: label };
   }, [filter, allNotes, tags, noteTagMap, pinnedIds, statusById, sortOrder, sortAsc]);
 
+  // Virtualize the note list so 1k+ vaults render only the visible cards.
+  // Card heights vary (snippet, tags, status), so estimate + measureElement.
+  const scrollRef = useRef<HTMLUListElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: notes.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 96,
+    overscan: 8,
+    getItemKey: (index) => notes[index].id,
+  });
+
   return (
     <section className="flex min-h-0 flex-col border-r border-[var(--color-cork-border)]">
       <div
@@ -366,7 +378,10 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
         </span>
       </div>
 
-      <ul className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {isLoading && (
           <li className="flex flex-col items-center gap-2 px-4 py-12 text-center">
             <CircleNotch size={24} className="animate-spin text-[var(--color-cork-accent)]" />
@@ -423,82 +438,91 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
             No archived notes
           </li>
         )}
-        {!isLoading &&
-          filter.kind !== "archived" &&
-          notes.map((n) => {
-            const isActive = view.kind === "note" && view.id === n.id;
-            const noteTags = noteTagMap.get(n.id) ?? [];
-            const noteStatus = statusById.get(n.id);
-            return (
-              <li key={n.id}>
+        {!isLoading && filter.kind !== "archived" && notes.length > 0 && (
+          <li className="relative block w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
+            {rowVirtualizer.getVirtualItems().map((vi) => {
+              const n = notes[vi.index];
+              const isActive = view.kind === "note" && view.id === n.id;
+              const noteTags = noteTagMap.get(n.id) ?? [];
+              const noteStatus = statusById.get(n.id);
+              return (
                 <div
-                  onClick={() => openNote(n.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") openNote(n.id);
-                  }}
-                  style={{
-                    paddingTop: "var(--density-card-py)",
-                    paddingBottom: "var(--density-card-py)",
-                  }}
-                  className={`group flex w-full flex-col gap-1.5 border-l-[3px] px-4 text-left transition cursor-pointer ${
-                    isActive
-                      ? "border-[var(--color-cork-accent)] bg-[var(--color-cork-accent-soft)]"
-                      : "border-transparent hover:bg-[var(--color-cork-panel-2)]"
-                  }`}
+                  key={n.id}
+                  data-index={vi.index}
+                  ref={rowVirtualizer.measureElement}
+                  className="absolute left-0 top-0 w-full"
+                  style={{ transform: `translateY(${vi.start}px)` }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      {pinnedIds.has(n.id) && (
-                        <Star size={10} weight="fill" className="shrink-0 text-amber-500" />
-                      )}
-                      <span className="truncate text-[13px] font-semibold text-[var(--color-cork-ink)]">
-                        {n.title}
+                  <div
+                    onClick={() => openNote(n.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") openNote(n.id);
+                    }}
+                    style={{
+                      paddingTop: "var(--density-card-py)",
+                      paddingBottom: "var(--density-card-py)",
+                    }}
+                    className={`group flex w-full flex-col gap-1.5 border-l-[3px] px-4 text-left transition cursor-pointer ${
+                      isActive
+                        ? "border-[var(--color-cork-accent)] bg-[var(--color-cork-accent-soft)]"
+                        : "border-transparent hover:bg-[var(--color-cork-panel-2)]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        {pinnedIds.has(n.id) && (
+                          <Star size={10} weight="fill" className="shrink-0 text-amber-500" />
+                        )}
+                        <span className="truncate text-[13px] font-semibold text-[var(--color-cork-ink)]">
+                          {n.title}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => openCardMenu(e, n)}
+                        className="rounded p-0.5 text-[var(--color-cork-subtle)] opacity-0 transition-opacity hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)] group-hover:opacity-100"
+                        title="Actions"
+                      >
+                        <DotsThreeVertical size={14} weight="bold" />
+                      </button>
+                    </div>
+                    {n.snippet && (
+                      <p className="line-clamp-2 text-[12px] leading-relaxed text-[var(--color-cork-muted)]">
+                        {n.snippet}
+                      </p>
+                    )}
+                    {noteTags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {noteTags.slice(0, 3).map((t) => (
+                          <span
+                            key={t}
+                            className="inline-flex items-center gap-0.5 rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400"
+                          >
+                            <Tag size={8} />
+                            {t}
+                          </span>
+                        ))}
+                        {noteTags.length > 3 && (
+                          <span className="rounded bg-[var(--color-cork-panel-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-cork-subtle)]">
+                            +{noteTags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        {noteStatus && <StatusBadge status={noteStatus} />}
+                        <span className="truncate">{formatRelativeDate(n.mtime)}</span>
                       </span>
+                      <span className="shrink-0">Created {formatRelativeDate(n.ctime)}</span>
                     </div>
-                    <button
-                      onClick={(e) => openCardMenu(e, n)}
-                      className="rounded p-0.5 text-[var(--color-cork-subtle)] opacity-0 transition-opacity hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)] group-hover:opacity-100"
-                      title="Actions"
-                    >
-                      <DotsThreeVertical size={14} weight="bold" />
-                    </button>
-                  </div>
-                  {n.snippet && (
-                    <p className="line-clamp-2 text-[12px] leading-relaxed text-[var(--color-cork-muted)]">
-                      {n.snippet}
-                    </p>
-                  )}
-                  {noteTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {noteTags.slice(0, 3).map((t) => (
-                        <span
-                          key={t}
-                          className="inline-flex items-center gap-0.5 rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400"
-                        >
-                          <Tag size={8} />
-                          {t}
-                        </span>
-                      ))}
-                      {noteTags.length > 3 && (
-                        <span className="rounded bg-[var(--color-cork-panel-2)] px-1.5 py-0.5 text-[10px] text-[var(--color-cork-subtle)]">
-                          +{noteTags.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-cork-subtle)]">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      {noteStatus && <StatusBadge status={noteStatus} />}
-                      <span className="truncate">{formatRelativeDate(n.mtime)}</span>
-                    </span>
-                    <span className="shrink-0">Created {formatRelativeDate(n.ctime)}</span>
                   </div>
                 </div>
-              </li>
-            );
-          })}
+              );
+            })}
+          </li>
+        )}
         {!isLoading && !isIndexing && filter.kind !== "archived" && notes.length === 0 && (
           <li className="px-4 py-8 text-center text-[12px] text-[var(--color-cork-subtle)]">
             No notes yet
