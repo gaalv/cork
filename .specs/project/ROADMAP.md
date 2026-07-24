@@ -334,23 +334,23 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ### Features
 
-**[F42 — Full-text Search UI](../features/F42-search-ui/spec.md)** — IN PROGRESS
+**[F42 — Full-text Search UI](../features/F42-search-ui/spec.md)** — COMPLETE (pending user UAT)
 
 - Palette "Content matches" section backed by the existing FTS5 `index.search`
 
-**[F43 — Daily Notes](../features/F43-daily-notes/spec.md)** — IN PROGRESS
+**[F43 — Daily Notes](../features/F43-daily-notes/spec.md)** — COMPLETE (pending user UAT)
 
 - `Daily/YYYY-MM-DD.md` flat format (AD-052), template-aware via F39, ⌘⇧T
 
-**[F44 — Editor-side Markdown Extension Rendering](../features/F44-editor-markdown/spec.md)** — IN PROGRESS
+**[F44 — Editor-side Markdown Extension Rendering](../features/F44-editor-markdown/spec.md)** — COMPLETE (pending user UAT)
 
 - Live-preview decorations for highlights, callouts, code fences, tables (closes the F14 editor half)
 
-**[F45 — Note Export](../features/F45-note-export/spec.md)** — IN PROGRESS
+**[F45 — Note Export](../features/F45-note-export/spec.md)** — COMPLETE (pending user UAT)
 
 - Self-contained HTML export, PDF via print dialog, copy as Markdown
 
-**[F46 — Graph View](../features/F46-graph-view/spec.md)** — IN PROGRESS
+**[F46 — Graph View](../features/F46-graph-view/spec.md)** — COMPLETE (pending user UAT)
 
 - Canvas force-directed graph over the existing `links.graph` IPC, overlay modal, ⌘⇧G
 
