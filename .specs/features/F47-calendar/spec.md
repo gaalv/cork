@@ -1,6 +1,6 @@
 # F47 — Calendar
 
-**Status:** COMPLETE (pending user UAT) · **Size:** Large · **Milestone:** M14
+**Status:** COMPLETE · **Size:** Large · **Milestone:** M14
 
 ## Problem
 

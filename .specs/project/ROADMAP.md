@@ -295,7 +295,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ### Features
 
-**[F39 — Note Templates](../features/F39-templates/spec.md)** — COMPLETE (pending user UAT)
+**[F39 — Note Templates](../features/F39-templates/spec.md)** — COMPLETE
 
 - Templates as plain `.md` notes in a configurable `Templates/` vault folder
 - 4 default templates seeded by scaffold (create-if-missing, never overwritten)
@@ -303,7 +303,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 - New note from template + insert template at cursor (shared picker modal via ⌘K)
 - Settings → Templates section (folder config, list, "New template")
 
-**[F40 — Note Status](../features/F40-note-status/spec.md)** — COMPLETE (pending user UAT)
+**[F40 — Note Status](../features/F40-note-status/spec.md)** — COMPLETE
 
 - Inkdrop-style per-note status: `active` / `on-hold` / `done`, absent by default
 - Plain `status:` frontmatter, mirroring the pinned architecture (AD-053) end-to-end
@@ -318,7 +318,7 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ### Features
 
-**[F41 — Sync Resilience](../features/F41-sync-resilience/spec.md)** — COMPLETE (T05 expiry-awareness deferred as P3; pending user UAT on live vault)
+**[F41 — Sync Resilience](../features/F41-sync-resilience/spec.md)** — COMPLETE (T05 expiry-awareness deferred as P3)
 
 - Erase-proof credential helper — a spurious 401 (proxy/hibernation) can no longer wipe a valid PAT (git `credential-store` erase semantics were destroying it)
 - "Update token" in place — recovery without touching remote/URL/history
@@ -334,27 +334,27 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 ### Features
 
-**[F42 — Full-text Search UI](../features/F42-search-ui/spec.md)** — COMPLETE (pending user UAT)
+**[F42 — Full-text Search UI](../features/F42-search-ui/spec.md)** — COMPLETE
 
 - Palette "Content matches" section backed by the existing FTS5 `index.search`
 
-**[F43 — Daily Notes](../features/F43-daily-notes/spec.md)** — COMPLETE (pending user UAT)
+**[F43 — Daily Notes](../features/F43-daily-notes/spec.md)** — COMPLETE
 
 - `Daily/YYYY-MM-DD.md` flat format (AD-052), template-aware via F39, ⌘⇧T
 
-**[F44 — Editor-side Markdown Extension Rendering](../features/F44-editor-markdown/spec.md)** — COMPLETE (pending user UAT)
+**[F44 — Editor-side Markdown Extension Rendering](../features/F44-editor-markdown/spec.md)** — COMPLETE
 
 - Live-preview decorations for highlights, callouts, code fences, tables (closes the F14 editor half)
 
-**[F45 — Note Export](../features/F45-note-export/spec.md)** — COMPLETE (pending user UAT)
+**[F45 — Note Export](../features/F45-note-export/spec.md)** — COMPLETE
 
 - Self-contained HTML export, PDF via print dialog, copy as Markdown
 
-**[F46 — Graph View](../features/F46-graph-view/spec.md)** — COMPLETE (pending user UAT)
+**[F46 — Graph View](../features/F46-graph-view/spec.md)** — COMPLETE
 
 - Canvas force-directed graph over the existing `links.graph` IPC, overlay modal, ⌘⇧G
 
-**[F47 — Calendar](../features/F47-calendar/spec.md)** — COMPLETE (pending user UAT)
+**[F47 — Calendar](../features/F47-calendar/spec.md)** — COMPLETE
 
 - Month-grid overlay from the status bar (like Graph); day markers for daily notes + `ctime` activity; click a day opens/creates its daily note and filters the list to that date. Sidebar stays filters-only; no events/scheduling.
 

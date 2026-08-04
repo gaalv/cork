@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-07-24T00:00-03:00
-**Current Work:** M14 (notes-app completeness) landed — F42 search UI, F43 daily notes, F44 editor markdown rendering, F45 export, F46 graph view, plus notes-list virtualization, archive-first deletion, and bundle code-splitting (main chunk 457 kB gz, back under the 500 kB budget). All F42–F46 COMPLETE pending user UAT. Also live-preview inline marks (F16 follow-up) and the CI pnpm/tap fixes shipped earlier this session. F39/F40/F41 still pending user UAT.
+**Last Updated:** 2026-08-03T00:00-03:00
+**Current Work:** Release prep for v0.1.0 — user UAT signed off on F39/F40/F41 and F42–F47 (2026-08-03), so all M12–M14 features are fully COMPLETE. `feat/notes-app-polish` (resizable columns, spell check, live-preview wikilink/fence/table fixes, unlinked mentions, vault find & replace, folder import) merged to main; CHANGELOG 0.1.0 written; versions aligned at 0.1.0 across package.json / Cargo.toml / tauri.conf.json. Remaining before tagging `v0.1.0`: nothing code-side — Apple signing secrets are absent, so first release ships unsigned (AD-050).
 
 ---
 
