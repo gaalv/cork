@@ -91,20 +91,5 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-  # After all builds complete, update the Homebrew tap
-  update-tap:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - name: Trigger tap update
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.TAP_GITHUB_TOKEN }}
-          repository: ${{ github.repository_owner }}/homebrew-cork
-          event-type: update-cask
-          client-payload: |
-            {
-              "version": "${{ github.ref_name }}",
-              "repo": "${{ github.repository }}"
-            }
+# The Homebrew tap is updated by update-tap.yml when the draft release is
+# published — not here, because draft assets aren't downloadable by the tap.

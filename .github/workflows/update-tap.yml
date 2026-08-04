@@ -1,0 +1,49 @@
+name: Update Homebrew tap
+
+# Runs when a release goes public (draft → published), so the .dmg assets are
+# guaranteed downloadable. Checksums are computed here, where the token always
+# has access, and shipped in the dispatch payload — the tap repo never has to
+# download anything.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to sync (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update-tap:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+    steps:
+      - name: Compute asset checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TAG" --repo "${{ github.repository }}" \
+            --pattern "*.dmg" --dir assets
+          SHA_ARM=$(sha256sum assets/*aarch64*.dmg | awk '{print $1}')
+          SHA_INTEL=$(sha256sum assets/*x64*.dmg | awk '{print $1}')
+          test -n "$SHA_ARM" && test -n "$SHA_INTEL"
+          echo "SHA_ARM=$SHA_ARM" >> "$GITHUB_ENV"
+          echo "SHA_INTEL=$SHA_INTEL" >> "$GITHUB_ENV"
+
+      - name: Trigger tap update
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          repository: ${{ github.repository_owner }}/homebrew-cork
+          event-type: update-cask
+          client-payload: |
+            {
+              "version": "${{ env.TAG }}",
+              "repo": "${{ github.repository }}",
+              "sha_arm": "${{ env.SHA_ARM }}",
+              "sha_intel": "${{ env.SHA_INTEL }}"
+            }
