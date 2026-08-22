@@ -1,0 +1,98 @@
+name: Publish to winget
+
+# Opens the manifest-update PR against microsoft/winget-pkgs when a release
+# goes public. Unlike Homebrew, winget has no per-project tap: manifests live
+# in one central community repo and every version is a pull request that
+# Microsoft's pipeline validates and a moderator merges.
+#
+# The FIRST submission is not done here — a package that does not exist yet
+# needs `wingetcreate new`, which is interactive. Run it once locally, then
+# this workflow keeps the version in step from then on.
+#
+# Dormant until WINGET_TOKEN is configured: without it the job exits cleanly
+# instead of failing every release.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.2.0)"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_ID: gaalv.Cork
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+
+    steps:
+      - name: Check for the submission token
+        id: gate
+        shell: bash
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          if [ -z "$WINGET_TOKEN" ]; then
+            echo "::notice::WINGET_TOKEN is not set — skipping winget submission."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Locate the Windows installer
+        if: steps.gate.outputs.ready == 'true'
+        id: installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # The NSIS .exe is submitted rather than the .msi: it supports a
+          # per-user install, so a developer without admin rights can still
+          # install it. Switch the pattern to .msi if machine-wide deployment
+          # (GPO / Intune) becomes the priority. Matching on the extension
+          # rather than Tauri's "-setup.exe" suffix keeps this working if the
+          # bundler's naming changes.
+          URL=$(gh release view "$TAG" --repo "${{ github.repository }}" \
+                  --json assets \
+                  --jq '.assets[] | select(.name | endswith(".exe")) | .url' | head -1)
+
+          if [ -z "$URL" ]; then
+            echo "::warning::No NSIS installer in $TAG — nothing to submit to winget."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Submitting: $URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Submit manifest update
+        if: steps.gate.outputs.ready == 'true' && steps.installer.outputs.found == 'true'
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          URL: ${{ steps.installer.outputs.url }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # winget is not guaranteed to be present on the runner, so pull the
+          # tool straight from its release redirect.
+          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+          $version = "$env:TAG" -replace '^v', ''
+
+          .\wingetcreate.exe update $env:PACKAGE_ID `
+            --version $version `
+            --urls "$env:URL" `
+            --submit `
+            --token $env:WINGET_TOKEN

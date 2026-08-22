@@ -26,6 +26,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+
+          # macOS — the cask
           gh release download "$TAG" --repo "${{ github.repository }}" \
             --pattern "*.dmg" --dir assets
           SHA_ARM=$(sha256sum assets/*aarch64*.dmg | awk '{print $1}')
@@ -33,6 +36,20 @@ jobs:
           test -n "$SHA_ARM" && test -n "$SHA_INTEL"
           echo "SHA_ARM=$SHA_ARM" >> "$GITHUB_ENV"
           echo "SHA_INTEL=$SHA_INTEL" >> "$GITHUB_ENV"
+
+          # Linux — the formula. The AppImage filename is passed through rather
+          # than reconstructed on the tap side, because Tauri's Linux naming
+          # differs from the macOS one and would have to be guessed.
+          if gh release download "$TAG" --repo "${{ github.repository }}" \
+               --pattern "*.AppImage" --dir assets 2>/dev/null; then
+            APPIMAGE=$(ls assets/*.AppImage | head -1)
+            echo "SHA_LINUX=$(sha256sum "$APPIMAGE" | awk '{print $1}')" >> "$GITHUB_ENV"
+            echo "APPIMAGE_NAME=$(basename "$APPIMAGE")" >> "$GITHUB_ENV"
+          else
+            echo "No AppImage in $TAG — the tap will leave the Linux formula alone."
+            echo "SHA_LINUX=" >> "$GITHUB_ENV"
+            echo "APPIMAGE_NAME=" >> "$GITHUB_ENV"
+          fi
 
       - name: Trigger tap update
         uses: peter-evans/repository-dispatch@v3
@@ -45,5 +62,7 @@ jobs:
               "version": "${{ env.TAG }}",
               "repo": "${{ github.repository }}",
               "sha_arm": "${{ env.SHA_ARM }}",
-              "sha_intel": "${{ env.SHA_INTEL }}"
+              "sha_intel": "${{ env.SHA_INTEL }}",
+              "sha_linux": "${{ env.SHA_LINUX }}",
+              "appimage_name": "${{ env.APPIMAGE_NAME }}"
             }
