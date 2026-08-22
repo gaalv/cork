@@ -13,6 +13,7 @@ import { TemplatePicker } from "@/components/modals/TemplatePicker";
 import { WelcomeScreen } from "@/screens/WelcomeScreen";
 import { HelpModal } from "@/components/modals/HelpModal";
 import { Toaster } from "@/components/ui/Toaster";
+import { DevBadge } from "@/components/ui/DevBadge";
 import { TriageBody } from "@/screens/TriageBody";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { useVaultStore } from "@/stores/vaultStore";
@@ -94,6 +95,7 @@ export function Shell() {
         <HelpModal />
         <SettingsPanel />
         <Toaster />
+        <DevBadge />
       </div>
     );
   }
@@ -122,6 +124,7 @@ export function Shell() {
       <HelpModal />
       <SettingsPanel />
       <Toaster />
+      <DevBadge />
     </div>
   );
 }

@@ -49,6 +49,9 @@
 
   --color-cork-danger: #b5453a;
   --color-cork-danger-tint: #fbe8e6;
+  /* Dev-build marker — deliberately off-palette so it cannot be mistaken
+     for a real UI accent. */
+  --color-cork-dev: #d2691e;
   --color-cork-success: #3d7a3f;
   --color-cork-success-tint: #e6f2e6;
 }
@@ -71,6 +74,7 @@
   --color-cork-kbd: #262626;
   --color-cork-danger: #e06058;
   --color-cork-danger-tint: #2a1f1e;
+  --color-cork-dev: #ff8c42;
   --color-cork-success: #5cb85c;
   --color-cork-success-tint: #1e2a1e;
   color-scheme: dark;
