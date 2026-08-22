@@ -16,6 +16,8 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Windows (`.msi`, `.exe`) and Linux (`.deb`, `.rpm`, `.AppImage`) release builds
 - Linux install via Homebrew (`brew install cork`) — macOS continues to use the cask
 - Development builds are marked with an outline and a corner badge, so they cannot be confused with an installed release
+- A first-run tour of the sidebar, notes list, editor and command palette — skippable at any step, replayable from Settings › General
+- Update notices: when a new version ships, Cork shows the upgrade command for however you installed it. Cork never replaces itself behind your package manager
 
 ### Fixed
 
