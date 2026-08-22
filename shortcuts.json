@@ -1,0 +1,72 @@
+{
+  "_comment": "Canonical keyboard shortcut list. Consumed by the in-app help modal and by cork-site's docs, so the two cannot drift. Keep in sync with src/hooks/useShortcuts.ts.",
+  "groups": [
+    {
+      "title": "General",
+      "shortcuts": [
+        {
+          "keys": "\u2318 K",
+          "label": "Command palette"
+        },
+        {
+          "keys": "\u2318 ,",
+          "label": "Settings"
+        },
+        {
+          "keys": "\u2318 N",
+          "label": "New note"
+        },
+        {
+          "keys": "\u2318 O",
+          "label": "Open vault"
+        },
+        {
+          "keys": "\u2318 \u21e7 L",
+          "label": "Toggle theme"
+        }
+      ]
+    },
+    {
+      "title": "Editor",
+      "shortcuts": [
+        {
+          "keys": "\u2318 S",
+          "label": "Save note"
+        },
+        {
+          "keys": "\u2318 .",
+          "label": "Toggle inspector"
+        },
+        {
+          "keys": "\u2318 F",
+          "label": "Find in note"
+        },
+        {
+          "keys": "\u2318 \u21e7 F",
+          "label": "Find & replace"
+        },
+        {
+          "keys": "\u2318 D",
+          "label": "Open daily note"
+        }
+      ]
+    },
+    {
+      "title": "Navigation",
+      "shortcuts": [
+        {
+          "keys": "Esc",
+          "label": "Close overlay"
+        },
+        {
+          "keys": "\u2318 [",
+          "label": "Go back"
+        },
+        {
+          "keys": "\u2318 ]",
+          "label": "Go forward"
+        }
+      ]
+    }
+  ]
+}

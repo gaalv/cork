@@ -8,36 +8,11 @@ import { X } from "@phosphor-icons/react";
 
 import { useShellStore } from "@/stores/shellStore";
 
-const SHORTCUT_GROUPS = [
-  {
-    title: "General",
-    shortcuts: [
-      { keys: "⌘ K", label: "Command palette" },
-      { keys: "⌘ ,", label: "Settings" },
-      { keys: "⌘ N", label: "New note" },
-      { keys: "⌘ O", label: "Open vault" },
-      { keys: "⌘ ⇧ L", label: "Toggle theme" },
-    ],
-  },
-  {
-    title: "Editor",
-    shortcuts: [
-      { keys: "⌘ S", label: "Save note" },
-      { keys: "⌘ .", label: "Toggle inspector" },
-      { keys: "⌘ F", label: "Find in note" },
-      { keys: "⌘ ⇧ F", label: "Find & replace" },
-      { keys: "⌘ D", label: "Open daily note" },
-    ],
-  },
-  {
-    title: "Navigation",
-    shortcuts: [
-      { keys: "Esc", label: "Close overlay" },
-      { keys: "⌘ [", label: "Go back" },
-      { keys: "⌘ ]", label: "Go forward" },
-    ],
-  },
-];
+import shortcuts from "../../../shortcuts.json";
+
+// Sourced from shortcuts.json at the repo root so the in-app list and the
+// documentation on the website cannot drift apart.
+const SHORTCUT_GROUPS = shortcuts.groups;
 
 export function HelpModal() {
   const open = useShellStore((s) => s.helpOpen);
