@@ -13,8 +13,7 @@ function StatusDot({ className }: { className: string }) {
 }
 
 const STATUS_OPTIONS: SelectOption<string>[] = [
-  // An invisible dot keeps "None" aligned with the statuses below it.
-  { value: "", label: "None", icon: <StatusDot className="bg-transparent" /> },
+  { value: "", label: "None" },
   ...NOTE_STATUSES.map((s) => ({
     value: s as string,
     label: NOTE_STATUS_META[s].label,

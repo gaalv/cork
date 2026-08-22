@@ -54,6 +54,8 @@ export function Select<T extends string | number>({
   const listId = useId();
 
   const selected = options.find((option) => option.value === value) ?? null;
+  /** Reserve the marker column only when some option actually has one. */
+  const hasIcons = options.some((option) => option.icon);
 
   useEffect(() => {
     if (!open) {
@@ -94,7 +96,7 @@ export function Select<T extends string | number>({
     const computePosition = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const estimatedHeight = Math.min(options.length * 36 + 8, 280);
+      const estimatedHeight = Math.min(options.length * (minimal ? 26 : 36) + 8, 280);
       const spaceBelow = window.innerHeight - rect.bottom;
       const placement: Position["placement"] =
         spaceBelow < estimatedHeight && rect.top > spaceBelow ? "above" : "below";
@@ -109,7 +111,7 @@ export function Select<T extends string | number>({
       window.removeEventListener("resize", recompute);
       window.removeEventListener("scroll", recompute, true);
     };
-  }, [open, options.length]);
+  }, [open, options.length, minimal]);
 
   function commit(index: number) {
     const option = options[index];
@@ -185,10 +187,14 @@ export function Select<T extends string | number>({
                 position: "fixed",
                 left: position.left,
                 top: position.top,
-                minWidth: Math.max(position.width, 140),
+                minWidth: Math.max(position.width, minimal ? 118 : 140),
                 maxHeight: 280,
               }}
-              className="z-[60] overflow-y-auto rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] py-1 shadow-lg"
+              className={cn(
+                "z-[60] overflow-y-auto rounded-md border border-[var(--color-cork-border)]",
+                "bg-[var(--color-cork-panel)] shadow-lg",
+                minimal ? "py-0.5" : "py-1",
+              )}
               onKeyDown={(event) => {
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
@@ -223,12 +229,17 @@ export function Select<T extends string | number>({
                     onClick={() => commit(index)}
                     onMouseEnter={() => setActiveIndex(index)}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between gap-2 px-2.5 py-1.5 text-[12px] text-[var(--color-cork-ink)] outline-none",
+                      "flex cursor-pointer items-center justify-between gap-2 text-[12px] text-[var(--color-cork-ink)] outline-none",
+                      minimal ? "px-2 py-1" : "px-2.5 py-1.5",
                       isActive && "bg-[var(--color-cork-panel-2)]",
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-1.5">
-                      {option.icon}
+                      {hasIcons && (
+                        <span className="flex w-2 shrink-0 items-center justify-center">
+                          {option.icon}
+                        </span>
+                      )}
                       <span className="flex min-w-0 flex-col">
                         <span className="truncate">{option.label}</span>
                         {option.description ? (
