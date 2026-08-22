@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ClockCounterClockwise } from "@phosphor-icons/react";
+import { ClockCounterClockwise, Sparkle } from "@phosphor-icons/react";
+import { toast } from "sonner";
 
 import { useEditorStore } from "@/stores/editorStore";
 import { client } from "@/ipc/client";
@@ -13,6 +14,8 @@ export function HistorySection() {
   const [hasGit, setHasGit] = useState(true);
   const [confirmingSha, setConfirmingSha] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
 
   useEffect(() => {
     void client.vcs
@@ -49,6 +52,33 @@ export function HistorySection() {
     [path, noteId],
   );
 
+  /**
+   * Per-note git history is something Cork has and most notes apps do not, so
+   * it is worth more than a list of commit subjects: the model turns it into
+   * "what happened to this note lately".
+   */
+  const summarizeHistory = useCallback(async () => {
+    if (commits.length === 0) return;
+    setSummarizing(true);
+    try {
+      const store = useEditorStore.getState();
+      const title = typeof store.frontmatter.title === "string" ? store.frontmatter.title : noteId;
+      const history = commits.map((c) => `${c.isoDate.slice(0, 10)} — ${c.message}`).join("\n");
+      const result = (await client.ai.runSkill("summarize-changes", {
+        title: title ?? "",
+        history,
+        body: store.body,
+      })) as { output: string };
+      setSummary(result.output.trim());
+    } catch (err) {
+      const error = err as { kind?: string; message?: string };
+      if (error.kind === "provider_disabled") toast.error("Configure an AI provider in Settings");
+      else toast.error(`Error: ${error.message ?? String(err)}`);
+    } finally {
+      setSummarizing(false);
+    }
+  }, [commits, noteId]);
+
   if (!hasGit) {
     return (
       <section>
@@ -68,6 +98,27 @@ export function HistorySection() {
       />
       {commits.length === 0 && (
         <p className="text-[11px] text-[var(--color-cork-subtle)]">No history yet.</p>
+      )}
+
+      {commits.length > 1 && (
+        <button
+          onClick={() => void summarizeHistory()}
+          disabled={summarizing}
+          className="mb-1.5 flex items-center gap-1.5 rounded-md border border-[var(--color-cork-border)] px-2 py-1 text-[11px] text-[var(--color-cork-muted)] hover:text-[var(--color-cork-ink)] disabled:opacity-50"
+        >
+          {summarizing ? (
+            <span className="inline-block size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <Sparkle size={12} />
+          )}
+          What changed
+        </button>
+      )}
+
+      {summary && (
+        <p className="mb-2 rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-2.5 py-2 text-[11px] leading-relaxed text-[var(--color-cork-muted)]">
+          {summary}
+        </p>
       )}
       {commits.length > 0 && (
         <div className="flex flex-col gap-0.5">

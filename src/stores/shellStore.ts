@@ -21,6 +21,8 @@ type ShellState = {
   paletteOpen: boolean;
   helpOpen: boolean;
   generateModalOpen: boolean;
+  askVaultOpen: boolean;
+  triageOpen: boolean;
   graphOpen: boolean;
   calendarOpen: boolean;
   replaceOpen: boolean;
@@ -37,6 +39,8 @@ type ShellState = {
   setPaletteOpen: (open: boolean) => void;
   setHelpOpen: (open: boolean) => void;
   setGenerateModalOpen: (open: boolean) => void;
+  setAskVaultOpen: (open: boolean) => void;
+  setTriageOpen: (open: boolean) => void;
   setGraphOpen: (open: boolean) => void;
   setCalendarOpen: (open: boolean) => void;
   setReplaceOpen: (open: boolean) => void;
@@ -55,6 +59,8 @@ export const useShellStore = create<ShellState>((set) => ({
   paletteOpen: false,
   helpOpen: false,
   generateModalOpen: false,
+  askVaultOpen: false,
+  triageOpen: false,
   graphOpen: false,
   calendarOpen: false,
   replaceOpen: false,
@@ -73,6 +79,8 @@ export const useShellStore = create<ShellState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setGenerateModalOpen: (generateModalOpen) => set({ generateModalOpen }),
+  setAskVaultOpen: (askVaultOpen) => set({ askVaultOpen }),
+  setTriageOpen: (triageOpen) => set({ triageOpen }),
   setGraphOpen: (graphOpen) => set({ graphOpen }),
   setCalendarOpen: (calendarOpen) => set({ calendarOpen }),
   setReplaceOpen: (replaceOpen) => set({ replaceOpen }),
@@ -93,6 +101,8 @@ export const useShellStore = create<ShellState>((set) => ({
       paletteOpen: false,
       helpOpen: false,
       generateModalOpen: false,
+      askVaultOpen: false,
+      triageOpen: false,
       graphOpen: false,
       calendarOpen: false,
       replaceOpen: false,

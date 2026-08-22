@@ -17,6 +17,12 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Linux install via Homebrew (`brew install cork`) — macOS continues to use the cask
 - Development builds are marked with an outline and a corner badge, so they cannot be confused with an installed release
 - A first-run tour of the sidebar, notes list, editor and command palette — skippable at any step, replayable from Settings › General
+- **Ask your vault** (⌘K) — ask a question and get an answer built only from your own notes, citing the ones it read
+- **Triage the Inbox** (⌘K) — proposes a folder, tags and a real title for each unfiled note, one at a time, nothing applied without your approval
+- **Suggest links** — finds notes this one should reference and turns the right phrase into a wikilink
+- **Find duplicates** — spots notes that cover the same ground and should probably be merged
+- **What changed** — turns a note's git history into a plain-English account of how it evolved
+- **Brief today's daily note** (⌘K) — starts the day from your unfinished tasks and the threads you were on, instead of a blank page
 - Update notices: when a new version ships, Cork shows the upgrade command for however you installed it. Cork never replaces itself behind your package manager
 
 ### Fixed

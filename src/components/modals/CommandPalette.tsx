@@ -31,6 +31,7 @@ import { parseSnippet, usePaletteSearch } from "@/hooks/usePaletteSearch";
 import { createNote } from "@/services/createNote";
 import { copyNoteAsMarkdown, exportNoteAsHtml, exportNoteAsPdf } from "@/services/exportNote";
 import { openDailyNote } from "@/services/dailyNote";
+import { insertDailyBrief } from "@/services/dailyBrief";
 import { useIndexStore } from "@/stores/indexStore";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
@@ -62,6 +63,24 @@ const COMMANDS: readonly PaletteCommand[] = [
   {
     id: "ai-generate",
     label: "Generate note from topic",
+    hint: "AI",
+    icon: <Sparkle size={14} weight="fill" />,
+  },
+  {
+    id: "ai-ask",
+    label: "Ask your vault",
+    hint: "AI",
+    icon: <Sparkle size={14} weight="fill" />,
+  },
+  {
+    id: "ai-triage",
+    label: "Triage the Inbox",
+    hint: "AI",
+    icon: <Sparkle size={14} weight="fill" />,
+  },
+  {
+    id: "ai-daily-brief",
+    label: "Brief today's daily note",
     hint: "AI",
     icon: <Sparkle size={14} weight="fill" />,
   },
@@ -225,6 +244,12 @@ export function CommandPalette() {
           void createNote();
         } else if (cmd.id === "ai-generate") {
           useShellStore.getState().setGenerateModalOpen(true);
+        } else if (cmd.id === "ai-ask") {
+          useShellStore.getState().setAskVaultOpen(true);
+        } else if (cmd.id === "ai-triage") {
+          useShellStore.getState().setTriageOpen(true);
+        } else if (cmd.id === "ai-daily-brief") {
+          void insertDailyBrief();
         } else if (cmd.id === "open-daily-note") {
           void openDailyNote();
         } else if (cmd.id === "open-graph") {

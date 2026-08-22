@@ -1,13 +1,27 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { Sparkle, Tag, TextAa, TextAlignLeft, TreeStructure } from "@phosphor-icons/react";
+import {
+  CopySimple,
+  LinkSimple,
+  Sparkle,
+  Tag,
+  TextAa,
+  TextAlignLeft,
+  TreeStructure,
+} from "@phosphor-icons/react";
 
 import { useEditorStore } from "@/stores/editorStore";
 import { client } from "@/ipc/client";
+import { existingLinks, findCandidates, formatCandidates, parsePairs } from "@/services/aiVault";
 import { SectionHeader } from "./helpers";
+import { AiSuggestions, type Suggestion } from "./AiSuggestions";
 
 export function AiSection() {
   const [loading, setLoading] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<{
+    kind: "links" | "overlap";
+    items: Suggestion[];
+  } | null>(null);
   const body = useEditorStore((s) => s.body);
   const noteId = useEditorStore((s) => s.noteId);
   const frontmatter = useEditorStore((s) => s.frontmatter);
@@ -43,6 +57,51 @@ export function AiSection() {
     [body, noteId, frontmatter],
   );
 
+  /**
+   * Skills that reason about the note *within* the vault. The index picks the
+   * candidates so the model only has to judge a short list, which keeps the
+   * prompt small and the reason a note was considered inspectable.
+   */
+  const runVaultSkill = useCallback(
+    async (skillId: "suggest-links" | "find-overlap") => {
+      if (!body || !noteId) return;
+      setLoading(skillId);
+      setSuggestions(null);
+      try {
+        const title = typeof frontmatter.title === "string" ? frontmatter.title : noteId;
+        const candidates = await findCandidates(body, noteId);
+        if (candidates.length === 0) {
+          toast.info("No comparable notes found in the vault yet");
+          return;
+        }
+        const result = (await client.ai.runSkill(skillId, {
+          title,
+          body,
+          candidates: formatCandidates(candidates),
+          linked: existingLinks(body).join(", ") || "none",
+        })) as { output: string };
+
+        const items = parsePairs(result.output);
+        if (items.length === 0) {
+          toast.info(
+            skillId === "suggest-links"
+              ? "Nothing worth linking here"
+              : "No overlapping notes found",
+          );
+          return;
+        }
+        setSuggestions({ kind: skillId === "suggest-links" ? "links" : "overlap", items });
+      } catch (err) {
+        const error = err as { kind?: string; message?: string };
+        if (error.kind === "provider_disabled") toast.error("Configure an AI provider in Settings");
+        else toast.error(`Error: ${error.message ?? String(err)}`);
+      } finally {
+        setLoading(null);
+      }
+    },
+    [body, noteId, frontmatter],
+  );
+
   return (
     <section>
       <SectionHeader icon={<Sparkle size={14} />} title="AI" />
@@ -66,12 +125,32 @@ export function AiSection() {
           onClick={() => void runSkill("related-notes")}
         />
         <AiButton
+          icon={<LinkSimple size={14} />}
+          label="Suggest links"
+          loading={loading === "suggest-links"}
+          onClick={() => void runVaultSkill("suggest-links")}
+        />
+        <AiButton
+          icon={<CopySimple size={14} />}
+          label="Find duplicates"
+          loading={loading === "find-overlap"}
+          onClick={() => void runVaultSkill("find-overlap")}
+        />
+        <AiButton
           icon={<TextAa size={14} />}
           label="Fix spelling"
           loading={loading === "fix-spelling"}
           onClick={() => void runSkill("fix-spelling")}
         />
       </div>
+
+      {suggestions && (
+        <AiSuggestions
+          kind={suggestions.kind}
+          items={suggestions.items}
+          onDismiss={() => setSuggestions(null)}
+        />
+      )}
     </section>
   );
 }
