@@ -1,7 +1,10 @@
 import { setTheme } from "@/services/themeRuntime";
 import { setDensity } from "@/services/densityRuntime";
+import { UI_FONTS, UI_FONT_LABELS } from "@/services/fontRuntime";
 import type { AppSettings } from "@/ipc/types";
-import { SettingRow } from "./SettingRow";
+import { SettingRow, Select } from "./SettingRow";
+
+const UI_FONT_OPTIONS = UI_FONTS.map((f) => ({ value: f, label: UI_FONT_LABELS[f] }));
 
 export function GeneralSection({
   settings,
@@ -26,6 +29,14 @@ export function GeneralSection({
           <option value="light">Light</option>
           <option value="dark">Dark</option>
         </select>
+      </SettingRow>
+      <SettingRow label="Interface font" description="Typeface for menus, lists and panels">
+        <Select
+          ariaLabel="Interface font"
+          value={settings.appearance.uiFont}
+          options={UI_FONT_OPTIONS}
+          onChange={(uiFont) => update({ appearance: { ...settings.appearance, uiFont } })}
+        />
       </SettingRow>
       <SettingRow label="Density" description="Comfortable or compact layout spacing">
         <select

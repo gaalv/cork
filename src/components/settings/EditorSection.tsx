@@ -1,5 +1,21 @@
+import {
+  CODE_FONTS,
+  CODE_FONT_LABELS,
+  EDITOR_FONTS,
+  EDITOR_FONT_LABELS,
+} from "@/services/fontRuntime";
 import type { AppSettings } from "@/ipc/types";
-import { SettingRow, Toggle } from "./SettingRow";
+import { SettingRow, Select, Toggle } from "./SettingRow";
+import { FontSpecimen } from "./FontSpecimen";
+
+const EDITOR_FONT_OPTIONS = EDITOR_FONTS.map((f) => ({ value: f, label: EDITOR_FONT_LABELS[f] }));
+const CODE_FONT_OPTIONS = CODE_FONTS.map((f) => ({ value: f, label: CODE_FONT_LABELS[f] }));
+const LINE_HEIGHT_OPTIONS = [
+  { value: "1.4", label: "Tight (1.4)" },
+  { value: "1.55", label: "Snug (1.55)" },
+  { value: "1.7", label: "Normal (1.7)" },
+  { value: "1.9", label: "Relaxed (1.9)" },
+] as const;
 
 export function EditorSection({
   settings,
@@ -25,11 +41,27 @@ export function EditorSection({
           onChange={(v) => update({ editor: { ...settings.editor, livePreview: v } })}
         />
       </SettingRow>
+      <SettingRow label="Editor font" description="Typeface for the writing surface">
+        <Select
+          ariaLabel="Editor font"
+          value={settings.editor.fontFamily}
+          options={EDITOR_FONT_OPTIONS}
+          onChange={(fontFamily) => update({ editor: { ...settings.editor, fontFamily } })}
+        />
+      </SettingRow>
+      <SettingRow label="Code font" description="Monospace typeface for code and tables">
+        <Select
+          ariaLabel="Code font"
+          value={settings.editor.codeFont}
+          options={CODE_FONT_OPTIONS}
+          onChange={(codeFont) => update({ editor: { ...settings.editor, codeFont } })}
+        />
+      </SettingRow>
       <SettingRow label="Font size" description="Editor font size in pixels">
         <input
           type="number"
-          min={10}
-          max={24}
+          min={11}
+          max={26}
           value={settings.editor.fontSize}
           onChange={(e) =>
             update({ editor: { ...settings.editor, fontSize: Number(e.target.value) } })
@@ -37,6 +69,15 @@ export function EditorSection({
           className="w-20 rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-2 py-1 text-[13px]"
         />
       </SettingRow>
+      <SettingRow label="Line height" description="Vertical breathing room between lines">
+        <Select
+          ariaLabel="Line height"
+          value={String(settings.editor.lineHeight)}
+          options={LINE_HEIGHT_OPTIONS}
+          onChange={(v) => update({ editor: { ...settings.editor, lineHeight: Number(v) } })}
+        />
+      </SettingRow>
+      <FontSpecimen />
       <SettingRow label="Tab size" description="Number of spaces per tab">
         <select
           value={settings.editor.tabSize}

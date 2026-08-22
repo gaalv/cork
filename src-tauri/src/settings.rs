@@ -8,7 +8,7 @@ use crate::vault::settings::{load_vault_settings, save_vault_settings, VaultSett
 use crate::vault::VaultState;
 use crate::IpcError;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     #[serde(default)]
@@ -47,9 +47,12 @@ pub struct AppearanceSettings {
     pub density: String,
     #[serde(default = "default_theme")]
     pub theme: String,
+    /// UI typeface: "system" | "inter".
+    #[serde(default = "default_ui_font")]
+    pub ui_font: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EditorSettings {
     #[serde(default = "default_auto_save_debounce_ms")]
@@ -62,6 +65,14 @@ pub struct EditorSettings {
     pub show_line_numbers: bool,
     #[serde(default = "default_font_size")]
     pub font_size: u32,
+    #[serde(default = "default_line_height")]
+    pub line_height: f32,
+    /// Writing-surface typeface: "system" | "inter" | "serif" | "mono".
+    #[serde(default = "default_editor_font")]
+    pub font_family: String,
+    /// Monospace typeface for code: "system" | "plex".
+    #[serde(default = "default_code_font")]
+    pub code_font: String,
     #[serde(default = "default_tab_size")]
     pub tab_size: u32,
     #[serde(default)]
@@ -119,6 +130,7 @@ impl Default for AppearanceSettings {
         Self {
             density: default_density(),
             theme: default_theme(),
+            ui_font: default_ui_font(),
         }
     }
 }
@@ -131,6 +143,9 @@ impl Default for EditorSettings {
             line_wrap: true,
             show_line_numbers: true,
             font_size: default_font_size(),
+            line_height: default_line_height(),
+            font_family: default_editor_font(),
+            code_font: default_code_font(),
             tab_size: default_tab_size(),
             vim_mode: false,
             live_preview: true,
@@ -224,7 +239,23 @@ fn default_recent_limit() -> u32 {
 }
 
 fn default_font_size() -> u32 {
-    14
+    15
+}
+
+fn default_line_height() -> f32 {
+    1.7
+}
+
+fn default_ui_font() -> String {
+    "system".to_string()
+}
+
+fn default_editor_font() -> String {
+    "system".to_string()
+}
+
+fn default_code_font() -> String {
+    "system".to_string()
 }
 
 fn default_tab_size() -> u32 {

@@ -42,3 +42,31 @@ export function Toggle({
     </button>
   );
 }
+
+/** Shared select styling so every settings row reads the same. */
+export function Select<T extends string>({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (v: T) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <select
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(e) => onChange(e.target.value as T)}
+      className="rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-2 py-1 text-[13px]"
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}

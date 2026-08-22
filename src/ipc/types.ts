@@ -1,3 +1,5 @@
+import type { CodeFont, EditorFont, UiFont } from "@/services/fontRuntime";
+
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type JsonRecord = { [key: string]: JsonValue };
@@ -24,6 +26,7 @@ export type AppSettings = {
   appearance: {
     density: "comfortable" | "compact";
     theme: "light" | "dark" | "system";
+    uiFont: UiFont;
   };
   editor: {
     autoSaveDebounceMs: number;
@@ -31,6 +34,9 @@ export type AppSettings = {
     lineWrap: boolean;
     showLineNumbers: boolean;
     fontSize: number;
+    lineHeight: number;
+    fontFamily: EditorFont;
+    codeFont: CodeFont;
     tabSize: number;
     vimMode: boolean;
     livePreview: boolean;

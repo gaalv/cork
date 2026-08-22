@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import { installThemeRuntime } from "@/services/themeRuntime";
 import { installDensityRuntime } from "@/services/densityRuntime";
+import { installFontRuntime } from "@/services/fontRuntime";
 import { installQuickCaptureRuntime } from "@/services/registerQuickCapture";
 import { installSyncNowRuntime } from "@/services/registerSyncNow";
 import { installGlobalErrorReporters, RootErrorBoundary } from "@/components/ui/RootErrorBoundary";
@@ -11,6 +12,7 @@ import "@/index.css";
 installGlobalErrorReporters();
 installThemeRuntime();
 installDensityRuntime();
+installFontRuntime();
 void installQuickCaptureRuntime();
 void installSyncNowRuntime();
 

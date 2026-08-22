@@ -11,16 +11,20 @@
 import { create } from "zustand";
 
 import { client } from "@/ipc/client";
+import { setTypography } from "@/services/fontRuntime";
 import type { AppSettings } from "@/ipc/types";
 
 const DEFAULT_SETTINGS: AppSettings = {
-  appearance: { density: "comfortable", theme: "system" },
+  appearance: { density: "comfortable", theme: "system", uiFont: "system" },
   editor: {
     autoSaveDebounceMs: 500,
     previewDefault: false,
     lineWrap: true,
     showLineNumbers: false,
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 1.7,
+    fontFamily: "system",
+    codeFont: "system",
     tabSize: 2,
     vimMode: false,
     livePreview: true,
@@ -39,6 +43,17 @@ type AppSettingsState = {
   loadVaultSettings: () => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
 };
+
+/** Push the typography slice of the settings onto the DOM + localStorage. */
+function syncTypography(settings: AppSettings) {
+  setTypography({
+    uiFont: settings.appearance.uiFont,
+    editorFont: settings.editor.fontFamily,
+    codeFont: settings.editor.codeFont,
+    fontSize: settings.editor.fontSize,
+    lineHeight: settings.editor.lineHeight,
+  });
+}
 
 function mergeSettings(base: AppSettings, partial: Partial<AppSettings>): AppSettings {
   return {
@@ -65,7 +80,9 @@ export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
   loadVaultSettings: async () => {
     try {
       const loaded = await client.settings.appLoad();
-      set({ settings: mergeSettings(DEFAULT_SETTINGS, loaded as Partial<AppSettings>) });
+      const merged = mergeSettings(DEFAULT_SETTINGS, loaded as Partial<AppSettings>);
+      set({ settings: merged });
+      syncTypography(merged);
     } catch {
       // keep defaults on error
     }
@@ -74,6 +91,7 @@ export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
   updateSettings: async (patch) => {
     const merged = mergeSettings(get().settings, patch);
     set({ settings: merged });
+    syncTypography(merged);
     try {
       await client.settings.appSave(merged);
     } catch {

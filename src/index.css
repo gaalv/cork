@@ -1,11 +1,28 @@
 @import "katex/dist/katex.min.css";
+/* Bundled offline — no CDN, no network at runtime (v1 is offline-first). */
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/ibm-plex-mono/400-italic.css";
 @import "tailwindcss";
 
 @theme {
-  --font-sans:
+  /* --- Font stacks --- */
+  /* Named stacks; the active ones are picked by the data-*-font attributes
+     below, which fontRuntime.ts sets from settings. */
+  --font-stack-system:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-  --font-display: Georgia, "Times New Roman", serif;
+  --font-stack-system-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-stack-inter: "Inter Variable", "Inter", var(--font-stack-system);
+  --font-stack-plex-mono: "IBM Plex Mono", var(--font-stack-system-mono);
+  --font-stack-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+
+  --font-sans: var(--font-stack-system);
+  --font-mono: var(--font-stack-system-mono);
+  --font-display: var(--font-stack-serif);
+  /* The writing surface — independent from the UI font. */
+  --font-editor: var(--font-stack-system);
 
   --color-cork-bg: #fafafa;
   --color-cork-panel: #fdfdfd;
@@ -57,6 +74,38 @@
 }
 :root[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
   background: #555555;
+}
+
+/* --- Font selection --- */
+/* fontRuntime.ts mirrors the persisted settings onto these attributes so the
+   choice applies before React mounts and cascades to every surface. */
+:root[data-ui-font="inter"] {
+  --font-sans: var(--font-stack-inter);
+}
+:root[data-editor-font="inter"] {
+  --font-editor: var(--font-stack-inter);
+}
+:root[data-editor-font="serif"] {
+  --font-editor: var(--font-stack-serif);
+}
+:root[data-editor-font="mono"] {
+  --font-editor: var(--font-stack-plex-mono);
+}
+:root[data-code-font="plex"] {
+  --font-mono: var(--font-stack-plex-mono);
+}
+
+/* --- Editor typography --- */
+/* Set by fontRuntime.ts from settings.editor; the CodeMirror theme reads them
+   so size/leading changes apply live without rebuilding the EditorView. */
+:root {
+  --editor-font-size: 15px;
+  --editor-line-height: 1.7;
+  /* Vertical rhythm, mirroring the block spacing of a rendered document. */
+  --editor-para-gap: 0.55em;
+  --editor-h1-gap: 1.4em;
+  --editor-h2-gap: 1.25em;
+  --editor-h3-gap: 1.1em;
 }
 
 /* --- Density --- */
@@ -159,8 +208,11 @@ body {
 
 .cork-preview {
   color: var(--color-cork-ink);
-  font-size: 14px;
-  line-height: 1.7;
+  /* Same typography tokens the editor uses, so toggling preview doesn't
+     reflow the text or change the typeface under you. */
+  font-family: var(--font-editor);
+  font-size: var(--editor-font-size);
+  line-height: var(--editor-line-height);
   /* Break long unbreakable tokens (URLs, hashes) instead of overflowing. */
   overflow-wrap: break-word;
 }
@@ -179,12 +231,17 @@ body {
 }
 .cork-preview h1 {
   font-size: 1.6em;
+  letter-spacing: -0.01em;
 }
 .cork-preview h2 {
   font-size: 1.35em;
+  letter-spacing: -0.01em;
 }
 .cork-preview h3 {
   font-size: 1.15em;
+}
+.cork-preview > :first-child {
+  margin-top: 0;
 }
 
 .cork-preview p {
