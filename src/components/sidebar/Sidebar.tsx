@@ -177,8 +177,10 @@ export function Sidebar({
   const isFolderActive = (id: string) => filter.kind === "folder" && filter.id === id;
 
   return (
-    <aside className="flex h-full min-h-0 flex-col border-r border-[var(--color-cork-border)] bg-[var(--color-cork-panel)]">
+    <aside
       data-tour="sidebar"
+      className="flex h-full min-h-0 flex-col border-r border-[var(--color-cork-border)] bg-[var(--color-cork-panel)]"
+    >
       <div
         ref={dragRef}
         className="flex h-12 shrink-0 items-center justify-end border-b border-[var(--color-cork-border)] px-3"

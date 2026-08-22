@@ -225,6 +225,7 @@ function EditorHeader({
         </button>
         <div className="mx-1 h-4 w-px bg-[var(--color-cork-border)]" />
         <button
+          data-tour="inspector"
           onClick={onToggleInspector}
           title="Inspector"
           className={`rounded-md p-1.5 ${

@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useDragRegion } from "@/hooks/useDragRegion";
 import { cn } from "@/utils/cn";
 
 import { TOUR_STEPS, type TourStep } from "./tourSteps";
@@ -61,6 +62,10 @@ function cardPosition(step: TourStep, rect: Rect | null) {
 
 export function OnboardingTour({ onFinish }: { onFinish: () => void }) {
   const [index, setIndex] = useState(0);
+  // The overlay sits above the window's drag regions, which would otherwise
+  // trap the window in place for the length of the tour. Dragging the dimmed
+  // backdrop moves it, exactly like dragging the app chrome underneath.
+  const dragRef = useDragRegion<HTMLDivElement>();
   const [steps, setSteps] = useState<TourStep[]>(TOUR_STEPS);
 
   // Drop steps whose target never mounted, so the tour cannot point at nothing.
@@ -113,9 +118,13 @@ export function OnboardingTour({ onFinish }: { onFinish: () => void }) {
       aria-modal="true"
       aria-label="Product tour"
     >
-      <svg className="absolute inset-0 h-full w-full" aria-hidden>
-        <path d={spotlightPath(rect)} fillRule="evenodd" fill="rgba(0,0,0,0.62)" />
-      </svg>
+      {/* The drag handler needs an HTMLElement target, so the SVG is wrapped
+          rather than carrying the ref itself. */}
+      <div ref={dragRef} className="absolute inset-0">
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+          <path d={spotlightPath(rect)} fillRule="evenodd" fill="rgba(0,0,0,0.62)" />
+        </svg>
+      </div>
 
       <div
         className={cn(
