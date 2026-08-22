@@ -178,6 +178,7 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full min-h-0 flex-col border-r border-[var(--color-cork-border)] bg-[var(--color-cork-panel)]">
+      data-tour="sidebar"
       <div
         ref={dragRef}
         className="flex h-12 shrink-0 items-center justify-end border-b border-[var(--color-cork-border)] px-3"
@@ -190,7 +191,6 @@ export function Sidebar({
           <SidebarSimple size={14} className="scale-x-[-1]" />
         </button>
       </div>
-
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-4 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex flex-col">
           <SidebarRow
@@ -349,9 +349,7 @@ export function Sidebar({
           )}
         </SidebarSection>
       </nav>
-
       <UpdateNotice />
-
       {folderCtx &&
         createPortal(
           <div
@@ -413,7 +411,6 @@ export function Sidebar({
           </div>,
           document.body,
         )}
-
       {tagCtx &&
         createPortal(
           <TagContextMenu

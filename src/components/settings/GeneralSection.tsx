@@ -1,6 +1,8 @@
 import { setTheme } from "@/services/themeRuntime";
 import { setDensity } from "@/services/densityRuntime";
 import { UI_FONTS, UI_FONT_LABELS } from "@/services/fontRuntime";
+import { replayOnboarding } from "@/components/onboarding/useOnboarding";
+import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import type { AppSettings } from "@/ipc/types";
 import { SettingRow, Select } from "./SettingRow";
 
@@ -13,6 +15,8 @@ export function GeneralSection({
   settings: AppSettings;
   update: (patch: Partial<AppSettings>) => void;
 }) {
+  const closeSettings = useSettingsUiStore((s) => s.closeSettings);
+
   return (
     <div className="space-y-5">
       <SettingRow label="Theme" description="Choose light, dark, or follow system">
@@ -37,6 +41,20 @@ export function GeneralSection({
           options={UI_FONT_OPTIONS}
           onChange={(uiFont) => update({ appearance: { ...settings.appearance, uiFont } })}
         />
+      </SettingRow>
+      <SettingRow
+        label="Product tour"
+        description="Replay the introduction to Cork's main surfaces"
+      >
+        <button
+          onClick={() => {
+            closeSettings();
+            replayOnboarding();
+          }}
+          className="rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-2.5 py-1 text-[13px] hover:border-[var(--color-cork-border-strong)]"
+        >
+          Show tour
+        </button>
       </SettingRow>
       <SettingRow label="Density" description="Comfortable or compact layout spacing">
         <select

@@ -287,7 +287,10 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   });
 
   return (
-    <section className="flex h-full min-h-0 flex-col border-r border-[var(--color-cork-border)]">
+    <section
+      data-tour="notes-list"
+      className="flex h-full min-h-0 flex-col border-r border-[var(--color-cork-border)]"
+    >
       <div
         ref={dragRef}
         className={`flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] px-3 ${

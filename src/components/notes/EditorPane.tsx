@@ -62,7 +62,7 @@ export function EditorPane({
   }
 
   return (
-    <main className="flex h-full flex-col ">
+    <main data-tour="editor" className="flex h-full flex-col ">
       <EditorHeader
         note={note}
         inspectorOpen={inspectorOpen}

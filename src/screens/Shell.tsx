@@ -14,6 +14,8 @@ import { WelcomeScreen } from "@/screens/WelcomeScreen";
 import { HelpModal } from "@/components/modals/HelpModal";
 import { Toaster } from "@/components/ui/Toaster";
 import { DevBadge } from "@/components/ui/DevBadge";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { useOnboarding } from "@/components/onboarding/useOnboarding";
 import { TriageBody } from "@/screens/TriageBody";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { useVaultStore } from "@/stores/vaultStore";
@@ -32,6 +34,7 @@ const CalendarOverlay = lazy(() =>
 export function Shell() {
   useShortcuts();
   const vaultPath = useVaultStore((state) => state.path);
+  const tour = useOnboarding(Boolean(vaultPath));
   const graphOpen = useShellStore((state) => state.graphOpen);
   const calendarOpen = useShellStore((state) => state.calendarOpen);
   const notes = useVaultStore((state) => state.notes);
@@ -125,6 +128,7 @@ export function Shell() {
       <SettingsPanel />
       <Toaster />
       <DevBadge />
+      {tour.active && <OnboardingTour onFinish={tour.finish} />}
     </div>
   );
 }
