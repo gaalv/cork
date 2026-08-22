@@ -53,6 +53,7 @@ export type AppSettings = {
   };
   ai: {
     provider: AiProvider;
+    models: AiModelSettings;
   };
   layout?: {
     mode: "triage";
@@ -265,7 +266,7 @@ export type ArchivedNoteEntry = {
   mtime: number;
 };
 
-export type AiProvider = "disabled" | "claude" | "copilot";
+export type AiProvider = "disabled" | "claude" | "copilot" | "codex";
 
 export type AiError = {
   kind: "provider_disabled" | "binary_not_found" | "subprocess_failed" | "timeout";
@@ -287,4 +288,34 @@ export type InstallChannel = {
   /** Upgrade command to show, when the channel has one. */
   command: string | null;
   label: string;
+};
+
+/** Model chosen per cost tier. Empty means the provider's own default. */
+export type TierModels = {
+  small: string;
+  standard: string;
+  premium: string;
+};
+
+export type AiModelSettings = {
+  claude: TierModels;
+  copilot: TierModels;
+  codex: TierModels;
+};
+
+export type ModelChoice = {
+  id: string;
+  label: string;
+  /** Aliases track the newest release of a family, so they age better. */
+  isAlias: boolean;
+};
+
+export type ProviderModels = {
+  provider: string;
+  models: ModelChoice[];
+};
+
+export type ModelTestResult = {
+  ok: boolean;
+  message: string;
 };

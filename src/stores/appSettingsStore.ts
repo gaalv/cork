@@ -33,7 +33,14 @@ const DEFAULT_SETTINGS: AppSettings = {
   vault: {},
   markdown: { callouts: true, footnotes: true, highlight: true },
   assets: { offlineMode: false },
-  ai: { provider: "disabled" },
+  ai: {
+    provider: "disabled",
+    models: {
+      claude: { small: "", standard: "", premium: "" },
+      copilot: { small: "", standard: "", premium: "" },
+      codex: { small: "", standard: "", premium: "" },
+    },
+  },
   layout: { mode: "triage", triageNavWidth: 220, triageListWidth: 300 },
   updates: { autoCheck: true },
 };
@@ -62,7 +69,13 @@ function mergeSettings(base: AppSettings, partial: Partial<AppSettings>): AppSet
     vault: { ...base.vault, ...partial.vault },
     markdown: { ...base.markdown, ...partial.markdown },
     assets: { ...base.assets, ...partial.assets },
-    ai: { ...base.ai, ...partial.ai },
+    ai: {
+      ...base.ai,
+      ...partial.ai,
+      // Deep-merge so a settings file written before per-tier models existed
+      // still yields a complete shape.
+      models: { ...base.ai.models, ...partial.ai?.models },
+    },
     layout: {
       mode: "triage" as const,
       triageNavWidth: 220,

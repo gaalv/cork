@@ -33,6 +33,8 @@ import type {
   DeployKeyInfo,
   ArchivedNoteEntry,
   InstallChannel,
+  ModelTestResult,
+  ProviderModels,
 } from "./types";
 
 export type TagCount = {
@@ -435,6 +437,14 @@ export type IpcCommandMap = {
     args: undefined;
     result: number;
   };
+  "ai.modelCatalog": {
+    args: undefined;
+    result: ProviderModels[];
+  };
+  "ai.testModel": {
+    args: { provider: string; model: string };
+    result: ModelTestResult;
+  };
   "ai.providersAvailable": {
     args: undefined;
     result: ProvidersAvailable;
@@ -503,6 +513,7 @@ export type AiStats = {
 export type ProvidersAvailable = {
   claude: boolean;
   copilot: boolean;
+  codex: boolean;
 };
 
 export type AiSkillError = {

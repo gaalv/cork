@@ -167,6 +167,8 @@ pub fn run() {
             ai::ai_stats,
             ai::ai_telemetry_clear,
             ai::ai_providers_available,
+            ai::ai_model_catalog,
+            ai::ai_test_model,
             // === F35 Diagnostics ===
             diagnostics::diagnostics_report_error,
             diagnostics::diagnostics_crash_log_path,

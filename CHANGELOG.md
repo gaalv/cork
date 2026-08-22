@@ -17,6 +17,8 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Linux install via Homebrew (`brew install cork`) — macOS continues to use the cask
 - Development builds are marked with an outline and a corner badge, so they cannot be confused with an installed release
 - A first-run tour of the sidebar, notes list, editor and command palette — skippable at any step, replayable from Settings › General
+- Pick the model each AI tier uses, per provider — with a Test button that runs the CLI and reports what it says
+- GitHub Copilot and Codex join Claude as AI providers
 - **Ask your vault** (⌘K) — ask a question and get an answer built only from your own notes, citing the ones it read
 - **Triage the Inbox** (⌘K) — proposes a folder, tags and a real title for each unfiled note, one at a time, nothing applied without your approval
 - **Suggest links** — finds notes this one should reference and turns the right phrase into a wikilink

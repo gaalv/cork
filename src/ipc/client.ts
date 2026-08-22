@@ -96,6 +96,8 @@ const commandNames: Record<IpcCommandName, string> = {
   "ai.skillsList": "ai_skills_list",
   "ai.stats": "ai_stats",
   "ai.telemetryClear": "ai_telemetry_clear",
+  "ai.modelCatalog": "ai_model_catalog",
+  "ai.testModel": "ai_test_model",
   "ai.providersAvailable": "ai_providers_available",
   // === Archive ===
   "archive.note": "archive_note",
@@ -256,6 +258,9 @@ export const client = {
   ai: {
     runSkill: (skillId: string, variables: Record<string, string>) =>
       invokeCommand("ai.runSkill", { skillId, variables }),
+    modelCatalog: () => invokeCommand("ai.modelCatalog", undefined),
+    testModel: (provider: string, model: string) =>
+      invokeCommand("ai.testModel", { provider, model }),
     cacheClear: (skillId?: string) => invokeCommand("ai.cacheClear", { skillId }),
     skillsReload: () => invokeCommand("ai.skillsReload", undefined),
     skillsList: () => invokeCommand("ai.skillsList", undefined),

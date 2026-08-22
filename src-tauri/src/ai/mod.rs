@@ -14,7 +14,7 @@ pub mod skills;
 pub mod telemetry;
 pub mod tiers;
 
-use crate::ai::runner::{AiSkillResult, ProcessSpawner};
+use crate::ai::runner::{AiSkillResult, ProcessSpawner, Spawner};
 use crate::ai::skills::SkillStore;
 use crate::settings::{settings_app_load, AppSettings};
 use crate::IpcError;
@@ -127,6 +127,7 @@ pub fn binary_for_provider(provider: &str) -> Option<&'static str> {
     match provider {
         "claude" => Some("claude"),
         "copilot" => Some("copilot"),
+        "codex" => Some("codex"),
         _ => None,
     }
 }
@@ -148,11 +149,29 @@ pub fn binary_available(binary: &str) -> bool {
 
 // ── Helpers (used by runner.rs) ───────────────────────────────────────────────
 
-/// Read the current AI provider slug from app settings (`disabled` / `claude` / `copilot`).
+/// Read the current AI provider slug from app settings.
 fn current_provider(app: &AppHandle) -> String {
     settings_app_load(app.clone())
         .map(|s: AppSettings| s.ai.provider)
         .unwrap_or_else(|_| "disabled".to_string())
+}
+
+/// The user's model choice for `provider` at `tier`, or empty for the default.
+fn model_override(app: &AppHandle, provider: &str, tier: &crate::ai::skills::ModelTier) -> String {
+    let Ok(settings) = settings_app_load(app.clone()) else {
+        return String::new();
+    };
+    let per_provider = match provider {
+        "claude" => &settings.ai.models.claude,
+        "copilot" => &settings.ai.models.copilot,
+        "codex" => &settings.ai.models.codex,
+        _ => return String::new(),
+    };
+    match crate::ai::tiers::tier_key(tier) {
+        "small" => per_provider.small.clone(),
+        "premium" => per_provider.premium.clone(),
+        _ => per_provider.standard.clone(),
+    }
 }
 
 // ── Tauri commands ────────────────────────────────────────────────────────────
@@ -171,11 +190,19 @@ pub async fn ai_run_skill(
             .lock()
             .map_err(|_| AiError::internal("skills mutex poisoned"))?;
         let skill = runner::lookup(&store, &input.skill_id)?;
+        let chosen = model_override(&app, &provider, &skill.model_tier);
         let conn = runtime
             .conn
             .lock()
             .map_err(|_| AiError::internal("ai db mutex poisoned"))?;
-        runner::run(skill, &input.variables, &provider, &ProcessSpawner, &conn)
+        runner::run(
+            skill,
+            &input.variables,
+            &provider,
+            &chosen,
+            &ProcessSpawner,
+            &conn,
+        )
     })
 }
 
@@ -247,6 +274,118 @@ pub fn ai_providers_available() -> ProvidersAvailable {
     ProvidersAvailable {
         claude: binary_for_provider("claude").map_or(false, binary_available),
         copilot: binary_for_provider("copilot").map_or(false, binary_available),
+        codex: binary_for_provider("codex").map_or(false, binary_available),
+    }
+}
+
+/// Models Cork knows about, per provider.
+///
+/// No supported CLI can enumerate its own models, so this is a curated list
+/// that will age. It is a starting point, not a constraint: Settings accepts
+/// any string, and `ai_test_model` is how a name gets verified.
+#[tauri::command]
+pub fn ai_model_catalog() -> Vec<ProviderModels> {
+    vec![
+        ProviderModels {
+            provider: "claude".to_string(),
+            // Aliases track the newest release of a family, so they age better
+            // than pinned ids — which is why they lead the list.
+            models: vec![
+                model("opus", "Opus — most capable", true),
+                model("sonnet", "Sonnet — balanced", true),
+                model("haiku", "Haiku — fastest, cheapest", true),
+                model("fable", "Fable — deepest reasoning", true),
+                model("claude-opus-5", "Claude Opus 5", false),
+                model("claude-sonnet-5", "Claude Sonnet 5", false),
+                model("claude-haiku-4-5", "Claude Haiku 4.5", false),
+                model("claude-fable-5", "Claude Fable 5", false),
+            ],
+        },
+        ProviderModels {
+            provider: "copilot".to_string(),
+            models: vec![
+                model("gpt-5", "GPT-5", false),
+                model("claude-sonnet-4.5", "Claude Sonnet 4.5", false),
+                model("o3", "o3", false),
+            ],
+        },
+        ProviderModels {
+            provider: "codex".to_string(),
+            models: vec![
+                model("gpt-5-codex", "GPT-5 Codex", false),
+                model("gpt-5", "GPT-5", false),
+                model("o3", "o3", false),
+            ],
+        },
+    ]
+}
+
+fn model(id: &str, label: &str, is_alias: bool) -> ModelChoice {
+    ModelChoice {
+        id: id.to_string(),
+        label: label.to_string(),
+        is_alias,
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelChoice {
+    pub id: String,
+    pub label: String,
+    /// Aliases resolve to whatever is newest, so they do not go stale.
+    pub is_alias: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderModels {
+    pub provider: String,
+    pub models: Vec<ModelChoice>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelTestResult {
+    pub ok: bool,
+    /// The CLI's own message when it failed — a wrong model name or a wrong
+    /// flag both surface here rather than being guessed at.
+    pub message: String,
+}
+
+/// Run the smallest possible prompt to prove a provider/model pair works.
+#[tauri::command]
+pub fn ai_test_model(provider: String, model: String) -> ModelTestResult {
+    let Some(binary) = binary_for_provider(&provider) else {
+        return ModelTestResult {
+            ok: false,
+            message: format!("Unknown provider: {provider}"),
+        };
+    };
+    if resolve_binary(binary).is_none() {
+        return ModelTestResult {
+            ok: false,
+            message: format!("'{binary}' is not installed, or Cork cannot see it"),
+        };
+    }
+
+    let mut args: Vec<String> = Vec::new();
+    let chosen = model.trim();
+    if !chosen.is_empty() {
+        args.push("--model".to_string());
+        args.push(chosen.to_string());
+    }
+    args.push("-p".to_string());
+
+    match ProcessSpawner.spawn(binary, &args, "Reply with the single word: ok", 45) {
+        Ok(out) => ModelTestResult {
+            ok: true,
+            message: out.trim().chars().take(120).collect(),
+        },
+        Err(err) => ModelTestResult {
+            ok: false,
+            message: err.message,
+        },
     }
 }
 
@@ -255,6 +394,7 @@ pub fn ai_providers_available() -> ProvidersAvailable {
 pub struct ProvidersAvailable {
     pub claude: bool,
     pub copilot: bool,
+    pub codex: bool,
 }
 
 /// List the currently loaded skills (id + name + source).

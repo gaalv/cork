@@ -113,6 +113,33 @@ pub struct AssetSettings {
 pub struct AiSettings {
     #[serde(default = "default_ai_provider")]
     pub provider: String,
+    /// Per-provider model overrides. Empty strings mean "let the CLI decide",
+    /// which is also what a settings file written before this existed yields.
+    #[serde(default)]
+    pub models: AiModelSettings,
+}
+
+/// Model to use for each cost tier. Empty means the provider's own default.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TierModels {
+    #[serde(default)]
+    pub small: String,
+    #[serde(default)]
+    pub standard: String,
+    #[serde(default)]
+    pub premium: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiModelSettings {
+    #[serde(default)]
+    pub claude: TierModels,
+    #[serde(default)]
+    pub copilot: TierModels,
+    #[serde(default)]
+    pub codex: TierModels,
 }
 
 fn default_ai_provider() -> String {
@@ -121,7 +148,10 @@ fn default_ai_provider() -> String {
 
 impl Default for AiSettings {
     fn default() -> Self {
-        Self { provider: default_ai_provider() }
+        Self {
+            provider: default_ai_provider(),
+            models: AiModelSettings::default(),
+        }
     }
 }
 

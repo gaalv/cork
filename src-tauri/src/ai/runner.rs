@@ -87,22 +87,38 @@ impl Spawner for ProcessSpawner {
             .map_err(|_| AiError::timeout(format!("AI request timed out after {timeout_secs}s")))?
             .map_err(|e| AiError::subprocess_failed(format!("subprocess: {e}")))?;
         if !output.status.success() {
+            // Some CLIs fail silently on a bad flag — an empty stderr would
+            // otherwise surface as "exited with error:" and nothing else.
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(AiError::subprocess_failed(format!(
-                "'{binary}' exited with error: {}",
-                stderr.trim()
-            )));
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let detail = if !stderr.trim().is_empty() {
+                stderr.trim().to_string()
+            } else if !stdout.trim().is_empty() {
+                stdout.trim().to_string()
+            } else {
+                match output.status.code() {
+                    Some(code) => format!(
+                        "exited with status {code} and no message — often an unknown model name or an unsupported flag"
+                    ),
+                    None => "was terminated before it produced output".to_string(),
+                }
+            };
+            return Err(AiError::subprocess_failed(format!("{binary}: {detail}")));
         }
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 }
 
 /// Run a skill end-to-end: build prompt → cache lookup → spawn → cache store → telemetry.
+///
+/// `model_override` is the user's model choice for this provider and tier;
+/// empty means the built-in default for that tier.
 #[allow(clippy::too_many_arguments)]
 pub fn run<S: Spawner>(
     skill: &Skill,
     vars: &HashMap<String, String>,
     provider: &str,
+    model_override: &str,
     spawner: &S,
     conn: &Connection,
 ) -> Result<AiSkillResult, AiError> {
@@ -172,7 +188,7 @@ pub fn run<S: Spawner>(
         return Err(err);
     }
 
-    let args = tiers::args_for(provider, &skill.model_tier);
+    let args = tiers::args_for(provider, &skill.model_tier, model_override);
     let result = spawner.spawn(binary, &args, &prompt_text, skill.timeout_secs.max(1));
 
     let latency = started.elapsed().as_millis() as u32;
