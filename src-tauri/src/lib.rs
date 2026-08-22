@@ -6,6 +6,7 @@ pub mod export;
 pub mod index;
 pub mod menu;
 pub mod proc;
+pub mod updates;
 pub mod settings;
 pub mod shortcuts;
 pub mod tray;
@@ -81,6 +82,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             health,
+            updates::updates_install_channel,
             vault::vault_open,
             vault::vault_current,
             vault::vault_list,

@@ -271,3 +271,20 @@ export type AiError = {
   kind: "provider_disabled" | "binary_not_found" | "subprocess_failed" | "timeout";
   message: string;
 };
+
+/** How this copy of Cork was installed — drives the upgrade instructions. */
+export type InstallChannelSlug =
+  | "homebrewCask"
+  | "homebrewFormula"
+  | "winget"
+  | "appImage"
+  | "systemPackage"
+  | "direct"
+  | "dev";
+
+export type InstallChannel = {
+  channel: InstallChannelSlug;
+  /** Upgrade command to show, when the channel has one. */
+  command: string | null;
+  label: string;
+};

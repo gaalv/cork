@@ -36,6 +36,7 @@ import {
 import { SidebarSection, SidebarRow, InlineNewFolder, InlineNewTag } from "./SidebarPrimitives";
 import { FolderContextPopover } from "./FolderContextPopover";
 import { TagContextMenu } from "@/components/notes/TagContextMenu";
+import { UpdateNotice } from "@/components/status/UpdateNotice";
 
 export function Sidebar({
   filter,
@@ -348,6 +349,8 @@ export function Sidebar({
           )}
         </SidebarSection>
       </nav>
+
+      <UpdateNotice />
 
       {folderCtx &&
         createPortal(

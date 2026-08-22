@@ -32,6 +32,7 @@ import type {
   RemoteInfo,
   DeployKeyInfo,
   ArchivedNoteEntry,
+  InstallChannel,
 } from "./types";
 
 export type TagCount = {
@@ -180,6 +181,10 @@ export type IpcCommandMap = {
     result: ScaffoldResult;
   };
   // === F13 Settings ===
+  "updates.installChannel": {
+    args: undefined;
+    result: InstallChannel;
+  };
   "settings.appLoad": {
     args: undefined;
     result: AppSettings;

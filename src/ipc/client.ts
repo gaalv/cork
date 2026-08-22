@@ -36,6 +36,7 @@ const commandNames: Record<IpcCommandName, string> = {
   "vault.removeRecent": "vault_remove_recent",
   "vault.settings": "vault_settings",
   "vault.scaffoldIfNeeded": "vault_scaffold_if_needed",
+  "updates.installChannel": "updates_install_channel",
   "settings.appLoad": "settings_app_load",
   "settings.appSave": "settings_app_save",
   "settings.vaultLoad": "settings_vault_load",
@@ -167,6 +168,9 @@ export const client = {
     removeRecent: (path: string) => invokeCommand("vault.removeRecent", { path }),
     settings: () => invokeCommand("vault.settings", undefined),
     scaffoldIfNeeded: () => invokeCommand("vault.scaffoldIfNeeded", undefined),
+  },
+  updates: {
+    installChannel: () => invokeCommand("updates.installChannel", undefined),
   },
   settings: {
     appLoad: () => invokeCommand("settings.appLoad", undefined),
