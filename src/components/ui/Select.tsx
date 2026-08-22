@@ -20,6 +20,12 @@ export type SelectProps<T extends string | number> = {
   className?: string;
   disabled?: boolean;
   placeholder?: string;
+  /**
+   * `minimal` drops the border and box, sizes to its content and only shows
+   * affordance on hover — for dense rows where a full control would outweigh
+   * the values around it. The menu itself is unchanged.
+   */
+  variant?: "default" | "minimal";
 };
 
 type Position = { left: number; top: number; width: number; placement: "below" | "above" };
@@ -32,7 +38,9 @@ export function Select<T extends string | number>({
   className,
   disabled,
   placeholder,
+  variant = "default",
 }: SelectProps<T>) {
+  const minimal = variant === "minimal";
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(() =>
     Math.max(
@@ -114,16 +122,18 @@ export function Select<T extends string | number>({
   }
 
   return (
-    <div className={cn("relative inline-block w-full", className)}>
+    <div className={cn("relative inline-block", minimal ? "w-fit" : "w-full", className)}>
       <button
         ref={triggerRef}
         type="button"
         role="combobox"
+        // `group` so the minimal variant can reveal its caret on hover.
         aria-expanded={open}
         aria-controls={listId}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         disabled={disabled}
+        data-minimal={minimal || undefined}
         onClick={() => !disabled && setOpen((prev) => !prev)}
         onKeyDown={(event) => {
           if (disabled) {
@@ -135,8 +145,15 @@ export function Select<T extends string | number>({
           }
         }}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-2.5 py-1.5 text-left text-[12px] text-[var(--color-cork-ink)] shadow-sm",
-          "hover:border-[var(--color-cork-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cork-ring)]",
+          "group flex items-center gap-1.5 text-left text-[12px] text-[var(--color-cork-ink)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cork-ring)]",
+          minimal
+            ? "-mx-1 w-fit rounded px-1 py-0 hover:bg-[var(--color-cork-panel-2)]"
+            : [
+                "w-full justify-between rounded-md border border-[var(--color-cork-border)]",
+                "bg-[var(--color-cork-panel)] px-2.5 py-1.5 shadow-sm",
+                "hover:border-[var(--color-cork-border-strong)]",
+              ],
           disabled && "cursor-not-allowed opacity-50",
         )}
       >
@@ -146,7 +163,14 @@ export function Select<T extends string | number>({
             {selected ? selected.label : (placeholder ?? "Select…")}
           </span>
         </span>
-        <CaretDown size={12} weight="bold" className="shrink-0 text-[var(--color-cork-muted)]" />
+        <CaretDown
+          size={minimal ? 10 : 12}
+          weight="bold"
+          className={cn(
+            "shrink-0 text-[var(--color-cork-subtle)]",
+            minimal && "opacity-0 transition-opacity group-hover:opacity-100",
+          )}
+        />
       </button>
 
       {open && position
@@ -161,7 +185,7 @@ export function Select<T extends string | number>({
                 position: "fixed",
                 left: position.left,
                 top: position.top,
-                width: position.width,
+                minWidth: Math.max(position.width, 140),
                 maxHeight: 280,
               }}
               className="z-[60] overflow-y-auto rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] py-1 shadow-lg"

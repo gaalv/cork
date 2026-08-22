@@ -47,6 +47,7 @@ export function PropertiesSection({ noteMtime }: { noteMtime: number }) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px]">
         <span className="text-[var(--color-cork-muted)]">Status</span>
         <Select
+          variant="minimal"
           ariaLabel="Note status"
           value={status ?? ""}
           options={STATUS_OPTIONS}
