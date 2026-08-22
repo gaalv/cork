@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { useEditorStore } from "@/stores/editorStore";
+import { replaceNoteBody } from "@/services/editorWrite";
 import { client } from "@/ipc/client";
 import { existingLinks, findCandidates, formatCandidates, parsePairs } from "@/services/aiVault";
 import { SectionHeader } from "./helpers";
@@ -38,7 +39,7 @@ export function AiSection() {
         const result = await client.ai.runSkill(skillId, { title, frontmatter: fm, body });
         const typed = result as { output: string };
         if (skillId === "fix-spelling") {
-          useEditorStore.getState().updateBody(typed.output);
+          replaceNoteBody(typed.output);
           toast.success("Spelling corrected");
         } else {
           toast.info(typed.output, { duration: 15000 });

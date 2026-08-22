@@ -19,6 +19,7 @@ import rehypeReact from "rehype-react";
 import mermaid from "mermaid";
 
 import { useEditorStore } from "@/stores/editorStore";
+import { replaceNoteBody } from "@/services/editorWrite";
 import { useVaultStore } from "@/stores/vaultStore";
 import { createMarkdownPipeline, preprocessMarkdown } from "@/utils/markdownProcessor";
 
@@ -91,7 +92,7 @@ function TaskCheckbox(props: ComponentPropsWithoutRef<"input"> & Record<string, 
   const handleChange = () => {
     if (cbIndex < 0) return;
 
-    const { body, updateBody } = useEditorStore.getState();
+    const { body } = useEditorStore.getState();
     const re = /^(\s*[-*+]\s)\[([ xX])\]/gm;
     let match: RegExpExecArray | null;
     let seen = 0;
@@ -102,7 +103,7 @@ function TaskCheckbox(props: ComponentPropsWithoutRef<"input"> & Record<string, 
         const replacement = `${match[1]}[${isChecked ? " " : "x"}]`;
         const updated =
           body.slice(0, match.index) + replacement + body.slice(match.index + match[0].length);
-        updateBody(updated);
+        replaceNoteBody(updated);
         return;
       }
       seen++;

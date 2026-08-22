@@ -10,7 +10,7 @@
 import { toast } from "sonner";
 
 import { client } from "@/ipc/client";
-import { useEditorStore } from "@/stores/editorStore";
+import { appendToNoteBody } from "@/services/editorWrite";
 import { useVaultStore } from "@/stores/vaultStore";
 import { recentNotes } from "@/services/aiVault";
 import { openDailyNote } from "@/services/dailyNote";
@@ -91,13 +91,7 @@ export async function insertDailyBrief(): Promise<void> {
       return;
     }
 
-    const store = useEditorStore.getState();
-    const body = store.body;
-    // A freshly created daily note holds only its `# YYYY-MM-DD` heading.
-    const isEmpty = body.trim().split("\n").filter(Boolean).length <= 1;
-    store.updateBody(
-      isEmpty ? `${body.trimEnd()}\n\n${brief}\n` : `${body.trimEnd()}\n\n${brief}\n`,
-    );
+    appendToNoteBody(brief);
 
     toast.success("Brief added", { id: "daily-brief", duration: 3000 });
   } catch (err) {

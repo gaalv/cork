@@ -9,6 +9,7 @@
 
 import { ArrowUpRight, Plus, X } from "@phosphor-icons/react";
 
+import { appendToNoteBody, replaceNoteBody } from "@/services/editorWrite";
 import { useEditorStore } from "@/stores/editorStore";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
@@ -43,9 +44,9 @@ export function AiSuggestions({
     const link = `[[${suggestion.title}]]`;
 
     if (phrase && body.includes(phrase)) {
-      store.updateBody(body.replace(phrase, `[[${suggestion.title}|${phrase}]]`));
+      replaceNoteBody(body.replace(phrase, `[[${suggestion.title}|${phrase}]]`));
     } else {
-      store.updateBody(`${body.trimEnd()}\n\n${link}\n`);
+      appendToNoteBody(link);
     }
   };
 
