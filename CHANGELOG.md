@@ -5,6 +5,43 @@ All notable changes to Cork will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — unreleased
+
+Editor rendering, theming and note-creation fixes, plus Windows and Linux builds.
+
+### Added
+
+- Bundled Inter and IBM Plex Mono, selectable for the interface, the writing surface and code — self-hosted, so the app makes no network requests
+- Editor line-height setting, and a live type specimen in Settings › Editor
+- Windows (`.msi`, `.exe`) and Linux (`.deb`, `.rpm`, `.AppImage`) release builds
+- Linux install via Homebrew (`brew install cork`) — macOS continues to use the cask
+- Development builds are marked with an outline and a corner badge, so they cannot be confused with an installed release
+
+### Fixed
+
+- **Font size setting had no effect** — the editor pinned a fixed size that overrode it
+- **Multi-line `$$…$$` never rendered.** Single-line display maths and inline maths also stayed raw when KaTeX finished loading after first paint
+- **Image previews never appeared.** Pasted or dropped images showed only the Markdown link; images in notes inside a folder resolved to the wrong path
+- **Code blocks rendered almost monochrome** — most syntax tokens collapsed onto two greys that were invisible in dark mode
+- Prose containing currency (`$5-$10`) was swallowed as a formula
+- `> [!warning]` callouts rendered as raw `!warning` instead of a styled label
+- Quotes, callouts and code blocks had no padding — content sat flush against the block edges
+- Markdown markers stayed raw on the last-edited line after clicking away from the editor
+- Task lines shifted sideways when the caret entered them
+- **Toasts ignored dark mode**, rendering white-on-red over the dark interface
+- Seven buttons and the settings toggle were unreadable in dark mode (white text on a near-white background)
+- Tailwind `dark:` styles followed the OS appearance instead of the app's theme setting
+- **AI providers and GitHub sync reported "not found on PATH"** even when the CLIs worked in the terminal — a GUI app does not inherit the shell's PATH
+- Wikilinks did not follow on a plain click, and never resolved folder-qualified targets such as `[[References/Cheatsheet]]`
+- Clicking a wikilink to a note that does not exist failed silently
+
+### Changed
+
+- **New notes now land in the vault root when no folder is selected**, instead of an `inbox/` directory. This matches how the sidebar defines the Inbox — notes created before this release stay where they are
+- Quick capture always targets the Inbox, opens straight into an editable note, and titles it with a timestamp
+- Every entry point (`⌘N`, the notes-list button, the command palette, the app menu, templates) now resolves the destination the same way
+- The preview pane shares the editor's typography, so toggling preview no longer reflows the text
+
 ## [0.1.0] — 2026-08-03
 
 Initial public release.
