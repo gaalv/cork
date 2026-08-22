@@ -64,6 +64,11 @@ pub fn unlinked_mentions(conn: &Connection, note_id: &str) -> Result<Vec<Mention
     if title.chars().count() < 2 || !title.chars().any(|c| c.is_alphanumeric()) {
         return Ok(Vec::new());
     }
+    // A placeholder title is not a subject, so a note "mentioning" it means
+    // nothing — every scratch note in the vault would list every other one.
+    if is_placeholder_title(&title) {
+        return Ok(Vec::new());
+    }
 
     // Notes already linking here are backlinks — exclude them wholesale.
     let mut linked: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -108,7 +113,43 @@ pub fn unlinked_mentions(conn: &Connection, note_id: &str) -> Result<Vec<Mention
             out.push(Mention { note, snippet });
         }
     }
+
+    // A word that turns up across a large slice of the vault is vocabulary,
+    // not a reference — listing those buries the mentions that mean something.
+    let total: i64 = conn
+        .query_row("SELECT COUNT(*) FROM notes", [], |r| r.get(0))
+        .unwrap_or(0);
+    if total > 0 && (out.len() as i64) * 100 / total >= COMMON_WORD_PERCENT {
+        return Ok(Vec::new());
+    }
+
+    out.truncate(MAX_MENTIONS);
     Ok(out)
+}
+
+/// Above this share of the vault, a title reads as a common word.
+const COMMON_WORD_PERCENT: i64 = 25;
+/// Even a genuine subject is not worth an unbounded list in a side panel.
+const MAX_MENTIONS: usize = 20;
+
+/// Titles Cork or the user never really chose — nothing "mentions" these.
+fn is_placeholder_title(title: &str) -> bool {
+    let lower = title.trim().to_lowercase();
+    if lower.starts_with("untitled") || lower.starts_with("quick capture") {
+        return true;
+    }
+    // A bare date is a daily note; every other daily note names it in passing.
+    if lower
+        .chars()
+        .all(|c| c.is_ascii_digit() || c == '-' || c == '/' || c == '.')
+    {
+        return true;
+    }
+    // Common scratch names, in either language.
+    matches!(
+        lower.as_str(),
+        "test" | "teste" | "testing" | "testando" | "note" | "nota" | "draft" | "rascunho" | "tmp" | "temp"
+    )
 }
 
 fn is_word_char(c: char) -> bool {
@@ -143,15 +184,24 @@ fn inside_wikilink(chars: &[char], start: usize, end: usize) -> bool {
 /// Find the first whole-word, non-wikilinked occurrence of `title` (ASCII
 /// case-insensitive) and return a trimmed snippet around it.
 fn first_unlinked_snippet(body: &str, title: &str) -> Option<String> {
+    // Unicode-aware folding: `to_ascii_lowercase` leaves 'Ç' and 'Á' untouched,
+    // so an accented title silently failed to match its own mentions.
     let chars: Vec<char> = body.chars().collect();
-    let pat: Vec<char> = title.chars().map(|c| c.to_ascii_lowercase()).collect();
+    let folded: Vec<char> = chars
+        .iter()
+        .map(|c| c.to_lowercase().next().unwrap_or(*c))
+        .collect();
+    let pat: Vec<char> = title
+        .chars()
+        .map(|c| c.to_lowercase().next().unwrap_or(c))
+        .collect();
     let (m, n) = (pat.len(), chars.len());
     if m == 0 || m > n {
         return None;
     }
     let mut i = 0;
     while i + m <= n {
-        let matched = (0..m).all(|k| chars[i + k].to_ascii_lowercase() == pat[k]);
+        let matched = (0..m).all(|k| folded[i + k] == pat[k]);
         if matched {
             let before_ok = i == 0 || !is_word_char(chars[i - 1]);
             let after_ok = i + m >= n || !is_word_char(chars[i + m]);
