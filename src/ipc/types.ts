@@ -308,6 +308,8 @@ export type ModelChoice = {
   label: string;
   /** Aliases track the newest release of a family, so they age better. */
   isAlias: boolean;
+  /** `fast` | `standard` | `deep` when this is the provider's pick for a tier. */
+  tierHint: string | null;
 };
 
 export type ProviderModels = {

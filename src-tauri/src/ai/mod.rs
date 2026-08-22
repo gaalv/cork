@@ -291,9 +291,9 @@ pub fn ai_model_catalog() -> Vec<ProviderModels> {
             // Aliases track the newest release of a family, so they age better
             // than pinned ids — which is why they lead the list.
             models: vec![
-                model("opus", "Opus — most capable", true),
-                model("sonnet", "Sonnet — balanced", true),
-                model("haiku", "Haiku — fastest, cheapest", true),
+                tiered("opus", "Opus — most capable", true, "deep"),
+                tiered("sonnet", "Sonnet — balanced", true, "standard"),
+                tiered("haiku", "Haiku — fastest, cheapest", true, "fast"),
                 model("fable", "Fable — deepest reasoning", true),
                 model("claude-opus-5", "Claude Opus 5", false),
                 model("claude-sonnet-5", "Claude Sonnet 5", false),
@@ -304,17 +304,19 @@ pub fn ai_model_catalog() -> Vec<ProviderModels> {
         ProviderModels {
             provider: "copilot".to_string(),
             models: vec![
-                model("gpt-5", "GPT-5", false),
+                tiered("gpt-5-mini", "GPT-5 mini — fastest", false, "fast"),
+                tiered("gpt-5", "GPT-5", false, "standard"),
+                tiered("o3", "o3 — deepest reasoning", false, "deep"),
                 model("claude-sonnet-4.5", "Claude Sonnet 4.5", false),
-                model("o3", "o3", false),
             ],
         },
         ProviderModels {
             provider: "codex".to_string(),
             models: vec![
-                model("gpt-5-codex", "GPT-5 Codex", false),
+                tiered("gpt-5-codex-mini", "GPT-5 Codex mini — fastest", false, "fast"),
+                tiered("gpt-5-codex", "GPT-5 Codex", false, "standard"),
+                tiered("o3", "o3 — deepest reasoning", false, "deep"),
                 model("gpt-5", "GPT-5", false),
-                model("o3", "o3", false),
             ],
         },
     ]
@@ -325,6 +327,19 @@ fn model(id: &str, label: &str, is_alias: bool) -> ModelChoice {
         id: id.to_string(),
         label: label.to_string(),
         is_alias,
+        tier_hint: None,
+    }
+}
+
+/// Same, but marks this model as the provider's pick for a tier — which is
+/// what lets Cork offer "quality" and "economy" without the user knowing any
+/// model names.
+fn tiered(id: &str, label: &str, is_alias: bool, hint: &str) -> ModelChoice {
+    ModelChoice {
+        id: id.to_string(),
+        label: label.to_string(),
+        is_alias,
+        tier_hint: Some(hint.to_string()),
     }
 }
 
@@ -335,6 +350,9 @@ pub struct ModelChoice {
     pub label: String,
     /// Aliases resolve to whatever is newest, so they do not go stale.
     pub is_alias: bool,
+    /// `fast` | `standard` | `deep` when this is the provider's pick for that
+    /// tier. Drives the presets; `None` means "listed, but not a preset pick".
+    pub tier_hint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

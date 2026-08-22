@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { Check, Warning } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState } from "react";
+import { CaretRight, Check, Warning } from "@phosphor-icons/react";
 
 import { client } from "@/ipc/client";
 import { Select } from "@/components/ui/Select";
 import { SettingRow } from "./SettingRow";
 import { ModelField } from "./ModelField";
+import { PRESETS, detectPreset, presetValues, type PresetId } from "@/services/aiPresets";
+import { cn } from "@/utils/cn";
 
 import type { AppSettings, AiProvider, ProviderModels, TierModels } from "@/ipc/types";
 import type { ProvidersAvailable } from "@/ipc/IpcContract";
@@ -45,6 +47,7 @@ export function AiSection({
   providers: ProvidersAvailable | null;
 }) {
   const [catalog, setCatalog] = useState<ProviderModels[]>([]);
+  const [advanced, setAdvanced] = useState(false);
   const provider = settings.ai.provider;
 
   useEffect(() => {
@@ -54,21 +57,29 @@ export function AiSection({
       .catch(() => setCatalog([]));
   }, []);
 
-  const models = catalog.find((c) => c.provider === provider)?.models ?? [];
+  const providerCatalog = catalog.find((c) => c.provider === provider);
+  const models = providerCatalog?.models ?? [];
   const tierModels =
     provider === "disabled" ? null : settings.ai.models[provider as ConfigurableProvider];
 
-  const setTier = (tier: keyof TierModels, value: string) => {
+  const preset = useMemo(
+    () => (tierModels ? detectPreset(tierModels, providerCatalog) : "balanced"),
+    [tierModels, providerCatalog],
+  );
+
+  const writeTiers = (next: TierModels) => {
     if (provider === "disabled") return;
     update({
       ai: {
         ...settings.ai,
-        models: {
-          ...settings.ai.models,
-          [provider]: { ...settings.ai.models[provider as ConfigurableProvider], [tier]: value },
-        },
+        models: { ...settings.ai.models, [provider]: next },
       },
     });
+  };
+
+  const setTier = (tier: keyof TierModels, value: string) => {
+    if (!tierModels) return;
+    writeTiers({ ...tierModels, [tier]: value });
   };
 
   return (
@@ -88,27 +99,66 @@ export function AiSection({
         <>
           <ProviderStatus provider={provider} providers={providers} />
 
-          <div>
-            <p className="mb-1 text-[13px] font-medium">Models</p>
-            <p className="mb-3 text-[12px] leading-relaxed text-[var(--color-cork-muted)]">
-              Leave a tier blank to use the CLI&apos;s own default. Cork cannot list what a provider
-              offers — no CLI exposes that — so the suggestions below are a starting point and any
-              name is accepted. Use Test to confirm one works.
-            </p>
-
-            <div className="flex flex-col gap-3">
-              {TIERS.map((tier) => (
-                <ModelField
-                  key={tier.key}
-                  label={tier.label}
-                  description={tier.description}
-                  provider={provider}
-                  value={tierModels?.[tier.key] ?? ""}
-                  suggestions={models}
-                  onChange={(next) => setTier(tier.key, next)}
-                />
-              ))}
+          <SettingRow label="Models" description="What Cork should optimise for">
+            <div className="w-44">
+              <Select
+                ariaLabel="Model preference"
+                value={preset}
+                options={[
+                  ...PRESETS.map((p) => ({ value: p.id as PresetId, label: p.label })),
+                  ...(preset === "custom"
+                    ? [{ value: "custom" as PresetId, label: "Custom" }]
+                    : []),
+                ]}
+                onChange={(next) => {
+                  if (next === "custom") return;
+                  writeTiers(presetValues(next, providerCatalog));
+                }}
+              />
             </div>
+          </SettingRow>
+
+          <p className="-mt-3 text-[12px] leading-relaxed text-[var(--color-cork-muted)]">
+            {preset === "custom"
+              ? "Set per task type below."
+              : (PRESETS.find((p) => p.id === preset)?.description ?? "")}
+          </p>
+
+          <div>
+            <button
+              onClick={() => setAdvanced((v) => !v)}
+              className="flex items-center gap-1 text-[12px] text-[var(--color-cork-muted)] hover:text-[var(--color-cork-ink)]"
+            >
+              <CaretRight
+                size={11}
+                weight="bold"
+                className={cn("transition-transform", advanced && "rotate-90")}
+              />
+              Advanced — pick a model per task type
+            </button>
+
+            {advanced && (
+              <>
+                <p className="mt-2 mb-3 text-[12px] leading-relaxed text-[var(--color-cork-muted)]">
+                  Leave a field blank to use the CLI&apos;s own default. Cork cannot list what a
+                  provider offers — no CLI exposes that — so the suggestions are a starting point
+                  and any name is accepted. Use Test to confirm one works.
+                </p>
+                <div className="flex flex-col gap-3">
+                  {TIERS.map((tier) => (
+                    <ModelField
+                      key={tier.key}
+                      label={tier.label}
+                      description={tier.description}
+                      provider={provider}
+                      value={tierModels?.[tier.key] ?? ""}
+                      suggestions={models}
+                      onChange={(next) => setTier(tier.key, next)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
