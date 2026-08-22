@@ -85,7 +85,7 @@ export function createExtensions(options: EditorOptions): Extension[] {
     keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
 
     // Wikilink decoration & click navigation
-    wikilinkExtension(),
+    wikilinkExtension(options.livePreview),
 
     // Interactive task checkboxes
     checkboxExtension(),
