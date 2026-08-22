@@ -1,6 +1,6 @@
 [package]
 name = "Cork"
-version = "0.1.0"
+version = "0.2.0"
 description = "Cork — local-first Markdown notes"
 authors = ["Cork contributors"]
 license = "MIT"

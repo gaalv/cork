@@ -17,7 +17,10 @@ import { useAppSettingsStore } from "@/stores/appSettingsStore";
 
 import type { InstallChannel } from "@/ipc/types";
 
-const MANIFEST_URL = "https://cork.md/version.json";
+// Served straight from the repo: a CDN-backed raw URL with no API rate limit
+// and no dependency on a deployed site. Swap for a first-party domain when
+// there is one.
+const MANIFEST_URL = "https://raw.githubusercontent.com/gaalv/cork/main/version.json";
 const RELEASES_URL = "https://github.com/gaalv/cork/releases";
 const CACHE_KEY = "cork-update-check";
 /** At most one request a day — a notes app has no reason to poll harder. */

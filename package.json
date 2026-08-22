@@ -1,7 +1,7 @@
 {
   "name": "cork",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -17,7 +17,8 @@
     "tauri:build": "tauri build",
     "prepare": "husky",
     "bench:index": "node scripts/bench-index.mjs",
-    "check:bundle-size": "node scripts/check-bundle-size.mjs"
+    "check:bundle-size": "node scripts/check-bundle-size.mjs",
+    "set-version": "node scripts/set-version.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.2",
