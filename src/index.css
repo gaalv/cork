@@ -46,6 +46,8 @@
   --color-cork-primary: #1a1a1a;
   --color-cork-primary-foreground: #fafafa;
   --color-cork-kbd: #fdfdfd;
+  /* Focus ring for interactive controls. */
+  --color-cork-ring: #8a8a8a;
 
   --color-cork-danger: #b5453a;
   --color-cork-danger-tint: #fbe8e6;
@@ -72,6 +74,7 @@
   --color-cork-primary: #eeeeee;
   --color-cork-primary-foreground: #1a1a1a;
   --color-cork-kbd: #262626;
+  --color-cork-ring: #777777;
   --color-cork-danger: #e06058;
   --color-cork-danger-tint: #2a1f1e;
   --color-cork-dev: #ff8c42;

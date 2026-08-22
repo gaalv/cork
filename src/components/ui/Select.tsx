@@ -8,6 +8,8 @@ export type SelectOption<T extends string | number> = {
   value: T;
   label: string;
   description?: string;
+  /** Leading marker — a status dot, a colour swatch — shown in trigger and list. */
+  icon?: React.ReactNode;
 };
 
 export type SelectProps<T extends string | number> = {
@@ -138,8 +140,11 @@ export function Select<T extends string | number>({
           disabled && "cursor-not-allowed opacity-50",
         )}
       >
-        <span className={cn("truncate", !selected && "text-[var(--color-cork-muted)]")}>
-          {selected ? selected.label : (placeholder ?? "Select…")}
+        <span className="flex min-w-0 items-center gap-1.5">
+          {selected?.icon}
+          <span className={cn("truncate", !selected && "text-[var(--color-cork-muted)]")}>
+            {selected ? selected.label : (placeholder ?? "Select…")}
+          </span>
         </span>
         <CaretDown size={12} weight="bold" className="shrink-0 text-[var(--color-cork-muted)]" />
       </button>
@@ -198,13 +203,16 @@ export function Select<T extends string | number>({
                       isActive && "bg-[var(--color-cork-panel-2)]",
                     )}
                   >
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate">{option.label}</span>
-                      {option.description ? (
-                        <span className="truncate text-[11px] text-[var(--color-cork-muted)]">
-                          {option.description}
-                        </span>
-                      ) : null}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      {option.icon}
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate">{option.label}</span>
+                        {option.description ? (
+                          <span className="truncate text-[11px] text-[var(--color-cork-muted)]">
+                            {option.description}
+                          </span>
+                        ) : null}
+                      </span>
                     </span>
                     {isSelected ? (
                       <Check

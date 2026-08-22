@@ -1,3 +1,5 @@
+import { Select as BaseSelect } from "@/components/ui/Select";
+
 export function SettingRow({
   label,
   description,
@@ -43,7 +45,11 @@ export function Toggle({
   );
 }
 
-/** Shared select styling so every settings row reads the same. */
+/**
+ * Settings rows delegate to the app's own Select rather than a native one —
+ * a native <select> on macOS paints OS chrome (system font, blue focus, its
+ * own caret) that ignores the theme entirely.
+ */
 export function Select<T extends string>({
   value,
   options,
@@ -56,17 +62,13 @@ export function Select<T extends string>({
   ariaLabel: string;
 }) {
   return (
-    <select
-      aria-label={ariaLabel}
-      value={value}
-      onChange={(e) => onChange(e.target.value as T)}
-      className="rounded-md border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-2 py-1 text-[13px]"
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <div className="w-44">
+      <BaseSelect
+        ariaLabel={ariaLabel}
+        value={value}
+        options={options.map((o) => ({ value: o.value, label: o.label }))}
+        onChange={onChange}
+      />
+    </div>
   );
 }
