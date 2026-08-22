@@ -108,6 +108,37 @@
   --editor-h3-gap: 1.1em;
 }
 
+/* --- Syntax token palette --- */
+/* Fenced code blocks were rendering near-monochrome because the highlight
+   style mapped most tags onto the same greys. These are real, theme-aware
+   token colors shared by the editor and the preview pane. */
+:root {
+  --syn-keyword: #8b3fa8;
+  --syn-string: #3d7a3f;
+  --syn-number: #b0630f;
+  --syn-comment: #8a8a8a;
+  --syn-function: #2f5fbf;
+  --syn-type: #1d7b86;
+  --syn-variable: #333333;
+  --syn-constant: #b0630f;
+  --syn-operator: #636363;
+  --syn-punctuation: #6f6f6f;
+  --syn-invalid: #b5453a;
+}
+:root[data-theme="dark"] {
+  --syn-keyword: #c792ea;
+  --syn-string: #8bc98b;
+  --syn-number: #e0a060;
+  --syn-comment: #6f6f6f;
+  --syn-function: #82aaff;
+  --syn-type: #5fc9d8;
+  --syn-variable: #dcdcdc;
+  --syn-constant: #e0a060;
+  --syn-operator: #999999;
+  --syn-punctuation: #9a9a9a;
+  --syn-invalid: #e06058;
+}
+
 /* --- Density --- */
 :root {
   --density-row-py: 6px; /* py-1.5 */

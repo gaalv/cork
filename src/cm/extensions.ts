@@ -40,6 +40,8 @@ type EditorOptions = {
   vimMode: boolean;
   livePreview: boolean;
   spellCheck: boolean;
+  /** Resolved theme — drives CodeMirror's own `&dark` base-theme rules. */
+  dark: boolean;
   onUpdate: (body: string) => void;
 };
 
@@ -61,7 +63,7 @@ export function createExtensions(options: EditorOptions): Extension[] {
     markdownExtension(),
 
     // Theme
-    corkEditorTheme,
+    corkEditorTheme(options.dark),
     corkHighlighting,
 
     // Native browser spellcheck on the writing surface (toggle in Settings)
@@ -94,7 +96,7 @@ export function createExtensions(options: EditorOptions): Extension[] {
     assetDropPaste(),
 
     // Inline image preview below ![](…) and ![[…]] lines
-    imagePreviewExtension(),
+    imagePreviewExtension(options.livePreview),
 
     // Update listener — sends body changes to the store
     EditorView.updateListener.of((update) => {

@@ -10,38 +10,83 @@ const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "i
 
 /** Returns true if the path points to an image based on extension. */
 export function isImagePath(filePath: string): boolean {
-  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+  // Inline images carry their type in the URI, not in a file extension.
+  if (filePath.startsWith("data:image/")) return true;
+  // Ignore any query string or fragment before reading the extension.
+  const clean = filePath.split(/[?#]/)[0];
+  const ext = clean.split(".").pop()?.toLowerCase() ?? "";
   return IMAGE_EXT.has(ext);
+}
+
+/**
+ * Folders that, by convention, live at the vault root rather than beside a
+ * note. `assets_write_attachment` writes to `_attachments/` at the root and
+ * returns a root-relative path, and Obsidian vaults use the same shape.
+ */
+const ROOT_ATTACHMENT_DIRS = new Set([
+  "_attachments",
+  "attachments",
+  "assets",
+  "media",
+  "files",
+  "images",
+]);
+
+/**
+ * Every place a Markdown `src` could point, best guess first.
+ *
+ * A bare path like `_attachments/shot.png` is genuinely ambiguous: it may be
+ * relative to the note's folder or to the vault root. The backend hands back
+ * root-relative paths, but the resolver only ever tried note-relative — so a
+ * pasted image rendered in a root note and silently 404'd in any note inside a
+ * folder. Return both and let the caller fall back.
+ */
+export function resolveAssetCandidates(
+  src: string,
+  vaultRoot: string,
+  noteRelDir: string,
+): string[] {
+  // Pass through remote URLs and data URIs
+  if (/^https?:\/\//i.test(src) || src.startsWith("data:")) {
+    return [src];
+  }
+
+  // Already resolved
+  if (src.startsWith("asset://") || src.startsWith("https://asset.localhost/")) {
+    return [src];
+  }
+
+  const noteRelative = resolveRelativePath(noteRelDir, src);
+  const rootRelative = resolveRelativePath("", src);
+
+  // An explicitly relative path (`./x`, `../x`) is never root-relative.
+  const explicitlyRelative = src.startsWith(".");
+  const firstSegment = src.split("/")[0];
+  const looksRooted = !explicitlyRelative && ROOT_ATTACHMENT_DIRS.has(firstSegment);
+
+  const ordered = looksRooted ? [rootRelative, noteRelative] : [noteRelative, rootRelative];
+
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const candidate of ordered) {
+    // Block path traversal outside the vault
+    if (candidate.startsWith("..") || candidate.startsWith("/")) continue;
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+    urls.push(convertFileSrc(`${vaultRoot}/${candidate}`));
+  }
+  return urls;
 }
 
 /**
  * Resolves a Markdown image/link `src` to a Tauri asset protocol URL.
  *
- * - Absolute URLs (http/https/data) are returned as-is.
- * - Vault-relative paths are joined with vaultRoot and converted via `convertFileSrc`.
- * - Paths that escape the vault (via `..`) are blocked and return `null`.
+ * Returns the single best guess. Prefer `resolveAssetCandidates` where the
+ * consumer can retry (an `<img>` with an error handler), since the note- vs
+ * root-relative question cannot be settled without touching the filesystem.
  */
 export function resolveAssetSrc(src: string, vaultRoot: string, noteRelDir: string): string | null {
-  // Pass through remote URLs and data URIs
-  if (/^https?:\/\//i.test(src) || src.startsWith("data:")) {
-    return src;
-  }
-
-  // Already resolved
-  if (src.startsWith("asset://") || src.startsWith("https://asset.localhost/")) {
-    return src;
-  }
-
-  // Resolve relative path against the note's directory within the vault
-  const resolved = resolveRelativePath(noteRelDir, src);
-
-  // Block path traversal outside vault
-  if (resolved.startsWith("..") || resolved.startsWith("/")) {
-    return null;
-  }
-
-  const absolutePath = `${vaultRoot}/${resolved}`;
-  return convertFileSrc(absolutePath);
+  return resolveAssetCandidates(src, vaultRoot, noteRelDir)[0] ?? null;
 }
 
 /**

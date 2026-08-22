@@ -16,6 +16,7 @@ import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { createExtensions } from "@/cm/extensions";
 import { setEditorView } from "@/cm/viewRef";
 import { useVimModeStore } from "@/stores/vimModeStore";
+import { useThemeMode } from "@/hooks/useThemeMode";
 
 import { ConflictBanner } from "./ConflictBanner";
 
@@ -27,6 +28,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
   const loading = useEditorStore((s) => s.loading);
   const conflict = useEditorStore((s) => s.conflict);
   const editorSettings = useAppSettingsStore((s) => s.settings.editor);
+  const dark = useThemeMode() === "dark";
 
   // Stable callback for CM6 updates
   const onUpdate = useCallback((newBody: string) => {
@@ -58,6 +60,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
       vimMode: editorSettings.vimMode,
       livePreview: editorSettings.livePreview,
       spellCheck: editorSettings.spellCheck,
+      dark,
       onUpdate,
     });
 
@@ -107,6 +110,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
     editorSettings.vimMode,
     editorSettings.livePreview,
     editorSettings.spellCheck,
+    dark,
     onUpdate,
   ]);
 
@@ -140,11 +144,7 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
     <div className="flex h-full flex-col overflow-hidden">
       {conflict && <ConflictBanner />}
       <div className="relative min-h-0 flex-1">
-        <div
-          ref={containerRef}
-          className="absolute inset-0 px-[max(2.5rem,7%)]"
-          style={{ fontSize: `${editorSettings.fontSize}px` }}
-        />
+        <div ref={containerRef} className="absolute inset-0 px-[max(2.5rem,7%)]" />
       </div>
     </div>
   );

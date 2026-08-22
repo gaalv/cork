@@ -32,10 +32,17 @@ const HIGHLIGHT_RE = /==([^=\n]+?)==/g;
 const CALLOUT_RE = /^(?:>\s*)+\[!([A-Za-z][\w-]*)\]/;
 const FENCE_LINE_RE = /^\s*(?:`{3,}|~{3,})/;
 // Single-line display math `$$…$$` and inline math `$…$` (remark-math parity:
-// inline delimiters must not hug whitespace). Multi-line `$$` blocks render in
-// the preview pane; the editor styles them via code-fence handling.
+// inline delimiters must not hug whitespace). Multi-line `$$` blocks are block
+// decorations, so they live in `blockMathField` further down.
 const BLOCK_MATH_RE = /\$\$([^\n]+?)\$\$/g;
 const INLINE_MATH_RE = /\$([^$\n]+?)\$/g;
+// A `$` glued to a word/digit is currency, not a delimiter — `R$50`, `$5-$10`.
+const MATH_BOUNDARY_RE = /[\p{L}\p{N}]/u;
+// `$1,200$` is money that happened to be bracketed; real math has a symbol.
+const CURRENCY_LIKE_RE = /^[\d.,\s]*$/;
+// Opening/closing fences of a multi-line `$$` block.
+const BLOCK_MATH_OPEN_RE = /^\s*\$\$\s*$/;
+const BLOCK_MATH_CLOSE_RE = /\$\$\s*$/;
 
 // KaTeX is ~280 kB — lazy-load it so it stays out of the main editor chunk
 // (shares the chunk the preview pipeline already creates). Until it resolves,
@@ -60,6 +67,32 @@ function loadKatex(): void {
 }
 
 type CalloutFamily = "note" | "tip" | "warning";
+
+/** How a line inside a fenced code block should be painted. */
+type CodeLineKind = "body" | "top" | "bottom" | "fence-open";
+
+/** Where a line sits inside its block — drives the padding and rounded caps. */
+type BlockPos = "top" | "bottom" | "both" | "body";
+
+/** Cap classes for a line, so a block gets padding around all of its content. */
+function capClasses(pos: BlockPos | undefined): string {
+  if (pos === "both") return " cm-cork-lp-block-top cm-cork-lp-block-bottom";
+  if (pos === "top") return " cm-cork-lp-block-top";
+  if (pos === "bottom") return " cm-cork-lp-block-bottom";
+  return "";
+}
+
+/** Lezer heading node → level, used for the block spacing above headings. */
+const HEADING_NODES = new Map<string, number>([
+  ["ATXHeading1", 1],
+  ["ATXHeading2", 2],
+  ["ATXHeading3", 3],
+  ["ATXHeading4", 4],
+  ["ATXHeading5", 5],
+  ["ATXHeading6", 6],
+  ["SetextHeading1", 1],
+  ["SetextHeading2", 2],
+]);
 
 /** Map callout types onto the three visual families (unknown → note). */
 const CALLOUT_FAMILIES: Record<string, CalloutFamily> = {
@@ -120,6 +153,14 @@ class HrWidget extends WidgetType {
 
 /** Renders `$…$` / `$$…$$` via KaTeX once it has lazy-loaded. */
 class MathWidget extends WidgetType {
+  /**
+   * Whether KaTeX was available when this widget was built. It has to take
+   * part in `eq`: without it the post-load rebuild produced widgets that
+   * compared equal to the raw-text ones already on screen, so CodeMirror
+   * reused the old DOM and the formula never actually rendered.
+   */
+  private readonly rendered = katexMod !== null;
+
   constructor(
     private readonly tex: string,
     private readonly display: boolean,
@@ -127,7 +168,9 @@ class MathWidget extends WidgetType {
     super();
   }
   eq(other: MathWidget) {
-    return other.tex === this.tex && other.display === this.display;
+    return (
+      other.tex === this.tex && other.display === this.display && other.rendered === this.rendered
+    );
   }
   toDOM() {
     const span = document.createElement("span");
@@ -150,6 +193,66 @@ class MathWidget extends WidgetType {
   ignoreEvent() {
     return false;
   }
+}
+
+/** Renders a multi-line `$$ … $$` block as centred display math. */
+class BlockMathWidget extends WidgetType {
+  /** See MathWidget.rendered — same lazy-load equality trap. */
+  private readonly rendered = katexMod !== null;
+
+  constructor(private readonly tex: string) {
+    super();
+  }
+  eq(other: BlockMathWidget) {
+    return other.tex === this.tex && other.rendered === this.rendered;
+  }
+  toDOM() {
+    const div = document.createElement("div");
+    div.className = "cm-cork-lp-math-block";
+    if (katexMod) {
+      try {
+        div.innerHTML = katexMod.renderToString(this.tex, {
+          throwOnError: false,
+          displayMode: true,
+        });
+      } catch {
+        div.textContent = this.tex;
+      }
+    } else {
+      div.textContent = this.tex;
+    }
+    return div;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
+/**
+ * Locate multi-line `$$ … $$` blocks. Only the single-line form was ever
+ * matched, so the conventional
+ *
+ *     $$
+ *     E = mc^2
+ *     $$
+ *
+ * never rendered in the editor.
+ */
+function findBlockMath(state: EditorState): { from: number; to: number; tex: string }[] {
+  const blocks: { from: number; to: number; tex: string }[] = [];
+  for (let i = 1; i <= state.doc.lines; i += 1) {
+    const line = state.doc.line(i);
+    if (!BLOCK_MATH_OPEN_RE.test(line.text)) continue;
+    for (let j = i + 1; j <= state.doc.lines; j += 1) {
+      const close = state.doc.line(j);
+      if (!BLOCK_MATH_CLOSE_RE.test(close.text)) continue;
+      const tex = state.doc.sliceString(line.to + 1, close.from + close.text.lastIndexOf("$$"));
+      blocks.push({ from: line.from, to: close.to, tex: tex.trim() });
+      i = j;
+      break;
+    }
+  }
+  return blocks;
 }
 
 type TableAlign = "left" | "center" | "right" | null;
@@ -227,8 +330,30 @@ class TableWidget extends WidgetType {
   }
 }
 
-/** True when any selection range touches the lines spanned by [from, to]. */
+/** Editor focus, mirrored into state so StateFields can read it too. */
+const focusEffect = StateEffect.define<boolean>();
+
+const focusField = StateField.define<boolean>({
+  create() {
+    return false;
+  },
+  update(value, tr) {
+    for (const e of tr.effects) if (e.is(focusEffect)) return e.value;
+    return value;
+  },
+});
+
+const focusTracker = EditorView.focusChangeEffect.of((_state, focusing) =>
+  focusEffect.of(focusing),
+);
+
+/**
+ * True when the caret sits on the lines spanned by [from, to] *and* the editor
+ * has focus — so markers stay concealed once you click away, instead of
+ * leaving one line of raw markdown behind.
+ */
 function selectionOnLines(state: EditorState, from: number, to: number): boolean {
+  if (!state.field(focusField, false)) return false;
   const start = state.doc.lineAt(from).from;
   const end = state.doc.lineAt(Math.min(to, state.doc.length)).to;
   return state.selection.ranges.some((r) => r.to >= start && r.from <= end);
@@ -245,12 +370,23 @@ function buildDecorations(view: EditorView): DecorationSet {
   const marks: Range<Decoration>[] = [];
   const lineDecos: Range<Decoration>[] = [];
   const quoteLines = new Set<number>();
+  const blockBounds = new Map<number, BlockPos>(); // line.from → position in block
   const calloutLines = new Map<number, CalloutFamily>();
-  const codeLines = new Map<number, boolean>(); // line.from → dimmed fence line
+  const headingLines = new Map<number, number>(); // line.from → heading level
+  const codeLines = new Map<number, CodeLineKind>(); // line.from → how to paint it
   const tableLines = new Map<number, boolean>(); // line.from → striped row
   const codeRanges: { from: number; to: number }[] = []; // no ==highlight== inside code
   const codeMark = Decoration.mark({ class: "cm-cork-lp-inline-code" });
   const highlightMark = Decoration.mark({ class: "cm-cork-lp-highlight" });
+
+  // Multi-line `$$` blocks are rendered by `blockMathField`; nothing here may
+  // decorate inside them or the two replace decorations would collide.
+  const blockMath = findBlockMath(state);
+  // Containment, not overlap: the root Document node spans the whole doc, so an
+  // overlap test against it is always true and aborts the entire tree walk.
+  const insideBlockMath = (a: number, b: number) => blockMath.some((m) => a >= m.from && b <= m.to);
+  // Regex spans are short and never straddle a fence, so overlap is right here.
+  const touchesBlockMath = (a: number, b: number) => blockMath.some((m) => a < m.to && b > m.from);
 
   for (const { from, to } of view.visibleRanges) {
     const text = state.sliceDoc(from, to);
@@ -274,7 +410,11 @@ function buildDecorations(view: EditorView): DecorationSet {
       from,
       to,
       enter: (node) => {
+        if (insideBlockMath(node.from, node.to)) return false;
         const parent = node.node.parent?.name ?? "";
+        if (HEADING_NODES.has(node.name)) {
+          headingLines.set(state.doc.lineAt(node.from).from, HEADING_NODES.get(node.name) ?? 3);
+        }
         switch (node.name) {
           case "HeaderMark": {
             // ATX `#` marks and setext underlines
@@ -310,7 +450,11 @@ function buildDecorations(view: EditorView): DecorationSet {
                 // the block's top/bottom padding.
                 conceals.push(Decoration.replace({}).range(line.from, line.to));
               }
-              codeLines.set(line.from, isFence && focused);
+              let kind: CodeLineKind = "body";
+              if (isFence && focused) kind = "fence-open";
+              else if (line.from === firstFrom) kind = "top";
+              else if (line.from === lastFrom) kind = "bottom";
+              codeLines.set(line.from, kind);
               pos = line.to + 1;
             }
             return;
@@ -341,6 +485,22 @@ function buildDecorations(view: EditorView): DecorationSet {
           }
           case "Blockquote": {
             const firstLine = state.doc.lineAt(node.from);
+            const lastLine = state.doc.lineAt(Math.min(node.to, state.doc.length));
+            // Record the block extents. `enter` reaches the outermost quote
+            // first, so a nested one finds its lines already claimed and the
+            // padding stays on the outer block's real edges.
+            for (let pos = node.from; pos <= node.to; ) {
+              const line = state.doc.lineAt(pos);
+              if (!blockBounds.has(line.from)) {
+                const isFirst = line.from === firstLine.from;
+                const isLast = line.from === lastLine.from;
+                blockBounds.set(
+                  line.from,
+                  isFirst && isLast ? "both" : isFirst ? "top" : isLast ? "bottom" : "body",
+                );
+              }
+              pos = line.to + 1;
+            }
             if (calloutLines.has(firstLine.from)) return; // nested in a callout
             const callout = CALLOUT_RE.exec(firstLine.text);
             if (!callout) return;
@@ -396,16 +556,18 @@ function buildDecorations(view: EditorView): DecorationSet {
           }
           case "ListMark": {
             if (parent !== "ListItem") return;
-            if (selectionOnLines(state, node.from, node.to)) return;
             const line = state.doc.lineAt(node.from);
             const markText = state.doc.sliceString(node.from, node.to);
             if (!/^[-*+]$/.test(markText)) return; // keep ordered-list numbers raw
             if (TASK_LINE_RE.test(line.text)) {
-              // Task line — the checkbox widget is the affordance; drop the dash
+              // Task line — the checkbox widget is the affordance; drop the
+              // dash unconditionally. `[ ]` is already a widget regardless of
+              // focus, so un-concealing only the dash made the whole line jump
+              // two characters sideways every time the caret entered it.
               conceals.push(
                 Decoration.replace({}).range(node.from, withTrailingSpace(state, node.to)),
               );
-            } else {
+            } else if (!selectionOnLines(state, node.from, node.to)) {
               conceals.push(
                 Decoration.replace({ widget: new BulletWidget() }).range(node.from, node.to),
               );
@@ -423,6 +585,7 @@ function buildDecorations(view: EditorView): DecorationSet {
 
     // Conceal wikilink markers (spans were collected before the tree walk).
     for (const w of wikilinks) {
+      if (touchesBlockMath(w.from, w.to)) continue;
       if (selectionOnLines(state, w.from, w.to)) continue;
       if (w.hasAlias) {
         // [[target|alias]] → show alias
@@ -441,6 +604,7 @@ function buildDecorations(view: EditorView): DecorationSet {
       const start = from + match.index;
       const end = start + match[0].length;
       if (codeRanges.some((r) => start < r.to && end > r.from)) continue;
+      if (touchesBlockMath(start, end)) continue;
       marks.push(highlightMark.range(start + 2, end - 2));
       if (selectionOnLines(state, start, end)) continue;
       conceals.push(Decoration.replace({}).range(start, start + 2));
@@ -454,6 +618,7 @@ function buildDecorations(view: EditorView): DecorationSet {
       const start = from + match.index;
       const end = start + match[0].length;
       if (codeRanges.some((r) => start < r.to && end > r.from)) continue;
+      if (touchesBlockMath(start, end)) continue;
       mathRanges.push({ from: start, to: end });
       if (!katexMod) loadKatex();
       if (selectionOnLines(state, start, end)) continue;
@@ -466,10 +631,18 @@ function buildDecorations(view: EditorView): DecorationSet {
       const inner = match[1];
       // remark-math parity: inline delimiters must not hug whitespace.
       if (/^\s|\s$/.test(inner)) continue;
+      // …and neither delimiter may be glued to a word or digit, otherwise
+      // prose like "custa $5-$10" gets swallowed as a formula.
       const start = from + match.index;
       const end = start + match[0].length;
+      const before = start > 0 ? state.doc.sliceString(start - 1, start) : "";
+      const after = end < state.doc.length ? state.doc.sliceString(end, end + 1) : "";
+      if (MATH_BOUNDARY_RE.test(before) || MATH_BOUNDARY_RE.test(after)) continue;
+      // Digits-only content is money, not maths.
+      if (CURRENCY_LIKE_RE.test(inner)) continue;
       if (codeRanges.some((r) => start < r.to && end > r.from)) continue;
       if (mathRanges.some((r) => start < r.to && end > r.from)) continue;
+      if (touchesBlockMath(start, end)) continue;
       if (!katexMod) loadKatex();
       if (selectionOnLines(state, start, end)) continue;
       conceals.push(Decoration.replace({ widget: new MathWidget(inner, false) }).range(start, end));
@@ -478,20 +651,38 @@ function buildDecorations(view: EditorView): DecorationSet {
 
   for (const lineFrom of quoteLines) {
     if (calloutLines.has(lineFrom)) continue; // callout styling wins
-    lineDecos.push(Decoration.line({ class: "cm-cork-lp-quote-line" }).range(lineFrom));
+    lineDecos.push(
+      Decoration.line({
+        class: `cm-cork-lp-quote-line${capClasses(blockBounds.get(lineFrom))}`,
+      }).range(lineFrom),
+    );
   }
   for (const [lineFrom, family] of calloutLines) {
     lineDecos.push(
       Decoration.line({
-        class: `cm-cork-lp-callout-line cm-cork-lp-callout-${family}`,
+        class: `cm-cork-lp-callout-line cm-cork-lp-callout-${family}${capClasses(
+          blockBounds.get(lineFrom),
+        )}`,
       }).range(lineFrom),
     );
   }
-  for (const [lineFrom, dimmed] of codeLines) {
+  const CODE_LINE_CLASS: Record<CodeLineKind, string> = {
+    body: "cm-cork-lp-code-line",
+    top: "cm-cork-lp-code-line cm-cork-lp-code-top",
+    bottom: "cm-cork-lp-code-line cm-cork-lp-code-bottom",
+    "fence-open": "cm-cork-lp-code-line cm-cork-lp-fence-dim",
+  };
+  for (const [lineFrom, kind] of codeLines) {
+    lineDecos.push(Decoration.line({ class: CODE_LINE_CLASS[kind] }).range(lineFrom));
+  }
+  // Block spacing above headings — the flat wall of lines was the main reason
+  // the writing surface read as a text dump rather than a document.
+  for (const [lineFrom, level] of headingLines) {
+    if (lineFrom === 0) continue; // no gap above the very first line
     lineDecos.push(
-      Decoration.line({
-        class: dimmed ? "cm-cork-lp-code-line cm-cork-lp-fence-dim" : "cm-cork-lp-code-line",
-      }).range(lineFrom),
+      Decoration.line({ class: `cm-cork-lp-heading cm-cork-lp-h${Math.min(level, 3)}` }).range(
+        lineFrom,
+      ),
     );
   }
   for (const [lineFrom, striped] of tableLines) {
@@ -505,7 +696,11 @@ function buildDecorations(view: EditorView): DecorationSet {
   // Sort, then drop ranges that overlap an already-kept range — overlapping
   // replace decorations are invalid in CM6 (wikilink + tree can both claim
   // the same text in odd nestings).
-  conceals.sort((a, b) => a.from - b.from || a.to - b.to);
+  // Longest range wins at a given start: the outer construct owns the region.
+  // Sorting shortest-first let the `[` of a `[!warning]` callout — which the
+  // markdown parser also sees as a Link — beat the callout's own label conceal,
+  // so the marker rendered as raw "!warning" instead of a WARNING label.
+  conceals.sort((a, b) => a.from - b.from || b.to - a.to);
   const kept: Range<Decoration>[] = [];
   let lastTo = -1;
   for (const range of conceals) {
@@ -531,7 +726,18 @@ const livePreviewPlugin = ViewPlugin.fromClass(
       const katexRefresh = update.transactions.some((tr) =>
         tr.effects.some((e) => e.is(katexLoadedEffect)),
       );
-      if (update.docChanged || update.viewportChanged || update.selectionSet || katexRefresh) {
+      // The markdown parser works incrementally and reports progress through
+      // ordinary transactions. Without this check the first paint of a note was
+      // built against a partial tree and never refreshed.
+      const treeChanged = syntaxTree(update.startState) !== syntaxTree(update.state);
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        update.selectionSet ||
+        update.focusChanged ||
+        treeChanged ||
+        katexRefresh
+      ) {
         this.decorations = buildDecorations(update.view);
       }
     }
@@ -584,7 +790,48 @@ const tableField = StateField.define<DecorationSet>({
     return buildTableDecorations(state);
   },
   update(value, tr) {
-    if (tr.docChanged || tr.selection) return buildTableDecorations(tr.state);
+    const focusChanged = tr.effects.some((e) => e.is(focusEffect));
+    const treeChanged = syntaxTree(tr.startState) !== syntaxTree(tr.state);
+    if (tr.docChanged || tr.selection || focusChanged || treeChanged) {
+      return buildTableDecorations(tr.state);
+    }
+    return value;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+/**
+ * Multi-line `$$ … $$` blocks, as block replace decorations — which, like the
+ * table widget, may only come from a StateField, never a ViewPlugin.
+ */
+function buildBlockMathDecorations(state: EditorState): DecorationSet {
+  const blocks = findBlockMath(state);
+  if (blocks.length === 0) return Decoration.none;
+  if (!katexMod) loadKatex();
+
+  const deco: Range<Decoration>[] = [];
+  for (const block of blocks) {
+    if (selectionOnLines(state, block.from, block.to)) continue;
+    deco.push(
+      Decoration.replace({ widget: new BlockMathWidget(block.tex), block: true }).range(
+        block.from,
+        block.to,
+      ),
+    );
+  }
+  return Decoration.set(deco, true);
+}
+
+const blockMathField = StateField.define<DecorationSet>({
+  create(state) {
+    return buildBlockMathDecorations(state);
+  },
+  update(value, tr) {
+    const katexRefresh = tr.effects.some((e) => e.is(katexLoadedEffect));
+    const focusChanged = tr.effects.some((e) => e.is(focusEffect));
+    if (tr.docChanged || tr.selection || katexRefresh || focusChanged) {
+      return buildBlockMathDecorations(tr.state);
+    }
     return value;
   },
   provide: (field) => EditorView.decorations.from(field),
@@ -619,9 +866,18 @@ const livePreviewTheme = EditorView.baseTheme({
     padding: "1px 4px",
   },
   ".cm-cork-lp-quote-line": {
-    borderLeft: "3px solid var(--color-cork-border)",
-    paddingLeft: "12px",
+    borderLeft: "3px solid var(--color-cork-border-strong)",
+    paddingLeft: "16px",
+    paddingRight: "16px",
     color: "var(--color-cork-muted)",
+  },
+  // Vertical padding on the first/last line of a block, so the content is
+  // inset on all four sides instead of butting against the block's edges.
+  ".cm-cork-lp-block-top": {
+    paddingTop: "0.5em",
+  },
+  ".cm-cork-lp-block-bottom": {
+    paddingBottom: "0.5em",
   },
   ".cm-cork-lp-highlight": {
     backgroundColor: "var(--color-cork-accent-soft)",
@@ -630,8 +886,15 @@ const livePreviewTheme = EditorView.baseTheme({
   },
   ".cm-cork-lp-callout-line": {
     borderLeft: "3px solid var(--color-cork-accent)",
-    paddingLeft: "12px",
+    paddingLeft: "16px",
+    paddingRight: "16px",
     backgroundColor: "var(--color-cork-panel-2)",
+  },
+  ".cm-cork-lp-callout-line.cm-cork-lp-block-top": {
+    borderTopRightRadius: "8px",
+  },
+  ".cm-cork-lp-callout-line.cm-cork-lp-block-bottom": {
+    borderBottomRightRadius: "8px",
   },
   ".cm-cork-lp-callout-tip": {
     borderLeftColor: "var(--color-cork-success)",
@@ -645,7 +908,9 @@ const livePreviewTheme = EditorView.baseTheme({
     fontWeight: "600",
     fontSize: "0.85em",
     textTransform: "uppercase",
-    letterSpacing: "0.02em",
+    letterSpacing: "0.04em",
+    // The conceal eats the space after `[!type]`, so put it back visually.
+    marginRight: "0.5em",
   },
   ".cm-cork-lp-callout-tip .cm-cork-lp-callout-label": {
     color: "var(--color-cork-success)",
@@ -655,9 +920,49 @@ const livePreviewTheme = EditorView.baseTheme({
   },
   ".cm-cork-lp-code-line": {
     backgroundColor: "var(--color-cork-panel-2)",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.9em",
+    paddingLeft: "16px",
+    paddingRight: "16px",
   },
+  // The ``` fence lines are concealed but still occupy a full line box, which
+  // read as a big empty gap inside the block. Collapse them to nothing and let
+  // real padding provide the top/bottom inset instead. (A focused fence line
+  // gets `fence-open` instead of these, so it stays visible while editing.)
+  ".cm-cork-lp-code-top": {
+    borderTopLeftRadius: "8px",
+    borderTopRightRadius: "8px",
+    fontSize: "0",
+    paddingTop: "12px",
+  },
+  ".cm-cork-lp-code-bottom": {
+    borderBottomLeftRadius: "8px",
+    borderBottomRightRadius: "8px",
+    fontSize: "0",
+    paddingBottom: "12px",
+  },
+
   ".cm-cork-lp-fence-dim": {
-    opacity: "0.55",
+    color: "var(--color-cork-subtle)",
+  },
+  ".cm-cork-lp-math-block": {
+    padding: "0.6em 0",
+    textAlign: "center",
+    cursor: "text",
+  },
+  // Block spacing above headings — padding, not margin, so CodeMirror's line
+  // height measurement stays accurate (margins collapse, padding doesn't).
+  ".cm-cork-lp-heading": {
+    paddingBottom: "var(--editor-para-gap)",
+  },
+  ".cm-cork-lp-h1": {
+    paddingTop: "var(--editor-h1-gap)",
+  },
+  ".cm-cork-lp-h2": {
+    paddingTop: "var(--editor-h2-gap)",
+  },
+  ".cm-cork-lp-h3": {
+    paddingTop: "var(--editor-h3-gap)",
   },
   ".cm-cork-lp-table-line": {
     fontFamily: "var(--font-mono)",
@@ -684,5 +989,12 @@ const livePreviewTheme = EditorView.baseTheme({
 });
 
 export function livePreviewExtension() {
-  return [tableField, livePreviewPlugin, livePreviewTheme];
+  return [
+    focusField,
+    focusTracker,
+    blockMathField,
+    tableField,
+    livePreviewPlugin,
+    livePreviewTheme,
+  ];
 }
