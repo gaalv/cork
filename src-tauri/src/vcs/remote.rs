@@ -13,7 +13,7 @@
 //! canonical — we never expose `<<<<<<<` markers.
 
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
@@ -454,7 +454,7 @@ fn finish_op(inner: &Arc<Mutex<RemoteInner>>, outcome: Result<(), String>, kind:
 // ── Git operations ───────────────────────────────────────────────────────────
 
 pub fn gh_available() -> bool {
-    Command::new("gh")
+    crate::proc::command("gh")
         .arg("--version")
         .output()
         .map(|o| o.status.success())
@@ -492,7 +492,7 @@ pub fn gh_active_account() -> Option<GhAccount> {
 }
 
 fn gh_active_account_uncached() -> Option<GhAccount> {
-    let out = Command::new("gh").args(["auth", "status"]).output().ok()?;
+    let out = crate::proc::command("gh").args(["auth", "status"]).output().ok()?;
     let combined = format!(
         "{}\n{}",
         String::from_utf8_lossy(&out.stdout),
@@ -555,7 +555,7 @@ fn gh_active_account_uncached() -> Option<GhAccount> {
 }
 
 fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
-    Command::new("git")
+    crate::proc::command("git")
         .current_dir(vault_root)
         // Never let git prompt for credentials — without a TTY it would
         // hang forever. We supply auth via a repo-local credential store or SSH.
@@ -572,7 +572,7 @@ fn run_git(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
 /// macOS Keychain and any global credential helpers are fully bypassed.
 fn run_git_remote(vault_root: &Path, args: &[&str]) -> Result<Output, String> {
     let cred_path = https_credential_store_path(vault_root);
-    let mut cmd = Command::new("git");
+    let mut cmd = crate::proc::command("git");
     cmd.current_dir(vault_root)
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_ASKPASS", "")
@@ -688,7 +688,7 @@ fn ensure_deploy_key(vault_root: &Path) -> Result<(), String> {
         .to_str()
         .ok_or_else(|| "deploy key path is not valid UTF-8".to_string())?;
 
-    let out = Command::new("ssh-keygen")
+    let out = crate::proc::command("ssh-keygen")
         .args([
             "-t", "ed25519", "-f", priv_str, "-N",
             "", // empty passphrase — we cannot prompt
@@ -737,7 +737,7 @@ fn read_deploy_pub_key(vault_root: &Path) -> Result<String, String> {
 fn deploy_key_fingerprint(vault_root: &Path) -> Option<String> {
     let priv_path = deploy_key_priv_path(vault_root);
     let priv_str = priv_path.to_str()?;
-    let out = Command::new("ssh-keygen")
+    let out = crate::proc::command("ssh-keygen")
         .args(["-lf", priv_str, "-E", "sha256"])
         .output()
         .ok()?;
@@ -1329,7 +1329,7 @@ fn hostname() -> String {
         .or_else(|_| std::env::var("COMPUTERNAME"))
         .ok()
         .or_else(|| {
-            Command::new("hostname")
+            crate::proc::command("hostname")
                 .output()
                 .ok()
                 .and_then(|o| String::from_utf8(o.stdout).ok())
@@ -1447,7 +1447,7 @@ fn clone_remote_blocking(parent_path: &Path, input: CloneRemoteInput) -> Result<
     let helper = read_only_credential_helper(credential_file.path());
     let helper_config = format!("credential.helper={helper}");
 
-    let clone_out = Command::new("git")
+    let clone_out = crate::proc::command("git")
         .current_dir(&parent)
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_ASKPASS", "")

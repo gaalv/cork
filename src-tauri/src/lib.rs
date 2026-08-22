@@ -5,6 +5,7 @@ pub mod error;
 pub mod export;
 pub mod index;
 pub mod menu;
+pub mod proc;
 pub mod settings;
 pub mod shortcuts;
 pub mod tray;

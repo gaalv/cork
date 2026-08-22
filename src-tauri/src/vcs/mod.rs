@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -146,7 +145,7 @@ pub fn start_worker(state: &VcsState, remote_state: &remote::RemoteState) {
 // ── Git helpers ───────────────────────────────────────────────────────────────
 
 pub fn git_available() -> bool {
-    Command::new("git")
+    crate::proc::command("git")
         .arg("--version")
         .output()
         .map(|o| o.status.success())
@@ -165,7 +164,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     }
 
     // Try modern `git init -b main` first; fall back for older git
-    let init_ok = Command::new("git")
+    let init_ok = crate::proc::command("git")
         .current_dir(vault_root)
         .args(["-c", "init.defaultBranch=main", "init"])
         .status()
@@ -173,7 +172,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
         .unwrap_or(false);
 
     if !init_ok {
-        let _ = Command::new("git")
+        let _ = crate::proc::command("git")
             .current_dir(vault_root)
             .arg("init")
             .status();
@@ -192,33 +191,33 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     // Make sure committer identity is set locally — the global config
     // may be missing on a fresh machine, in which case `git commit`
     // fails silently and the first push has nothing to send.
-    let has_name = Command::new("git")
+    let has_name = crate::proc::command("git")
         .current_dir(vault_root)
         .args(["config", "user.name"])
         .output()
         .map(|o| o.status.success() && !o.stdout.is_empty())
         .unwrap_or(false);
     if !has_name {
-        let _ = Command::new("git")
+        let _ = crate::proc::command("git")
             .current_dir(vault_root)
             .args(["config", "--local", "user.name", "Cork"])
             .status();
     }
-    let has_email = Command::new("git")
+    let has_email = crate::proc::command("git")
         .current_dir(vault_root)
         .args(["config", "user.email"])
         .output()
         .map(|o| o.status.success() && !o.stdout.is_empty())
         .unwrap_or(false);
     if !has_email {
-        let _ = Command::new("git")
+        let _ = crate::proc::command("git")
             .current_dir(vault_root)
             .args(["config", "--local", "user.email", "cork@local"])
             .status();
     }
 
     // Stage everything and create the initial commit
-    let _ = Command::new("git")
+    let _ = crate::proc::command("git")
         .current_dir(vault_root)
         .args(["add", "-A"])
         .status();
@@ -228,7 +227,7 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
         chrono::Utc::now().to_rfc3339(),
         vault_root.display()
     );
-    let commit = Command::new("git")
+    let commit = crate::proc::command("git")
         .current_dir(vault_root)
         .args([
             "commit",
@@ -274,13 +273,13 @@ fn do_commit(vault_root: &Path, note_path: &Path, is_new: bool) -> Result<(), St
         rel
     );
 
-    let _ = Command::new("git")
+    let _ = crate::proc::command("git")
         .current_dir(vault_root)
         .args(["add", "--", &note_path.to_string_lossy().to_string()])
         .status();
 
     // `git commit` exits non-zero when there is nothing to commit — that is fine
-    let _ = Command::new("git")
+    let _ = crate::proc::command("git")
         .current_dir(vault_root)
         .args([
             "commit",
@@ -360,7 +359,7 @@ pub fn vcs_history(
         .to_string_lossy()
         .to_string();
 
-    let output = Command::new("git")
+    let output = crate::proc::command("git")
         .current_dir(&vault_root)
         .args([
             "log",
@@ -410,7 +409,7 @@ pub fn vcs_restore(
         .to_string_lossy()
         .to_string();
 
-    let output = Command::new("git")
+    let output = crate::proc::command("git")
         .current_dir(&vault_root)
         .args(["show", &format!("{}:{}", input.sha, rel)])
         .output()
@@ -438,12 +437,12 @@ pub fn vcs_restore(
         input.sha
     );
 
-    let _ = Command::new("git")
+    let _ = crate::proc::command("git")
         .current_dir(&vault_root)
         .args(["add", "--", &rel])
         .status();
 
-    let _ = Command::new("git")
+    let _ = crate::proc::command("git")
         .current_dir(&vault_root)
         .args([
             "commit",

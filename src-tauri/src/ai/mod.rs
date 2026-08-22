@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::Command;
 use std::sync::Mutex;
 
 use rusqlite::Connection;
@@ -132,18 +131,19 @@ pub fn binary_for_provider(provider: &str) -> Option<&'static str> {
     }
 }
 
-/// Checks whether `binary` is reachable on PATH using `which` (Unix) / `where` (Windows).
-pub fn binary_available(binary: &str) -> bool {
-    #[cfg(target_os = "windows")]
-    let check_cmd = "where";
-    #[cfg(not(target_os = "windows"))]
-    let check_cmd = "which";
+/// Absolute path to `binary`. See [`crate::proc`] for why PATH needs help.
+pub fn resolve_binary(binary: &str) -> Option<PathBuf> {
+    crate::proc::resolve_binary(binary)
+}
 
-    Command::new(check_cmd)
-        .arg(binary)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+/// PATH handed to spawned CLIs, so their own child processes resolve too.
+pub fn spawn_path() -> &'static str {
+    crate::proc::search_path()
+}
+
+/// Checks whether `binary` is reachable.
+pub fn binary_available(binary: &str) -> bool {
+    crate::proc::binary_available(binary)
 }
 
 // ── Helpers (used by runner.rs) ───────────────────────────────────────────────

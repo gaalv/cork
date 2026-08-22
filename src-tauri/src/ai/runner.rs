@@ -13,7 +13,7 @@ use crate::ai::prompt;
 use crate::ai::skills::{Skill, SkillStore};
 use crate::ai::telemetry;
 use crate::ai::tiers;
-use crate::ai::{binary_available, binary_for_provider, AiError};
+use crate::ai::{binary_for_provider, resolve_binary, spawn_path, AiError};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,16 +44,26 @@ impl Spawner for ProcessSpawner {
     fn check(&self, provider: &str) -> Result<(), AiError> {
         let binary = binary_for_provider(provider)
             .ok_or_else(|| AiError::provider_disabled(format!("Unknown AI provider: {provider}")))?;
-        if !binary_available(binary) {
+        if resolve_binary(binary).is_none() {
             return Err(AiError::binary_not_found(format!(
-                "Binary '{binary}' not found on PATH. Please install it and restart Cork."
+                "'{binary}' was not found. Cork looked in: {}. \
+                 If it works in your terminal, it is installed somewhere the app cannot see — \
+                 symlink it into /usr/local/bin and try again.",
+                spawn_path()
             )));
         }
         Ok(())
     }
 
     fn spawn(&self, binary: &str, args: &[String], stdin_data: &str, timeout_secs: u64) -> Result<String, AiError> {
-        let mut cmd = Command::new(binary);
+        // Launch the absolute path: a GUI process inherits a minimal PATH, so
+        // the bare name would not resolve even when the CLI is installed.
+        let program = resolve_binary(binary).ok_or_else(|| {
+            AiError::binary_not_found(format!("'{binary}' was not found on PATH"))
+        })?;
+        let mut cmd = Command::new(program);
+        // The CLI spawns its own helpers (node, git, …) — give it a usable PATH.
+        cmd.env("PATH", spawn_path());
         for a in args {
             cmd.arg(a);
         }
