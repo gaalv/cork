@@ -109,7 +109,7 @@ export function FolderContextPopover({
               if (renameValue.trim()) onRename(renameValue.trim());
             }}
             disabled={!renameValue.trim()}
-            className="rounded bg-[var(--color-cork-accent)] px-2 py-0.5 text-[11px] text-white disabled:opacity-40"
+            className="rounded bg-[var(--color-cork-accent)] px-2 py-0.5 text-[11px] text-[var(--color-cork-primary-foreground)] disabled:opacity-40"
           >
             Rename
           </button>

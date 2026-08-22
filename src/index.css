@@ -7,6 +7,13 @@
 @import "@fontsource/ibm-plex-mono/400-italic.css";
 @import "tailwindcss";
 
+/* Bind Tailwind's `dark:` variant to the app's own theme attribute.
+   By default it tracks `prefers-color-scheme`, which meant every `dark:` rule
+   followed the OS instead of the user's choice in Settings — so they applied
+   in light mode on a dark Mac, and not at all in dark mode on a light one.
+   themeRuntime always writes an explicit data-theme, so this is exact. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   /* --- Font stacks --- */
   /* Named stacks; the active ones are picked by the data-*-font attributes

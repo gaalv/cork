@@ -35,7 +35,7 @@ export function Toggle({
       }`}
     >
       <span
-        className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition ${
+        className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-[var(--color-cork-primary-foreground)] shadow transition ${
           checked ? "translate-x-4" : ""
         }`}
       />

@@ -179,7 +179,7 @@ export function ReplaceInVaultModal() {
           <button
             onClick={() => void apply()}
             disabled={!preview || preview.total === 0 || busy}
-            className="rounded-full bg-[var(--color-cork-ink)] px-4 py-1.5 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="rounded-full bg-[var(--color-cork-ink)] px-4 py-1.5 text-[12px] font-medium text-[var(--color-cork-primary-foreground)] hover:opacity-90 disabled:opacity-50"
           >
             Replace all
           </button>

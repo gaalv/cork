@@ -164,7 +164,7 @@ function EmptyState({ onClose }: { onClose: () => void }) {
           onClose();
           void createTemplateNote();
         }}
-        className="mt-1 flex items-center gap-1.5 rounded-full bg-[var(--color-cork-ink)] px-4 py-1.5 text-[12px] font-medium text-white hover:opacity-90"
+        className="mt-1 flex items-center gap-1.5 rounded-full bg-[var(--color-cork-ink)] px-4 py-1.5 text-[12px] font-medium text-[var(--color-cork-primary-foreground)] hover:opacity-90"
       >
         <Plus size={12} />
         Create template
