@@ -10,7 +10,9 @@
 import { toast } from "sonner";
 
 import { client } from "@/ipc/client";
+import { useEditorStore } from "@/stores/editorStore";
 import { appendToNoteBody } from "@/services/editorWrite";
+import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { recentNotes } from "@/services/aiVault";
 import { openDailyNote } from "@/services/dailyNote";
@@ -44,6 +46,24 @@ async function openTasks(notes: NoteEntry[]): Promise<string> {
   return found.slice(0, 40).join("\n");
 }
 
+/**
+ * Wait until the editor is actually showing `noteId`.
+ *
+ * `openNote` only sets shell state; the editor remounts and loads the buffer
+ * in a later React effect. Writing before that lands the text in whichever
+ * note was open before — today the AI round trip usually hides the gap, which
+ * is not something to depend on.
+ */
+async function waitForEditor(noteId: string, timeoutMs = 4000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const state = useEditorStore.getState();
+    if (state.noteId === noteId && !state.loading) return true;
+    if (Date.now() > deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 /** Yesterday's daily note body, if there is one. */
 async function previousDaily(): Promise<string> {
   const dailies = useVaultStore
@@ -75,6 +95,11 @@ export async function insertDailyBrief(): Promise<void> {
   try {
     await openDailyNote();
 
+    // Capture the target before the slow work, so a note opened in the
+    // meantime cannot receive the brief.
+    const opened = useShellStore.getState().view;
+    const targetId = opened.kind === "note" ? opened.id : null;
+
     const recent = recentNotes(7, 12);
     const [previous, tasks] = await Promise.all([previousDaily(), openTasks(recent)]);
 
@@ -88,6 +113,23 @@ export async function insertDailyBrief(): Promise<void> {
     const brief = result.output.trim();
     if (!brief) {
       toast.error("Nothing to brief today", { id: "daily-brief", duration: 4000 });
+      return;
+    }
+
+    if (targetId && !(await waitForEditor(targetId))) {
+      toast.error("The daily note did not finish opening", {
+        id: "daily-brief",
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Refuse rather than write into whatever note is open now.
+    if (targetId && useEditorStore.getState().noteId !== targetId) {
+      toast.error("Daily note is no longer open — brief not added", {
+        id: "daily-brief",
+        duration: 4000,
+      });
       return;
     }
 
