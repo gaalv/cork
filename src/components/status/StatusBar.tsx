@@ -14,8 +14,7 @@ import { useIndexStore } from "@/stores/indexStore";
 import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { useShellStore } from "@/stores/shellStore";
 import { startSyncPolling, useSyncStore } from "@/stores/syncStore";
-import { VaultIndicator } from "@/components/sidebar/VaultIndicator";
-import { NotificationsPopover } from "./NotificationsPopover";
+import { ActivityPopover } from "./ActivityPopover";
 
 function relTime(iso: string | null): string {
   if (!iso) return "never";
@@ -124,7 +123,6 @@ export function StatusBar() {
   return (
     <footer className="flex h-8 shrink-0 items-center justify-between rounded-b-[10px] border-t border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-3 text-[11px] text-[var(--color-cork-muted)]">
       <div className="flex items-center gap-2">
-        <VaultIndicator />
         {isIndexing && indexProgress && (
           <span className="flex items-center gap-1 text-[var(--color-cork-subtle)]">
             <CircleNotch size={12} className="animate-spin" />
@@ -149,7 +147,7 @@ export function StatusBar() {
         </button>
         <div className="mx-0.5 h-3 w-px bg-[var(--color-cork-border)]" />
         <SyncStatusIcon />
-        <NotificationsPopover />
+        <ActivityPopover />
         <button
           onClick={() => openSettings()}
           className="rounded p-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"

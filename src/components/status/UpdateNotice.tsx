@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, Check, Copy, X } from "@phosphor-icons/react";
 
 import { checkForUpdate, type UpdateInfo } from "@/services/updateCheck";
+import { recordActivity } from "@/stores/activityStore";
 import { cn } from "@/utils/cn";
 
 const DISMISSED_KEY = "cork-update-dismissed";
@@ -33,6 +34,12 @@ export function UpdateNotice() {
     // hold up the shell.
     void checkForUpdate().then((update) => {
       if (cancelled || !update) return;
+      // Logged even when the banner is dismissed, so the update stays findable.
+      recordActivity(
+        "update",
+        `Cork ${update.latest} is available`,
+        update.command ? `Run: ${update.command}` : "Download from the releases page",
+      );
       if (dismissedVersion() === update.latest) return;
       setInfo(update);
     });

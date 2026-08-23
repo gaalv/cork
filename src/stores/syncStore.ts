@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { client } from "@/ipc/client";
+import { recordActivity } from "@/stores/activityStore";
 import type { DeployKeyInfo, RemoteInfo, SyncStatus, VcsStatus } from "@/ipc/types";
 
 type SyncState = {
@@ -62,6 +63,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       set({ error: msg });
+      // Sync often runs unattended; a toast for it may never be seen.
+      recordActivity("sync", "Sync failed", msg);
       throw err;
     } finally {
       set({ loading: false });

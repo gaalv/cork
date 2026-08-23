@@ -8,6 +8,7 @@
 import { create } from "zustand";
 
 import { client } from "@/ipc/client";
+import { recordActivity } from "@/stores/activityStore";
 import type { IpcErrorPayload, JsonRecord } from "@/ipc/types";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { useVaultStore } from "@/stores/vaultStore";
@@ -99,6 +100,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
             saving: false,
             conflict: { externalMtime: error.currentMtime },
           });
+          // The banner only exists while this note is open — the log keeps it
+          // findable after navigating away.
+          recordActivity(
+            "conflict",
+            "Note changed on disk",
+            "It was edited outside Cork while open here, so the save was held back.",
+          );
         } else {
           set({ saving: false, error: String(err) });
         }
