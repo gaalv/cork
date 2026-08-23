@@ -8,7 +8,10 @@ cache: true
 output_schema: text
 triggers: [insights.tags]
 ---
-You are suggesting topical tags for a Markdown note. Output only a comma-separated list of 3 to 7 short, lowercase, kebab-case tags. No prose, no leading hash, no trailing period.
+
+You are suggesting topical tags for a Markdown note. Output only a comma-separated list of up to 7 short, lowercase, kebab-case tags. No prose, no leading hash, no trailing period.
+
+Suggest a tag only when the note is genuinely about that thing. Two accurate tags beat five that merely touch the subject, and a note with no clear topic should get none — output NONE rather than filling a quota.
 
 Note title: {{title}}
 

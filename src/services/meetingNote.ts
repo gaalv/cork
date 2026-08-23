@@ -72,9 +72,18 @@ export async function structureMeetingNote(): Promise<void> {
       return;
     }
 
-    // Structure first, source kept below it — folded behind a heading so the
-    // note opens on the summary rather than the wall of transcript.
-    replaceNoteBody(`${structured}\n\n---\n\n## Transcript\n\n${body.trim()}\n`);
+    // A provenance line, not decoration: at work this note will be read by
+    // someone who was not in the meeting and did not run the skill, and it
+    // should be obvious that a model organised it and that the source is
+    // right there to check.
+    const provenance =
+      `> Organised from a transcript by Cork on ${new Date().toISOString().slice(0, 10)}. ` +
+      `The transcript is below — check anything that matters against it.` +
+      (droppedChars > 0 ? `\n> Part of the middle was too long to send and was left out.` : "");
+
+    // Structure first, source kept below — the note opens on what happened
+    // rather than the wall of speech, without the speech going anywhere.
+    replaceNoteBody(`${provenance}\n\n${structured}\n\n---\n\n## Transcript\n\n${body.trim()}\n`);
 
     toast.success(
       droppedChars > 0
