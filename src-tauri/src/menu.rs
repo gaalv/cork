@@ -14,12 +14,37 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, IpcErro
         .map_err(menu_error)?;
 
     let recent_vaults = recent_vaults_menu(app)?;
+    // Export and import were reachable only through the command palette. The
+    // File menu is where anyone looks for them first, and it costs no screen
+    // space — which also means Windows and Linux get them for free, since
+    // Tauri renders this menu inside the window there.
     let file = SubmenuBuilder::new(app, "File")
         .item(&item(app, "new-note", "New Note", Some("CmdOrControl+N"))?)
+        .item(&item(app, "new-from-template", "New from Template…", None)?)
+        .item(&item(app, "insert-template", "Insert Template…", None)?)
+        .separator()
         .item(&item(app, "open-vault", "Open Vault…", Some("CmdOrControl+O"))?)
         .item(&recent_vaults)
+        .item(&item(app, "import-folder", "Import Folder…", None)?)
+        .item(&item(app, "close-vault", "Close Vault", None)?)
+        .separator()
+        .item(&item(app, "export-html", "Export as HTML…", None)?)
+        .item(&item(app, "export-pdf", "Export as PDF…", None)?)
+        .item(&item(app, "copy-markdown", "Copy as Markdown", None)?)
         .separator()
         .item(&item(app, "reveal-vault", "Reveal Vault", None)?)
+        .build()
+        .map_err(menu_error)?;
+
+    // The Inspector holds the skills that act on the open note. These act on
+    // the whole vault, so they had nowhere to live and ended up palette-only.
+    let ai = SubmenuBuilder::new(app, "AI")
+        .item(&item(app, "ai-ask", "Ask Your Vault…", None)?)
+        .item(&item(app, "ai-triage", "Triage the Inbox…", None)?)
+        .separator()
+        .item(&item(app, "ai-generate", "Generate Note from Topic…", None)?)
+        .item(&item(app, "ai-daily-brief", "Brief Today\u{2019}s Daily Note", None)?)
+        .item(&item(app, "ai-meeting-note", "Structure as Meeting Note", None)?)
         .build()
         .map_err(menu_error)?;
 
@@ -52,7 +77,7 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, IpcErro
         .map_err(menu_error)?;
 
     MenuBuilder::new(app)
-        .items(&[&app_menu, &file, &edit, &view, &help])
+        .items(&[&app_menu, &file, &edit, &view, &ai, &help])
         .build()
         .map_err(menu_error)
 }

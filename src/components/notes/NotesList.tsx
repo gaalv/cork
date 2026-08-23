@@ -25,6 +25,7 @@ import type { ArchivedNoteEntry, NoteEntry } from "@/ipc/types";
 
 import type { SidebarFilter } from "@/utils/triageHelpers";
 import { formatRelativeDate } from "@/utils/triageHelpers";
+import { useOverlayTitleBar } from "@/hooks/usePlatform";
 import { NOTE_STATUS_META } from "@/utils/noteStatus";
 import { NoteContextMenu, MoveToSubmenu, StatusSubmenu } from "./NoteContextMenu";
 import type { ContextMenuState, MoveSubmenuState } from "./NoteContextMenu";
@@ -42,6 +43,7 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
   const toggleNotePin = useIndexStore((s) => s.toggleNotePin);
   const statusById = useIndexStore((s) => s.statusById);
   const setNoteStatus = useIndexStore((s) => s.setNoteStatus);
+  const overlayTitleBar = useOverlayTitleBar();
   const isIndexing = useIndexStore((s) => s.isIndexing);
   const indexProgress = useIndexStore((s) => s.indexProgress);
   const view = useShellStore((s) => s.view);
@@ -294,7 +296,8 @@ export function NotesList({ filter }: { filter: SidebarFilter }) {
       <div
         ref={dragRef}
         className={`flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] px-3 ${
-          !sidebarOpen ? "pl-[76px]" : ""
+          // Only macOS floats its window controls over this corner.
+          !sidebarOpen && overlayTitleBar ? "pl-[76px]" : ""
         }`}
       >
         <div className="flex items-center gap-1">

@@ -26,6 +26,7 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - **Find duplicates** — spots notes that cover the same ground and should probably be merged
 - **What changed** — turns a note's git history into a plain-English account of how it evolved
 - **Brief today's daily note** (⌘K) — starts the day from your unfinished tasks and the threads you were on, instead of a blank page
+- Export, import, templates and the vault-wide AI actions are now in the menu bar, not only the command palette. On Windows and Linux that menu renders inside the window, so all three platforms get them
 - **Activity** in the status bar — a short log of what Cork did unattended: a sync that failed or succeeded, a note that changed on disk under an open buffer, an available update. Only failures raise the badge. It replaces a "notifications" panel that held a hardcoded changelog and had no data source
 - Update notices: when a new version ships, Cork shows the upgrade command for however you installed it. Cork never replaces itself behind your package manager
 
@@ -42,6 +43,7 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Quotes, callouts and code blocks had no padding — content sat flush against the block edges
 - Markdown markers stayed raw on the last-edited line after clicking away from the editor
 - Task lines shifted sideways when the caret entered them
+- **The native menu did nothing.** Every custom item — New Note, Open Vault, Find, Toggle Folders — was inert: the backend emitted one event name and the frontend listened for another, and the ids did not match either. What appeared to work was the keyboard shortcut, bound separately
 - **Toasts ignored dark mode**, rendering white-on-red over the dark interface
 - Seven buttons and the settings toggle were unreadable in dark mode (white text on a near-white background)
 - Four strings shipped in Portuguese — the outline heading, the tag filter placeholder and the relative timestamps, which also disagreed with the notes list about how to write the same elapsed time
