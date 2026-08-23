@@ -12,8 +12,15 @@ function StatusDot({ className }: { className: string }) {
   return <span className={cn("inline-block h-2 w-2 shrink-0 rounded-full", className)} />;
 }
 
+/** Hollow dot for "no status" — matches the note context menu. */
+function EmptyStatusDot() {
+  return (
+    <span className="inline-block h-2 w-2 shrink-0 rounded-full border border-[var(--color-cork-subtle)]" />
+  );
+}
+
 const STATUS_OPTIONS: SelectOption<string>[] = [
-  { value: "", label: "None" },
+  { value: "", label: "None", icon: <EmptyStatusDot /> },
   ...NOTE_STATUSES.map((s) => ({
     value: s as string,
     label: NOTE_STATUS_META[s].label,

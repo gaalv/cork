@@ -184,7 +184,10 @@ export function Sidebar({
     >
       <div
         ref={dragRef}
-        className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] px-2"
+        // The window uses an overlay title bar, so the macOS traffic lights sit
+        // over the top-left of this column. 76px is the same reservation
+        // NotesList makes when it becomes the leftmost column.
+        className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] pr-2 pl-[76px]"
       >
         <VaultIndicator />
         <button
