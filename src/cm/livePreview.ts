@@ -364,7 +364,14 @@ function withTrailingSpace(state: EditorState, to: number): number {
   return state.doc.sliceString(to, to + 1) === " " ? to + 1 : to;
 }
 
-function buildDecorations(view: EditorView): DecorationSet {
+/**
+ * Conceals double as atomic ranges: without that, the caret steps through a
+ * hidden `- ` or checkbox one invisible character at a time and looks stuck.
+ * Only the replacements are atomic — marks stay editable.
+ */
+type LivePreviewSets = { decorations: DecorationSet; atomic: DecorationSet };
+
+function buildDecorations(view: EditorView): LivePreviewSets {
   const { state } = view;
   const conceals: Range<Decoration>[] = [];
   const marks: Range<Decoration>[] = [];
@@ -709,15 +716,19 @@ function buildDecorations(view: EditorView): DecorationSet {
     lastTo = Math.max(lastTo, range.to);
   }
 
-  return Decoration.set([...kept, ...marks, ...lineDecos], true);
+  return {
+    decorations: Decoration.set([...kept, ...marks, ...lineDecos], true),
+    atomic: Decoration.set(kept, true),
+  };
 }
 
 const livePreviewPlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
+    atomic: DecorationSet;
     private readonly refresh: () => void;
     constructor(view: EditorView) {
-      this.decorations = buildDecorations(view);
+      ({ decorations: this.decorations, atomic: this.atomic } = buildDecorations(view));
       // Rebuild once KaTeX finishes loading so raw math swaps to rendered.
       this.refresh = () => view.dispatch({ effects: katexLoadedEffect.of(null) });
       if (!katexMod) katexWaiters.add(this.refresh);
@@ -738,14 +749,18 @@ const livePreviewPlugin = ViewPlugin.fromClass(
         treeChanged ||
         katexRefresh
       ) {
-        this.decorations = buildDecorations(update.view);
+        ({ decorations: this.decorations, atomic: this.atomic } = buildDecorations(update.view));
       }
     }
     destroy() {
       katexWaiters.delete(this.refresh);
     }
   },
-  { decorations: (v) => v.decorations },
+  {
+    decorations: (v) => v.decorations,
+    provide: (plugin) =>
+      EditorView.atomicRanges.of((view) => view.plugin(plugin)?.atomic ?? Decoration.none),
+  },
 );
 
 /**
@@ -797,7 +812,10 @@ const tableField = StateField.define<DecorationSet>({
     }
     return value;
   },
-  provide: (field) => EditorView.decorations.from(field),
+  provide: (field) => [
+    EditorView.decorations.from(field),
+    EditorView.atomicRanges.of((view) => view.state.field(field)),
+  ],
 });
 
 /**
@@ -834,7 +852,10 @@ const blockMathField = StateField.define<DecorationSet>({
     }
     return value;
   },
-  provide: (field) => EditorView.decorations.from(field),
+  provide: (field) => [
+    EditorView.decorations.from(field),
+    EditorView.atomicRanges.of((view) => view.state.field(field)),
+  ],
 });
 
 const livePreviewTheme = EditorView.baseTheme({

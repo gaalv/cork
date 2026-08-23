@@ -14,7 +14,6 @@ import { useIndexStore } from "@/stores/indexStore";
 import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { useShellStore } from "@/stores/shellStore";
 import { startSyncPolling, useSyncStore } from "@/stores/syncStore";
-import { VimIndicator } from "./VimIndicator";
 import { VaultIndicator } from "@/components/sidebar/VaultIndicator";
 import { NotificationsPopover } from "./NotificationsPopover";
 
@@ -134,7 +133,6 @@ export function StatusBar() {
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        <VimIndicator />
         <button
           onClick={() => useShellStore.getState().setCalendarOpen(true)}
           className="rounded p-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"

@@ -102,12 +102,6 @@ export function EditorSection({
           onChange={(v) => update({ editor: { ...settings.editor, showLineNumbers: v } })}
         />
       </SettingRow>
-      <SettingRow label="Vim mode" description="Use Vim keybindings in the editor">
-        <Toggle
-          checked={settings.editor.vimMode}
-          onChange={(v) => update({ editor: { ...settings.editor, vimMode: v } })}
-        />
-      </SettingRow>
       <SettingRow label="Spell check" description="Underline misspelled words as you type">
         <Toggle
           checked={settings.editor.spellCheck}

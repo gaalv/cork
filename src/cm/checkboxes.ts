@@ -87,6 +87,10 @@ export function checkboxExtension() {
       },
       {
         decorations: (v) => v.decorations,
+        // The checkbox replaces `[ ]` unconditionally, so without this the
+        // caret crosses it three invisible characters at a time.
+        provide: (plugin) =>
+          EditorView.atomicRanges.of((view) => view.plugin(plugin)?.decorations ?? Decoration.none),
         eventHandlers: {
           mousedown(event: MouseEvent, view: EditorView) {
             const target = event.target as HTMLElement;

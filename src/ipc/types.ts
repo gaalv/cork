@@ -38,7 +38,6 @@ export type AppSettings = {
     fontFamily: EditorFont;
     codeFont: CodeFont;
     tabSize: number;
-    vimMode: boolean;
     livePreview: boolean;
     spellCheck: boolean;
   };

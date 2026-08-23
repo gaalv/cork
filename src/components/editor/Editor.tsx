@@ -15,7 +15,6 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { createExtensions } from "@/cm/extensions";
 import { setEditorView } from "@/cm/viewRef";
-import { useVimModeStore } from "@/stores/vimModeStore";
 import { useThemeMode } from "@/hooks/useThemeMode";
 
 import { ConflictBanner } from "./ConflictBanner";
@@ -57,7 +56,6 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
       lineWrap: editorSettings.lineWrap,
       showLineNumbers: editorSettings.showLineNumbers,
       tabSize: editorSettings.tabSize,
-      vimMode: editorSettings.vimMode,
       livePreview: editorSettings.livePreview,
       spellCheck: editorSettings.spellCheck,
       dark,
@@ -90,11 +88,6 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
       useEditorStore.getState().setPendingCursorOffset(null);
     }
 
-    // Track vim mode via getCM() vimState — much more reliable than DOM observation
-    if (editorSettings.vimMode) {
-      useVimModeStore.getState().setMode("NORMAL");
-    }
-
     return () => {
       view.destroy();
       viewRef.current = null;
@@ -107,7 +100,6 @@ export function Editor({ noteId, path }: { noteId: string; path: string }) {
     editorSettings.lineWrap,
     editorSettings.showLineNumbers,
     editorSettings.tabSize,
-    editorSettings.vimMode,
     editorSettings.livePreview,
     editorSettings.spellCheck,
     dark,

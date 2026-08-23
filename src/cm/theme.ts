@@ -53,16 +53,6 @@ const themeSpec = {
     borderLeftColor: "var(--color-cork-accent)",
     borderLeftWidth: "2px",
   },
-  // Vim fat cursor — override the default red with accent color
-  ".cm-fat-cursor": {
-    background: "var(--color-cork-accent) !important",
-    color: "var(--color-cork-primary-foreground) !important",
-    outline: "none !important",
-  },
-  "&:not(.cm-focused) .cm-fat-cursor": {
-    background: "none !important",
-    outline: "1px solid var(--color-cork-accent) !important",
-  },
   ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground":
     {
       backgroundColor: "var(--color-cork-accent-soft)",

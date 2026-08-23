@@ -45,11 +45,16 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Wikilinks did not follow on a plain click, and never resolved folder-qualified targets such as `[[References/Cheatsheet]]`
 - Clicking a wikilink to a note that does not exist failed silently
 
+### Removed
+
+- **Vim mode.** It was listed as a v2 feature in the editor spec, shipped ahead of that, cost 40 kB gzipped — 8% of the whole bundle — for something off by default, and interacted badly with live preview. The `vimMode` setting is ignored; nothing else changes.
+
 ### Changed
 
 - **New notes now land in the vault root when no folder is selected**, instead of an `inbox/` directory. This matches how the sidebar defines the Inbox — notes created before this release stay where they are
 - Quick capture always targets the Inbox, opens straight into an editable note, and titles it with a timestamp
 - Every entry point (`⌘N`, the notes-list button, the command palette, the app menu, templates) now resolves the destination the same way
+- Moving the caret past hidden Markdown — a task's `- [ ]`, a rendered table, an embedded image — now steps over it in one keypress instead of stalling on each invisible character
 - The preview pane shares the editor's typography, so toggling preview no longer reflows the text
 
 ## [0.1.0] — 2026-08-03

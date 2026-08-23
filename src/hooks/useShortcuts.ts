@@ -11,8 +11,6 @@ import { tinykeys } from "tinykeys";
 import { useShellStore } from "@/stores/shellStore";
 import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { useEditorStore } from "@/stores/editorStore";
-import { useAppSettingsStore } from "@/stores/appSettingsStore";
-import { getEditorView } from "@/cm/viewRef";
 import { cycleTheme } from "@/services/themeRuntime";
 import { createNote } from "@/services/createNote";
 import { openDailyNote } from "@/services/dailyNote";
@@ -67,13 +65,8 @@ export function useShortcuts() {
         const shell = useShellStore.getState();
         shell.setCalendarOpen(!shell.calendarOpen);
       },
-      // Escape — Close topmost overlay (but let vim handle it when editor is focused)
+      // Escape — Close topmost overlay
       Escape: (event) => {
-        // When vim mode is on and the editor is focused, let CM6 vim handle
-        // Escape (e.g. INSERT→NORMAL). Only intercept when an overlay is open.
-        const vimOn = useAppSettingsStore.getState().settings.editor.vimMode;
-        const editorFocused = getEditorView()?.hasFocus;
-
         const shell = useShellStore.getState();
         const settingsOpen = useSettingsUiStore.getState().open;
         const hasOverlay =
@@ -84,7 +77,7 @@ export function useShortcuts() {
           shell.graphOpen ||
           shell.calendarOpen;
 
-        if (vimOn && editorFocused && !hasOverlay) return;
+        if (!hasOverlay) return;
 
         event.preventDefault();
         if (shell.paletteOpen) {

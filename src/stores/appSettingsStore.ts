@@ -26,7 +26,6 @@ const DEFAULT_SETTINGS: AppSettings = {
     fontFamily: "system",
     codeFont: "system",
     tabSize: 2,
-    vimMode: false,
     livePreview: true,
     spellCheck: true,
   },

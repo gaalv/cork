@@ -145,7 +145,10 @@ function imagePreviewField(concealSource: boolean) {
       if (tr.docChanged || tr.selection) return buildDecorations(tr.state, concealSource);
       return value;
     },
-    provide: (field) => EditorView.decorations.from(field),
+    provide: (field) => [
+      EditorView.decorations.from(field),
+      EditorView.atomicRanges.of((view) => view.state.field(field)),
+    ],
   });
 }
 

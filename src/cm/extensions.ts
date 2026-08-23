@@ -21,13 +21,10 @@ import {
 } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
 
-import { vim, getCM } from "@replit/codemirror-vim";
-
 import { livePreviewExtension } from "./livePreview";
 import { markdownExtension } from "./markdown";
 import { corkEditorTheme, corkHighlighting } from "./theme";
 import { wikilinkCompletion } from "./autocomplete";
-import { useVimModeStore, type VimMode } from "@/stores/vimModeStore";
 import { wikilinkExtension } from "./wikilinks";
 import { checkboxExtension } from "./checkboxes";
 import { assetDropPaste } from "@/cm/dropPaste";
@@ -37,7 +34,6 @@ type EditorOptions = {
   lineWrap: boolean;
   showLineNumbers: boolean;
   tabSize: number;
-  vimMode: boolean;
   livePreview: boolean;
   spellCheck: boolean;
   /** Resolved theme — drives CodeMirror's own `&dark` base-theme rules. */
@@ -108,30 +104,6 @@ export function createExtensions(options: EditorOptions): Extension[] {
 
   if (options.livePreview) {
     extensions.push(livePreviewExtension());
-  }
-
-  if (options.vimMode) {
-    extensions.push(vim());
-    // Detect vim mode changes and sync to store for status bar
-    let lastMode: VimMode = "NORMAL";
-    extensions.push(
-      EditorView.updateListener.of((update) => {
-        const cm = getCM(update.view);
-        if (!cm) return;
-        const vs = (
-          cm.state as { vim?: { insertMode?: boolean; visualMode?: boolean; mode?: string } }
-        ).vim;
-        if (!vs) return;
-        let mode: VimMode = "NORMAL";
-        if (vs.insertMode) mode = "INSERT";
-        else if (vs.visualMode) mode = "VISUAL";
-        else if (vs.mode === "replace") mode = "REPLACE";
-        if (mode !== lastMode) {
-          lastMode = mode;
-          useVimModeStore.getState().setMode(mode);
-        }
-      }),
-    );
   }
 
   if (options.lineWrap) {

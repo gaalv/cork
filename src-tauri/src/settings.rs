@@ -75,8 +75,6 @@ pub struct EditorSettings {
     pub code_font: String,
     #[serde(default = "default_tab_size")]
     pub tab_size: u32,
-    #[serde(default)]
-    pub vim_mode: bool,
     #[serde(default = "default_true")]
     pub live_preview: bool,
     #[serde(default = "default_true")]
@@ -177,7 +175,6 @@ impl Default for EditorSettings {
             font_family: default_editor_font(),
             code_font: default_code_font(),
             tab_size: default_tab_size(),
-            vim_mode: false,
             live_preview: true,
             spell_check: true,
         }
