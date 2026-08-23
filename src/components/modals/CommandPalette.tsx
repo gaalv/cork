@@ -32,6 +32,7 @@ import { createNote } from "@/services/createNote";
 import { copyNoteAsMarkdown, exportNoteAsHtml, exportNoteAsPdf } from "@/services/exportNote";
 import { openDailyNote } from "@/services/dailyNote";
 import { insertDailyBrief } from "@/services/dailyBrief";
+import { structureMeetingNote } from "@/services/meetingNote";
 import { useIndexStore } from "@/stores/indexStore";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
@@ -75,6 +76,12 @@ const COMMANDS: readonly PaletteCommand[] = [
   {
     id: "ai-triage",
     label: "Triage the Inbox",
+    hint: "AI",
+    icon: <Sparkle size={14} weight="fill" />,
+  },
+  {
+    id: "ai-meeting-note",
+    label: "Structure as meeting note",
     hint: "AI",
     icon: <Sparkle size={14} weight="fill" />,
   },
@@ -248,6 +255,8 @@ export function CommandPalette() {
           useShellStore.getState().setAskVaultOpen(true);
         } else if (cmd.id === "ai-triage") {
           useShellStore.getState().setTriageOpen(true);
+        } else if (cmd.id === "ai-meeting-note") {
+          void structureMeetingNote();
         } else if (cmd.id === "ai-daily-brief") {
           void insertDailyBrief();
         } else if (cmd.id === "open-daily-note") {

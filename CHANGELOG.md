@@ -19,6 +19,7 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - A first-run tour of the sidebar, notes list, editor and command palette — skippable at any step, replayable from Settings › General
 - Choose what AI should optimise for — Balanced, Quality or Economy — with per-task-type model overrides under Advanced, and a Test button that runs the CLI and reports what it says
 - GitHub Copilot and Codex join Claude as AI providers
+- **Structure as meeting note** — turns a pasted transcript into attendees, summary, decisions, action items and open questions, keeping the transcript underneath
 - **Ask your vault** (⌘K) — ask a question and get an answer built only from your own notes, citing the ones it read
 - **Triage the Inbox** (⌘K) — proposes a folder, tags and a real title for each unfiled note, one at a time, nothing applied without your approval
 - **Suggest links** — finds notes this one should reference and turns the right phrase into a wikilink

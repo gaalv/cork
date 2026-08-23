@@ -4,6 +4,7 @@ import {
   CopySimple,
   LinkSimple,
   Sparkle,
+  Microphone,
   Tag,
   TextAa,
   TextAlignLeft,
@@ -14,6 +15,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import { replaceNoteBody } from "@/services/editorWrite";
 import { client } from "@/ipc/client";
 import { existingLinks, findCandidates, formatCandidates, parsePairs } from "@/services/aiVault";
+import { structureMeetingNote } from "@/services/meetingNote";
 import { SectionHeader } from "./helpers";
 import { AiSuggestions, type Suggestion } from "./AiSuggestions";
 
@@ -136,6 +138,15 @@ export function AiSection() {
           label="Find duplicates"
           loading={loading === "find-overlap"}
           onClick={() => void runVaultSkill("find-overlap")}
+        />
+        <AiButton
+          icon={<Microphone size={14} />}
+          label="Structure as meeting"
+          loading={loading === "meeting-note"}
+          onClick={() => {
+            setLoading("meeting-note");
+            void structureMeetingNote().finally(() => setLoading(null));
+          }}
         />
         <AiButton
           icon={<TextAa size={14} />}
