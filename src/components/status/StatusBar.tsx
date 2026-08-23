@@ -14,6 +14,7 @@ import { useIndexStore } from "@/stores/indexStore";
 import { useSettingsUiStore } from "@/stores/settingsUiStore";
 import { useShellStore } from "@/stores/shellStore";
 import { startSyncPolling, useSyncStore } from "@/stores/syncStore";
+import { VaultIndicator } from "@/components/sidebar/VaultIndicator";
 import { ActivityPopover } from "./ActivityPopover";
 
 function relTime(iso: string | null): string {
@@ -123,6 +124,7 @@ export function StatusBar() {
   return (
     <footer className="flex h-8 shrink-0 items-center justify-between rounded-b-[10px] border-t border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-3 text-[11px] text-[var(--color-cork-muted)]">
       <div className="flex items-center gap-2">
+        <VaultIndicator />
         {isIndexing && indexProgress && (
           <span className="flex items-center gap-1 text-[var(--color-cork-subtle)]">
             <CircleNotch size={12} className="animate-spin" />

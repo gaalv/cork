@@ -37,7 +37,6 @@ import { SidebarSection, SidebarRow, InlineNewFolder, InlineNewTag } from "./Sid
 import { FolderContextPopover } from "./FolderContextPopover";
 import { TagContextMenu } from "@/components/notes/TagContextMenu";
 import { UpdateNotice } from "@/components/status/UpdateNotice";
-import { VaultIndicator } from "./VaultIndicator";
 
 export function Sidebar({
   filter,
@@ -184,12 +183,8 @@ export function Sidebar({
     >
       <div
         ref={dragRef}
-        // The window uses an overlay title bar, so the macOS traffic lights sit
-        // over the top-left of this column. 76px is the same reservation
-        // NotesList makes when it becomes the leftmost column.
-        className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] pr-2 pl-[76px]"
+        className="flex h-12 shrink-0 items-center justify-end border-b border-[var(--color-cork-border)] px-3"
       >
-        <VaultIndicator />
         <button
           onClick={toggleSidebar}
           title="Hide sidebar"

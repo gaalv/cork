@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import { client } from "@/ipc/client";
-import { recordActivity } from "@/stores/activityStore";
+import { recordActivity, recordFailure } from "@/stores/activityStore";
 import type { DeployKeyInfo, RemoteInfo, SyncStatus, VcsStatus } from "@/ipc/types";
 
 type SyncState = {
@@ -59,12 +59,15 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     try {
       const remote = await client.vcs.remoteSyncNow();
       await get().refresh();
+      // Sync runs unattended, so "it worked" is worth being able to look up —
+      // recorded, but without raising the badge.
+      recordActivity("sync", "Vault synced", remote.url ? `Pushed to ${remote.url}` : undefined);
       return remote;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       set({ error: msg });
       // Sync often runs unattended; a toast for it may never be seen.
-      recordActivity("sync", "Sync failed", msg);
+      recordFailure("sync", "Sync failed", msg);
       throw err;
     } finally {
       set({ loading: false });

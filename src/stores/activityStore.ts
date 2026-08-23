@@ -14,9 +14,20 @@ import { create } from "zustand";
 
 export type ActivityKind = "update" | "sync" | "conflict" | "ai" | "index";
 
+/**
+ * Only failures raise the badge.
+ *
+ * If routine success lit the dot too, the dot would mostly mean "nothing to
+ * do" and you would stop looking — which is exactly when it needs to work.
+ * Everything worth looking up is still recorded; the badge just means
+ * "something wants you".
+ */
+export type ActivitySeverity = "error" | "info";
+
 export type ActivityEntry = {
   id: string;
   kind: ActivityKind;
+  severity: ActivitySeverity;
   title: string;
   detail?: string;
   /** Epoch ms. */
@@ -47,9 +58,14 @@ function persist(entries: ActivityEntry[]) {
   }
 }
 
+function countUnreadErrors(entries: ActivityEntry[]): number {
+  return entries.filter((e) => !e.read && e.severity === "error").length;
+}
+
 type ActivityState = {
   entries: ActivityEntry[];
-  unread: number;
+  /** Unread failures — what the badge counts. */
+  unreadErrors: number;
   push: (entry: Omit<ActivityEntry, "id" | "at" | "read">) => void;
   markAllRead: () => void;
   clear: () => void;
@@ -57,7 +73,7 @@ type ActivityState = {
 
 export const useActivityStore = create<ActivityState>((set, get) => ({
   entries: load(),
-  unread: load().filter((e) => !e.read).length,
+  unreadErrors: load().filter((e) => !e.read && e.severity === "error").length,
 
   push: (entry) => {
     const entries = get().entries;
@@ -67,7 +83,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
     if (newest && newest.kind === entry.kind && newest.title === entry.title) {
       const updated = [{ ...newest, at: Date.now(), read: false }, ...entries.slice(1)];
       persist(updated);
-      set({ entries: updated, unread: updated.filter((e) => !e.read).length });
+      set({ entries: updated, unreadErrors: countUnreadErrors(updated) });
       return;
     }
 
@@ -77,22 +93,27 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
     ].slice(0, MAX_ENTRIES);
 
     persist(next);
-    set({ entries: next, unread: next.filter((e) => !e.read).length });
+    set({ entries: next, unreadErrors: countUnreadErrors(next) });
   },
 
   markAllRead: () => {
     const next = get().entries.map((e) => ({ ...e, read: true }));
     persist(next);
-    set({ entries: next, unread: 0 });
+    set({ entries: next, unreadErrors: 0 });
   },
 
   clear: () => {
     persist([]);
-    set({ entries: [], unread: 0 });
+    set({ entries: [], unreadErrors: 0 });
   },
 }));
 
-/** Convenience for the producers scattered across services. */
+/** Record a failure — raises the badge. */
+export function recordFailure(kind: ActivityKind, title: string, detail?: string): void {
+  useActivityStore.getState().push({ kind, severity: "error", title, detail });
+}
+
+/** Record something worth looking up later, without demanding attention. */
 export function recordActivity(kind: ActivityKind, title: string, detail?: string): void {
-  useActivityStore.getState().push({ kind, title, detail });
+  useActivityStore.getState().push({ kind, severity: "info", title, detail });
 }

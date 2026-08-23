@@ -8,7 +8,7 @@
 import { create } from "zustand";
 
 import { client } from "@/ipc/client";
-import { recordActivity } from "@/stores/activityStore";
+import { recordFailure } from "@/stores/activityStore";
 import type { IpcErrorPayload, JsonRecord } from "@/ipc/types";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { useVaultStore } from "@/stores/vaultStore";
@@ -102,7 +102,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           });
           // The banner only exists while this note is open — the log keeps it
           // findable after navigating away.
-          recordActivity(
+          recordFailure(
             "conflict",
             "Note changed on disk",
             "It was edited outside Cork while open here, so the save was held back.",

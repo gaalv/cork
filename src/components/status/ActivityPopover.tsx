@@ -28,7 +28,7 @@ const KIND_META: Record<ActivityKind, { icon: PhosphorIcon; className: string }>
 
 export function ActivityPopover() {
   const entries = useActivityStore((s) => s.entries);
-  const unread = useActivityStore((s) => s.unread);
+  const unreadErrors = useActivityStore((s) => s.unreadErrors);
   const markAllRead = useActivityStore((s) => s.markAllRead);
   const clear = useActivityStore((s) => s.clear);
 
@@ -52,10 +52,10 @@ export function ActivityPopover() {
         onClick={() => setOpen((v) => !v)}
         className="relative rounded p-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
         title="Activity"
-        aria-label={unread > 0 ? `Activity — ${unread} unread` : "Activity"}
+        aria-label={unreadErrors > 0 ? `Activity — ${unreadErrors} needing attention` : "Activity"}
       >
         <Bell size={14} />
-        {unread > 0 && (
+        {unreadErrors > 0 && (
           <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-[var(--color-cork-danger)]" />
         )}
       </button>

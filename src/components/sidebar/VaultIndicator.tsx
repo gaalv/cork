@@ -64,7 +64,7 @@ export function VaultIndicator() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-[var(--color-cork-ink)] hover:bg-[var(--color-cork-panel-2)]"
+        className="flex items-center gap-1.5 rounded px-1.5 py-1 hover:bg-[var(--color-cork-panel-2)] hover:text-[var(--color-cork-ink)]"
       >
         <FolderSimple size={13} className="text-[var(--color-cork-accent)]" />
         <span className="max-w-[150px] truncate text-[13px] font-semibold tracking-tight">
