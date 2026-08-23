@@ -18,7 +18,7 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Development builds are marked with an outline and a corner badge, so they cannot be confused with an installed release
 - A first-run tour of the sidebar, notes list, editor and command palette — skippable at any step, replayable from Settings › General
 - Choose what AI should optimise for — Balanced, Quality or Economy — with per-task-type model overrides under Advanced, and a Test button that runs the CLI and reports what it says
-- GitHub Copilot and Codex join Claude as AI providers
+- Codex joins Claude and GitHub Copilot as an AI provider
 - **Structure as meeting note** — turns a pasted transcript into attendees, summary, decisions, action items and open questions, keeping the transcript underneath
 - **Ask your vault** (⌘K) — ask a question and get an answer built only from your own notes, citing the ones it read
 - **Triage the Inbox** (⌘K) — proposes a folder, tags and a real title for each unfiled note, one at a time, nothing applied without your approval
@@ -26,6 +26,7 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - **Find duplicates** — spots notes that cover the same ground and should probably be merged
 - **What changed** — turns a note's git history into a plain-English account of how it evolved
 - **Brief today's daily note** (⌘K) — starts the day from your unfinished tasks and the threads you were on, instead of a blank page
+- **Activity** in the status bar — a short log of what Cork did unattended: a sync that failed or succeeded, a note that changed on disk under an open buffer, an available update. Only failures raise the badge. It replaces a "notifications" panel that held a hardcoded changelog and had no data source
 - Update notices: when a new version ships, Cork shows the upgrade command for however you installed it. Cork never replaces itself behind your package manager
 
 ### Fixed
@@ -34,17 +35,21 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - **Multi-line `$$…$$` never rendered.** Single-line display maths and inline maths also stayed raw when KaTeX finished loading after first paint
 - **Image previews never appeared.** Pasted or dropped images showed only the Markdown link; images in notes inside a folder resolved to the wrong path
 - **Code blocks rendered almost monochrome** — most syntax tokens collapsed onto two greys that were invisible in dark mode
+- **Fix spelling reported success and changed nothing.** AI edits were written to the store, which the editor deliberately ignores while a buffer is dirty — so the file on disk and the text on screen diverged and the next keystroke undid the correction. The daily brief and AI link insertion had the same defect
 - Prose containing currency (`$5-$10`) was swallowed as a formula
 - `> [!warning]` callouts rendered as raw `!warning` instead of a styled label
+- The note status field was a native macOS control that ignored the theme and dropped the coloured dot the rest of the app uses for status
 - Quotes, callouts and code blocks had no padding — content sat flush against the block edges
 - Markdown markers stayed raw on the last-edited line after clicking away from the editor
 - Task lines shifted sideways when the caret entered them
 - **Toasts ignored dark mode**, rendering white-on-red over the dark interface
 - Seven buttons and the settings toggle were unreadable in dark mode (white text on a near-white background)
+- Four strings shipped in Portuguese — the outline heading, the tag filter placeholder and the relative timestamps, which also disagreed with the notes list about how to write the same elapsed time
 - Tailwind `dark:` styles followed the OS appearance instead of the app's theme setting
 - **AI providers and GitHub sync reported "not found on PATH"** even when the CLIs worked in the terminal — a GUI app does not inherit the shell's PATH
 - Wikilinks did not follow on a plain click, and never resolved folder-qualified targets such as `[[References/Cheatsheet]]`
 - Clicking a wikilink to a note that does not exist failed silently
+- **Unlinked mentions listed unrelated notes.** A placeholder title like "Untitled" matched every scratch note in the vault, and an accented title such as "Configuração" matched nothing at all
 
 ### Removed
 
