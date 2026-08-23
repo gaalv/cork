@@ -133,7 +133,7 @@ export function TagsSection() {
                   setSearch("");
                 }
               }}
-              placeholder="Buscar tag…"
+              placeholder="Search tags…"
               className="min-w-0 flex-1 rounded border border-[var(--color-cork-border)] bg-[var(--color-cork-panel-2)] px-2 py-0.5 text-[11px] outline-none placeholder:text-[var(--color-cork-subtle)] focus:border-[var(--color-cork-tag)]"
             />
             <button

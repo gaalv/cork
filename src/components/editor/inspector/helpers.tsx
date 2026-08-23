@@ -23,10 +23,12 @@ export function formatRelative(ts: number): string {
   const diffH = Math.floor(diffMs / 3_600_000);
   const diffD = Math.floor(diffMs / 86_400_000);
 
-  if (diffMin < 1) return "agora";
-  if (diffMin < 60) return `${diffMin}min atrás`;
-  if (diffH < 24) return `${diffH}h atrás`;
-  if (diffD < 7) return `${diffD}d atrás`;
+  // Wording matches formatRelativeDate in triageHelpers, so the same elapsed
+  // time never reads two different ways in two panes.
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffH < 24) return `${diffH}h ago`;
+  if (diffD < 7) return `${diffD}d ago`;
   return formatDate(ts);
 }
 

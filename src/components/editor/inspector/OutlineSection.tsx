@@ -53,7 +53,7 @@ export function OutlineSection() {
   if (headings.length === 0) {
     return (
       <section>
-        <SectionHeader icon={<ListBullets size={14} />} title="Sumário" />
+        <SectionHeader icon={<ListBullets size={14} />} title="Outline" />
         <p className="text-[11px] text-[var(--color-cork-subtle)]">No headings found</p>
       </section>
     );
@@ -63,7 +63,7 @@ export function OutlineSection() {
 
   return (
     <section>
-      <SectionHeader icon={<ListBullets size={14} />} title="Sumário" />
+      <SectionHeader icon={<ListBullets size={14} />} title="Outline" />
       <nav className="flex flex-col gap-0.5">
         {headings.map((h, i) => (
           <button
