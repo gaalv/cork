@@ -37,6 +37,7 @@ import { SidebarSection, SidebarRow, InlineNewFolder, InlineNewTag } from "./Sid
 import { FolderContextPopover } from "./FolderContextPopover";
 import { TagContextMenu } from "@/components/notes/TagContextMenu";
 import { UpdateNotice } from "@/components/status/UpdateNotice";
+import { VaultIndicator } from "./VaultIndicator";
 
 export function Sidebar({
   filter,
@@ -183,8 +184,9 @@ export function Sidebar({
     >
       <div
         ref={dragRef}
-        className="flex h-12 shrink-0 items-center justify-end border-b border-[var(--color-cork-border)] px-3"
+        className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-cork-border)] px-2"
       >
+        <VaultIndicator />
         <button
           onClick={toggleSidebar}
           title="Hide sidebar"
