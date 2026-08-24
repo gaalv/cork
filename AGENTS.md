@@ -1,148 +1,50 @@
-# Agents Guide
+# Cork Agent Guide
 
-Welcome, agent. This file is your launchpad. Read it top-to-bottom before doing anything else.
+## Sources Of Truth
 
-## What is Cork
+- Cork is a local-first desktop Markdown notes app: React 19/Vite 7 in `src/`, Tauri 2/Rust in `src-tauri/`, and a rebuildable SQLite index outside the vault.
+- Trust executable config and current code before prose. `README.md` still lists the removed Vitest/Playwright setup and the old `src/features` layout; some early `.specs/` decisions and paths are historical or superseded.
+- For feature work, check `.specs/project/ROADMAP.md` for the real status first, then relevant non-superseded decisions in `.specs/project/STATE.md`, `.specs/codebase/CONVENTIONS.md`, and the feature's `spec.md`/`design.md`/`tasks.md`.
+- Stay inside a task's `Where` list. Do not silently choose behavior absent from the spec or a current decision; surface the decision before implementing it.
 
-A local-first Markdown notes app for developers — Tauri 2 + React 19 + SQLite. Pure `.md` vault on disk, dev-grade editor, wikilinks, backlinks, command-driven UI. The layout is a **Triage 3-column layout** (Sidebar + NotesList + EditorPane) inspired by Linear. Stack mirrors [Tolaria](https://github.com/refactoringhq/tolaria).
+## Toolchain And Commands
 
-Full vision: `.specs/project/PROJECT.md`.
-
-## Where to start
-
-1. Read `.specs/project/PROJECT.md` — vision, goals, scope, strategic decisions.
-2. Read `.specs/project/ROADMAP.md` — find which milestone is current. **Important:** check feature statuses carefully — some specs are PARTIAL (not fully implemented) and some were removed (never implemented).
-3. Read `.specs/project/STATE.md` — most recent decisions, blockers, deferred ideas. Treat decisions (`AD-NNN`) as **locked**; if you need to change one, update STATE.md first and explain why.
-4. Read `.specs/codebase/CONVENTIONS.md` — non-negotiable code rules.
-5. Read the spec for the feature you've been assigned: `.specs/features/Fxx-*/{spec.md,design.md,tasks.md}`.
-
-## Multi-agent contract
-
-Every feature is broken into atomic, traceable tasks. Multiple agents can work in parallel as long as they obey the rules below.
-
-### Ownership
-
-- One agent per task at a time. Tasks are tracked in the session SQL `todos` table (`id` matches `Fxx-Tyy`).
-- A task is "yours" when its row has `status = 'in_progress'` and your agent ID. Update the row before starting.
-- If a task you need is owned by another agent, work on a different parallelizable (`[P]`) task.
-
-### Boundaries (hard rules)
-
-- **Do not modify files outside your task's "Where" list** unless the task explicitly says so. Cross-cutting state lives in `src/stores/*`, IPC in `src/ipc/*`, imperative flows in `src/services/*`.
-- **Do not edit `IpcContract.ts` and the Rust IPC handler in different commits.** Same task = same commit.
-- **Do not invent dependencies.** If a library isn't in `package.json` or `Cargo.toml`, your task must include adding it AND the spec must allow it. Otherwise stop and flag.
-- **Do not change conventions** (`CONVENTIONS.md`, `STRUCTURE.md`). If you think a rule should change, write a STATE.md entry and stop.
-- **Never commit secrets** or call external services. v1 is offline-first.
-
-### Workflow per task
-
-```
-1. Read the task block in tasks.md (What / Where / Depends on / Reuses / Done when / Verify).
-2. Mark the SQL todo `in_progress`.
-3. Implement ONLY what's listed under "Where".
-4. Run the "Verify" command(s). All "Done when" boxes must check.
-5. Self-review against `.specs/codebase/CONVENTIONS.md`.
-6. `git add` only listed files; commit with the message specified.
-7. Mark the SQL todo `done`. Append a row to STATE.md "Quick Tasks Completed" if it qualifies.
-8. Move to the next task. If a task fails verification, set status to `blocked` with a description and stop.
-```
-
-### Parallelism map
-
-Tasks tagged `[P]` in `tasks.md` can run simultaneously with other `[P]` tasks at the same dependency level. Tasks without `[P]` block their phase.
-
-### Decision provenance
-
-If you need to make a decision the spec doesn't cover:
-
-1. Check `.specs/project/STATE.md` for an existing AD that applies.
-2. If none, propose one in your response and add `AD-NNN` to STATE.md before continuing.
-3. Never silently choose. Decisions must be searchable later.
-
-## Stack quick reference
-
-- **pnpm** is the package manager (via corepack). Do not use `npm` or `yarn`.
-- **Tauri 2** + **Rust stable** in `src-tauri/`.
-- **React 19** + **Vite 7** in `src/`.
-- **Tailwind v4** with `@theme` tokens. No `tailwind.config.js`.
-- **CodeMirror 6** is the editor. Not BlockNote (AD-006).
-- **SQLite via rusqlite** in `src-tauri`. WAL mode.
-- **Zustand** for cross-feature state.
-- **Phosphor icons** + **Lucide** as fallback.
-
-## Commands you'll need
+- Use Node 20+, Corepack, and exactly pnpm (`packageManager: pnpm@9.15.0`); do not create npm or Yarn lockfiles. Rust uses stable and requires the platform-specific Tauri prerequisites.
+- This is one root package, not a pnpm workspace. `pnpm install --frozen-lockfile` matches CI; use `pnpm add` when an approved task actually adds a dependency.
 
 ```bash
-pnpm install              # install
-pnpm dev                  # vite dev server (web only)
-pnpm tauri dev            # full Tauri dev
-pnpm build                # vite build
-pnpm tauri build          # tauri release build
-pnpm typecheck            # tsc -b --noEmit
-pnpm lint                 # eslint
+pnpm dev                    # browser-only Vite server on strict port 1420
+pnpm tauri:dev              # full desktop app; starts Vite through tauri.conf.json
+pnpm lint                   # ESLint, zero warnings allowed
+pnpm typecheck              # tsc -b --noEmit
+pnpm format:check           # check Prettier without rewriting
+pnpm build                  # TypeScript build, then production Vite bundle
+pnpm check:bundle-size --budget=500  # requires a current dist/ from pnpm build
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+cargo check --manifest-path src-tauri/Cargo.toml
+pnpm tauri:build            # expensive native release build
 ```
 
-## Repo layout (cheat sheet)
+- Blocking CI parity is `pnpm lint && pnpm typecheck && pnpm build && pnpm check:bundle-size --budget=500`. The separate `pnpm bench:index` CI job is intentionally non-blocking.
+- Focus frontend checks with `pnpm exec eslint path/to/file.ts --max-warnings=0` and `pnpm exec prettier --check path/to/file.ts`.
+- There is currently no configured JS test runner, E2E suite, Rust test suite, or `pnpm test` script. Do not follow stale test commands from `README.md` or old feature specs unless the task restores that tooling.
+- The pre-commit hook runs `pnpm exec lint-staged`, which may rewrite staged JS/TS/CSS/Markdown/JSON/YAML. Reinspect the diff after it runs.
 
-```
-.specs/                  # source of truth — read first
-  project/               # PROJECT, ROADMAP, STATE
-  codebase/              # STACK, ARCHITECTURE, CONVENTIONS, STRUCTURE
-  features/Fxx-*/        # spec.md + design.md + tasks.md
-src/                     # frontend (flat structure — feature folders removed in a1c5e06)
-  app/                   # App.tsx root composition
-  screens/               # Top-level surfaces: Shell, TriageBody, EmptyVault, WelcomeScreen, LoginScreen
-  components/            # UI by domain: editor/ (+inspector/), notes/, sidebar/, folders/,
-                         #   modals/ (CommandPalette, HelpModal, …), settings/, sync/, status/, auth/, ui/ (primitives)
-  cm/                    # CodeMirror 6 extensions: markdown, wikilinks, autocomplete, theme,
-                         #   dropPaste, imagePreview, checkboxes, viewRef
-  stores/                # Zustand: vaultStore, editorStore, indexStore, shellStore, appSettingsStore,
-                         #   settingsUiStore, syncStore, authStore, vimModeStore
-  ipc/                   # IpcContract.ts (single source of truth) + client.ts + types.ts + errors.ts
-  services/              # Imperative flows: createNote, folderOps, bulkOps, menuActions, assetIngest, …
-  hooks/                 # useShortcuts, useBulkSelection, useDragDropFolder, useDragRegion
-  types/  utils/         # Shared TS types; cn(), markdown/tag/triage helpers
-src-tauri/               # Rust backend
-  src/
-    ai/                  # Skills, cache, runner, telemetry
-    assets/              # Asset protocol + DB
-    diagnostics.rs       # Crash logging + redactor
-    error.rs             # IpcError type
-    index/               # SQLite schema, worker, parser, FTS5
-    lib.rs               # Builder + command registration
-    menu.rs              # Native OS menu
-    settings.rs          # App + vault settings bridge
-    shortcuts.rs         # Global shortcuts (quick capture)
-    tray.rs              # Tray icon + lifecycle
-    vault/               # FS ops, watcher, scaffold, folders, bulk, frontmatter, archive
-    vcs/                 # Git local + remote sync
-    window.rs            # Window helpers
-brand/                   # Logo SVGs, icon source
-AGENTS.md                # this file
-CLAUDE.md                # Claude Code guidance
-```
+## Runtime Wiring
 
-## Knowledge verification chain
+- Frontend startup is `src/main.tsx` (error/theme/density/font/capture/sync runtimes) -> `src/app/App.tsx` -> `src/screens/Shell.tsx`. The active triage composition is `src/screens/TriageBody.tsx`.
+- Domain UI lives in `src/components/`; CodeMirror extensions in `src/cm/`; cross-cutting Zustand state in `src/stores/`; multi-store imperative flows in `src/services/`; typed native access in `src/ipc/`.
+- `pnpm dev` cannot exercise filesystem, SQLite, native menus, dialogs, tray, shortcuts, or other Tauri IPC. Use `pnpm tauri:dev` for native behavior; web-safe fallbacks must be deliberate, not accidental production behavior.
+- Backend startup and command registration live in `src-tauri/src/lib.rs`. `vault/` owns disk operations, `index/` owns SQLite/FTS and watcher-fed indexing, and `vcs/` owns local history and GitHub sync.
 
-Before introducing any technical claim:
+## Change Constraints
 
-1. Check existing code (`grep`/`view`).
-2. Check `.specs/` docs.
-3. Use `context7` MCP for library APIs (resolve ID, then query docs).
-4. Web search for current docs.
-5. If still unsure → say "I don't know" or flag as `uncertain`. **Never fabricate.**
-
-## When you finish a feature
-
-1. All tasks in its `tasks.md` are `done`.
-2. The feature's spec.md requirements are verified.
-3. Update `ROADMAP.md` status from `IN PROGRESS` → `COMPLETE`.
-4. Add a one-line `L-NNN` Lesson Learned to STATE.md if anything surprising happened.
-
-## When you're stuck
-
-- Re-read the spec. The answer is usually there.
-- Check `STATE.md` for AD-NNN that constrain the choice.
-- If genuinely blocked, mark the task `blocked` with reason in the SQL todo, write a `B-NNN` blocker in STATE.md, and stop. Don't guess.
-
-That's it. Be surgical, be honest, ship clean commits.
+- An IPC command change normally touches all of: `src/ipc/IpcContract.ts`, the mapping/wrapper in `src/ipc/client.ts`, its Rust `#[tauri::command]` handler, and `tauri::generate_handler!` in `src-tauri/src/lib.rs`. Keep TypeScript and Rust contract changes together.
+- Rust commands return serializable `Result<T, IpcError>`; do not panic across the IPC boundary.
+- Vault Markdown is the content source of truth. The SQLite index is disposable and uses `src-tauri/src/index/schema.sql` plus `migrate.rs`; do not make the database authoritative for note content.
+- Follow the existing state/service boundary rather than introducing direct component orchestration: stores own shared state and optimistic reconciliation, while services coordinate flows spanning IPC and multiple stores.
+- Tailwind v4 is configured through `@theme` and CSS variables in `src/index.css`; there is no `tailwind.config.js`. Reuse existing `--color-cork-*` tokens and `cn()` from `@/utils/cn`; do not add CSS Modules or CSS-in-JS.
+- `@/*` maps to `src/*`. Use the alias across directories and relative imports within a directory. TypeScript is strict and ESLint rejects explicit `any` outside test-file patterns.
+- Do not hand-edit generated Tauri files under `src-tauri/gen/` or build outputs under `dist/` and `src-tauri/target/`.
+- Versions must stay aligned across `package.json`, `version.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`; use `pnpm set-version -- <semver>`. Tag pushes build draft releases on four targets; signing/updater environment wiring is disabled, and the updater crate is not registered in `src-tauri/src/lib.rs`.
+- When explicitly asked to commit, use Conventional Commits and keep one spec task per commit. Never mix unrelated or concurrent worktree changes into the task.
