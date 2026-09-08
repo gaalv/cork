@@ -5,7 +5,7 @@ All notable changes to Cork will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] — unreleased
+## [0.2.0] — 2026-09-08
 
 Editor rendering, theming and note-creation fixes, plus Windows and Linux builds.
 
@@ -14,11 +14,9 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Bundled Inter and IBM Plex Mono, selectable for the interface, the writing surface and code — self-hosted, so the app makes no network requests
 - Editor line-height setting, and a live type specimen in Settings › Editor
 - Windows (`.msi`, `.exe`) and Linux (`.deb`, `.rpm`, `.AppImage`) release builds
-- Linux install via Homebrew (`brew install cork`) — macOS continues to use the cask
 - Development builds are marked with an outline and a corner badge, so they cannot be confused with an installed release
 - A first-run tour of the sidebar, notes list, editor and command palette — skippable at any step, replayable from Settings › General
-- Choose what AI should optimise for — Balanced, Quality or Economy — with per-task-type model overrides under Advanced, and a Test button that runs the CLI and reports what it says
-- Codex joins Claude and GitHub Copilot as an AI provider
+- Automatic AI model selection follows the selected provider's own default; per-task-type overrides remain under Advanced, and Test uses the same provider-specific command as real skills
 - **Structure as meeting note** — turns a pasted transcript into attendees, summary, decisions, action items and open questions, keeping the transcript underneath
 - **Ask your vault** (⌘K) — ask a question and get an answer built only from your own notes, citing the ones it read
 - **Triage the Inbox** (⌘K) — proposes a folder, tags and a real title for each unfiled note, one at a time, nothing applied without your approval
@@ -29,6 +27,7 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Export, import, templates and the vault-wide AI actions are now in the menu bar, not only the command palette. On Windows and Linux that menu renders inside the window, so all three platforms get them
 - **Activity** in the status bar — a short log of what Cork did unattended: a sync that failed or succeeded, a note that changed on disk under an open buffer, an available update. Only failures raise the badge. It replaces a "notifications" panel that held a hardcoded changelog and had no data source
 - Update notices: when a new version ships, Cork shows the upgrade command for however you installed it. Cork never replaces itself behind your package manager
+- Existing GitHub vaults can be cloned from the welcome screen with a repository-scoped fine-grained PAT
 
 ### Fixed
 
@@ -64,6 +63,7 @@ Editor rendering, theming and note-creation fixes, plus Windows and Linux builds
 - Every entry point (`⌘N`, the notes-list button, the command palette, the app menu, templates) now resolves the destination the same way
 - Moving the caret past hidden Markdown — a task's `- [ ]`, a rendered table, an embedded image — now steps over it in one keypress instead of stalling on each invisible character
 - The preview pane shares the editor's typography, so toggling preview no longer reflows the text
+- Cork pins both author and committer identity to `Cork <cork@local>` for its automatic Git history, without using the machine-global identity
 
 ## [0.1.0] — 2026-08-03
 

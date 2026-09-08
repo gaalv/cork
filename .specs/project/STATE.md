@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-08-03T00:00-03:00
-**Current Work:** Release prep for v0.1.0 — user UAT signed off on F39/F40/F41 and F42–F47 (2026-08-03), so all M12–M14 features are fully COMPLETE. `feat/notes-app-polish` (resizable columns, spell check, live-preview wikilink/fence/table fixes, unlinked mentions, vault find & replace, folder import) merged to main; CHANGELOG 0.1.0 written; versions aligned at 0.1.0 across package.json / Cargo.toml / tauri.conf.json. Remaining before tagging `v0.1.0`: nothing code-side — Apple signing secrets are absent, so first release ships unsigned (AD-050).
+**Last Updated:** 2026-09-08T00:00-03:00
+**Current Work:** Publishing v0.2.0. Versions are aligned, release notes are dated, the local quality gates and release-readiness review pass, and release automation now gates builds on frontend/Rust checks and uploads SHA-256 checksums. The release remains intentionally unsigned under AD-050; Windows and Linux packages are new in v0.2.0, while Homebrew continues to publish only the macOS cask and winget remains deferred until its first manual package submission.
 
 ---
 
@@ -385,6 +385,20 @@ Scope classification rules: `notes` (only note files), `single` (one file), `mix
 **Reason:** Live incident (2026-07-07): a **transient HTTP 401** (token had no expiry, personal machine with no proxy — exact server-side cause undeterminable) hit one push, and git's `credential-store` helper erased the stored token file (0 bytes, mtime = the 401 minute, atomic, no stale lock) — a transient failure destroyed a valid credential and forced full re-setup. The trigger probability was pathologically amplified by the sync.log self-commit loop (since 2026-06-29, one push every ~12s; 5,848 junk commits in the vault), and fetch failures after the incident were silent with no recovery affordance.
 **Trade-off:** Inline shell helper depends on git's sh on Windows (quoted defensively); expiry check adds one authenticated HTTPS request to GitHub at token save (same service sync already talks to).
 **Impact:** Supersedes the credential-storage detail of AD-051 (auth model unchanged: repo-scoped fine-grained PAT). New `vcs.updateToken` IPC; `RemoteInfo` gains `errorKind`; vault settings gain `token_expires_at` metadata. See F41 spec/design/tasks.
+
+### AD-059: Every opened vault uses a repository-local Cork Git identity (2026-08-24)
+
+**Decision:** Whenever Cork opens a vault, it writes `user.name=Cork` and `user.email=cork@local` into that repository's local Git config. Existing local values are overwritten, including for repositories initialized outside Cork; machine-global Git configuration is never changed.
+**Reason:** Cork-generated history must not inherit or expose a work or personal Git identity as the committer merely because that identity is configured globally on the device.
+**Trade-off:** Opening an existing repository as a Cork vault intentionally replaces its repository-local author/committer defaults. Users who also make manual commits in that repository will get the Cork identity unless they reset the local config after each Cork open.
+**Impact:** F18 R1/R2 now require both author and committer to be `Cork <cork@local>` for every opened vault, not only repositories initialized by Cork.
+
+### AD-060: AI model selection defaults to provider-owned automatic mode (2026-08-29)
+
+**Decision:** The user selects Claude or Copilot; Cork omits a model flag by default and lets that CLI choose its own current model. Explicit per-tier model names remain an Advanced override scoped to one provider. Selecting a provider clears its old overrides back to automatic. Each supported provider has a dedicated non-interactive command adapter shared by Test and real skill runs. Codex is excluded because its agentic CLI cannot be safely reduced to text-only inference over untrusted note content.
+**Reason:** Materializing Balanced/Quality/Economy into static model IDs made configuration age quickly and provider switches unreliable. Provider and model were also read from separate settings snapshots, and cache keys did not distinguish either value.
+**Trade-off:** Automatic results and cost can change when a CLI updates its default. Users requiring reproducibility must pin an explicit model under Advanced and verify it with Test.
+**Impact:** `ai.runSkill` receives one immutable AI-settings snapshot; cache identity includes provider and effective model; provider switches cannot reuse another provider's cached output or model name. F21 R3/R5/R6 and design supersede the original hard-coded Claude tier mapping.
 
 ---
 
