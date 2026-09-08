@@ -73,7 +73,10 @@ pub fn setup(app: &AppHandle) {
     };
 
     if let Err(err) = fs::create_dir_all(&log_dir) {
-        eprintln!("cork: failed to create app log dir {}: {err}", log_dir.display());
+        eprintln!(
+            "cork: failed to create app log dir {}: {err}",
+            log_dir.display()
+        );
         return;
     }
 
@@ -244,7 +247,10 @@ pub fn diagnostics_crash_log_path(app: AppHandle) -> Result<String, IpcError> {
 }
 
 #[tauri::command]
-pub fn diagnostics_recent(app: AppHandle, limit: Option<usize>) -> Result<Vec<CrashEvent>, IpcError> {
+pub fn diagnostics_recent(
+    app: AppHandle,
+    limit: Option<usize>,
+) -> Result<Vec<CrashEvent>, IpcError> {
     let dir = app
         .path()
         .app_log_dir()

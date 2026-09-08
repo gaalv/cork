@@ -50,7 +50,10 @@ pub fn notes_replace_in_vault(
         });
     }
 
-    let root = state.current_path().ok_or(IpcError::NotFound)?.canonicalize()?;
+    let root = state
+        .current_path()
+        .ok_or(IpcError::NotFound)?
+        .canonicalize()?;
     // Default attachments folder is enough to keep the walker out of assets.
     let attachments_folder = "_attachments";
 
@@ -139,9 +142,7 @@ fn replace_all(text: &str, find: &str, replacement: &str, case_sensitive: bool) 
     let mut count = 0usize;
     let mut i = 0;
     while i < n {
-        if i + m <= n
-            && (0..m).all(|k| chars[i + k].to_lowercase().eq(needle[k].to_lowercase()))
-        {
+        if i + m <= n && (0..m).all(|k| chars[i + k].to_lowercase().eq(needle[k].to_lowercase())) {
             out.push_str(replacement);
             count += 1;
             i += m;

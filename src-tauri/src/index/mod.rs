@@ -306,8 +306,9 @@ pub fn tags_rename(
     old_tag: String,
     new_tag: String,
 ) -> Result<(), IpcError> {
-    let note_paths =
-        state.with_conn(&app, &vault, |conn| query::tags_rename(conn, &old_tag, &new_tag))?;
+    let note_paths = state.with_conn(&app, &vault, |conn| {
+        query::tags_rename(conn, &old_tag, &new_tag)
+    })?;
 
     for path in &note_paths {
         if path.exists() {

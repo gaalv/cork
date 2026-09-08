@@ -57,10 +57,7 @@ pub fn archive_note(
         "archived_at".to_string(),
         Value::String(Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
     );
-    fm_map.insert(
-        "archived_from".to_string(),
-        Value::String(relative_folder),
-    );
+    fm_map.insert("archived_from".to_string(), Value::String(relative_folder));
 
     let archived_dir = vault_root.join(ARCHIVED_FOLDER);
     fs::create_dir_all(&archived_dir)?;
@@ -232,10 +229,7 @@ pub fn cleanup_expired(vault_root: &Path, retention_days: u32) {
             Ok(pair) => pair,
             Err(_) => continue,
         };
-        let archived_at = fm
-            .get("archived_at")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let archived_at = fm.get("archived_at").and_then(|v| v.as_str()).unwrap_or("");
         let days_elapsed = parse_days_since(archived_at);
         if days_elapsed >= retention_days as i64 {
             if fs::remove_file(&path).is_ok() {
@@ -262,10 +256,7 @@ fn unique_path(dir: &Path, file_name: &str) -> PathBuf {
     }
 
     let p = Path::new(file_name);
-    let stem = p
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(file_name);
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or(file_name);
     let ext = p.extension().and_then(|e| e.to_str());
 
     for i in 1.. {

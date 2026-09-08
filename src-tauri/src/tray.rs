@@ -26,7 +26,9 @@ pub fn build(app: &AppHandle) -> Result<(), tauri::Error> {
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItemBuilder::with_id("tray:quit", "Quit Cork").build(app)?;
 
-    let menu = MenuBuilder::new(app).items(&[&quick, &sync, &show, &separator, &quit]).build()?;
+    let menu = MenuBuilder::new(app)
+        .items(&[&quick, &sync, &show, &separator, &quit])
+        .build()?;
 
     let icon = Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
         .map_err(|_| tauri::Error::AssetNotFound("tray icon".into()))?;

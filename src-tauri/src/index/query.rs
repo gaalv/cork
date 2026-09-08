@@ -148,7 +148,16 @@ fn is_placeholder_title(title: &str) -> bool {
     // Common scratch names, in either language.
     matches!(
         lower.as_str(),
-        "test" | "teste" | "testing" | "testando" | "note" | "nota" | "draft" | "rascunho" | "tmp" | "temp"
+        "test"
+            | "teste"
+            | "testing"
+            | "testando"
+            | "note"
+            | "nota"
+            | "draft"
+            | "rascunho"
+            | "tmp"
+            | "temp"
     )
 }
 
@@ -336,7 +345,11 @@ pub fn tags_create(conn: &Connection, tag: &str) -> Result<(), IpcError> {
     Ok(())
 }
 
-pub fn tags_rename(conn: &Connection, old_tag: &str, new_tag: &str) -> Result<Vec<PathBuf>, IpcError> {
+pub fn tags_rename(
+    conn: &Connection,
+    old_tag: &str,
+    new_tag: &str,
+) -> Result<Vec<PathBuf>, IpcError> {
     // Get all note paths that have this tag
     let mut stmt = conn
         .prepare(
@@ -346,9 +359,7 @@ pub fn tags_rename(conn: &Connection, old_tag: &str, new_tag: &str) -> Result<Ve
         )
         .map_err(sql_error)?;
     let note_paths: Vec<PathBuf> = stmt
-        .query_map([old_tag], |row| {
-            Ok(PathBuf::from(row.get::<_, String>(0)?))
-        })
+        .query_map([old_tag], |row| Ok(PathBuf::from(row.get::<_, String>(0)?)))
         .map_err(sql_error)?
         .collect::<Result<Vec<_>, _>>()
         .map_err(sql_error)?;
@@ -382,9 +393,7 @@ pub fn tags_delete(conn: &Connection, tag: &str) -> Result<Vec<PathBuf>, IpcErro
         )
         .map_err(sql_error)?;
     let note_paths: Vec<PathBuf> = stmt
-        .query_map([tag], |row| {
-            Ok(PathBuf::from(row.get::<_, String>(0)?))
-        })
+        .query_map([tag], |row| Ok(PathBuf::from(row.get::<_, String>(0)?)))
         .map_err(sql_error)?
         .collect::<Result<Vec<_>, _>>()
         .map_err(sql_error)?;
@@ -495,7 +504,9 @@ pub fn graph(conn: &Connection) -> Result<GraphData, IpcError> {
             })
         })
         .map_err(sql_error)?;
-    let edges: Vec<GraphEdge> = edge_rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)?;
+    let edges: Vec<GraphEdge> = edge_rows
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(sql_error)?;
 
     let mut node_stmt = conn
         .prepare(
@@ -515,7 +526,9 @@ pub fn graph(conn: &Connection) -> Result<GraphData, IpcError> {
             })
         })
         .map_err(sql_error)?;
-    let nodes = node_rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)?;
+    let nodes = node_rows
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(sql_error)?;
 
     Ok(GraphData { nodes, edges })
 }

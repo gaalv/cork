@@ -54,7 +54,9 @@ pub async fn vault_import_folder(
         .canonicalize()?;
     let source = source.canonicalize()?;
     if source == root {
-        return Err(IpcError::Io("cannot import a vault into itself".to_string()));
+        return Err(IpcError::Io(
+            "cannot import a vault into itself".to_string(),
+        ));
     }
 
     let mut imported = 0usize;

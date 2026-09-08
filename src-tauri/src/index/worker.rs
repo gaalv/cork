@@ -270,7 +270,8 @@ fn upsert_path_in_tx(
                     params![
                         id,
                         key,
-                        serde_json::to_string(value).map_err(|err| IpcError::Other(err.to_string()))?
+                        serde_json::to_string(value)
+                            .map_err(|err| IpcError::Other(err.to_string()))?
                     ],
                 )
                 .map_err(sql_error)?;
@@ -358,9 +359,7 @@ fn replace_note_rows(
 }
 
 fn purge_stale_notes(conn: &mut Connection, live_ids: &BTreeSet<String>) -> Result<(), IpcError> {
-    let mut stmt = conn
-        .prepare("SELECT id FROM notes")
-        .map_err(sql_error)?;
+    let mut stmt = conn.prepare("SELECT id FROM notes").map_err(sql_error)?;
     let stale_ids: Vec<String> = stmt
         .query_map([], |row| row.get::<_, String>(0))
         .map_err(sql_error)?

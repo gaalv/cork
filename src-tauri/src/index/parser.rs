@@ -144,14 +144,16 @@ fn link_regex() -> &'static Regex {
 fn callout_regex() -> &'static Regex {
     static CALLOUT_REGEX: OnceLock<Regex> = OnceLock::new();
     CALLOUT_REGEX.get_or_init(|| {
-        Regex::new(r"(?m)^(?:>\s*)+\[!([A-Za-z][\w-]*)\]\s*([^\r\n]*)").expect("callout regex compiles")
+        Regex::new(r"(?m)^(?:>\s*)+\[!([A-Za-z][\w-]*)\]\s*([^\r\n]*)")
+            .expect("callout regex compiles")
     })
 }
 
 fn footnote_definition_regex() -> &'static Regex {
     static FOOTNOTE_DEFINITION_REGEX: OnceLock<Regex> = OnceLock::new();
     FOOTNOTE_DEFINITION_REGEX.get_or_init(|| {
-        Regex::new(r"(?m)^\[\^([A-Za-z0-9_-]+)\]:\s*([^\r\n]*)").expect("footnote definition regex compiles")
+        Regex::new(r"(?m)^\[\^([A-Za-z0-9_-]+)\]:\s*([^\r\n]*)")
+            .expect("footnote definition regex compiles")
     })
 }
 
@@ -236,7 +238,10 @@ fn collect_footnotes(
             }
             Some((
                 captures.get(1)?.as_str().to_string(),
-                (captures.get(2)?.as_str().trim().to_string(), full_match.start()),
+                (
+                    captures.get(2)?.as_str().trim().to_string(),
+                    full_match.start(),
+                ),
             ))
         })
         .collect::<std::collections::BTreeMap<_, _>>();
@@ -245,7 +250,8 @@ fn collect_footnotes(
         let Some(full_match) = captures.get(0) else {
             continue;
         };
-        if text[full_match.end()..].starts_with(':') || is_skipped(full_match.start(), skip_ranges) {
+        if text[full_match.end()..].starts_with(':') || is_skipped(full_match.start(), skip_ranges)
+        {
             continue;
         }
         let Some(id) = captures.get(1).map(|id| id.as_str()) else {

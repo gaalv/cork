@@ -50,7 +50,8 @@ pub fn load_vault_settings(vault_root: &Path) -> Result<VaultSettings, IpcError>
 pub fn save_vault_settings(vault_root: &Path, settings: &VaultSettings) -> Result<(), IpcError> {
     let config_dir = vault_root.join(".cork");
     fs::create_dir_all(&config_dir)?;
-    let text = serde_json::to_string_pretty(settings).map_err(|err| IpcError::Parse(err.to_string()))?;
+    let text =
+        serde_json::to_string_pretty(settings).map_err(|err| IpcError::Parse(err.to_string()))?;
     fs::write(config_dir.join("config.json"), text)?;
     Ok(())
 }

@@ -145,11 +145,9 @@ pub fn rename_folder(old_path: &Path, new_name: &str) -> Result<PathBuf, IpcErro
         .parent()
         .ok_or_else(|| IpcError::Io("folder path has no parent directory".to_string()))?;
     let new_path = parent.join(new_name.trim());
-    let old_name = old_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
-    let is_case_only = old_name.eq_ignore_ascii_case(new_name.trim()) && old_name != new_name.trim();
+    let old_name = old_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    let is_case_only =
+        old_name.eq_ignore_ascii_case(new_name.trim()) && old_name != new_name.trim();
     if !is_case_only && same_path(old_path, &new_path) {
         return Ok(old_path.to_path_buf());
     }

@@ -99,10 +99,7 @@ pub fn rename_note(old_path: &Path, new_name: &str) -> Result<PathBuf, IpcError>
         format!("{new_name}.md")
     };
     let new_path = parent.join(&file_name);
-    let old_stem = old_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    let old_stem = old_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     let is_case_only = old_stem.eq_ignore_ascii_case(&file_name) && old_stem != file_name;
     if !is_case_only && new_path.exists() {
         let current_mtime = fs::metadata(&new_path)
@@ -209,9 +206,7 @@ pub fn metadata_mtime_ms(metadata: &fs::Metadata) -> Result<i64, IpcError> {
 }
 
 pub fn metadata_ctime_ms(metadata: &fs::Metadata) -> Result<i64, IpcError> {
-    let time = metadata
-        .created()
-        .or_else(|_| metadata.modified())?;
+    let time = metadata.created().or_else(|_| metadata.modified())?;
     let duration = time
         .duration_since(UNIX_EPOCH)
         .map_err(|err| IpcError::Other(err.to_string()))?;
@@ -241,6 +236,5 @@ pub fn to_slash_string(path: &Path) -> String {
 }
 
 pub(crate) fn iso_utc_now() -> String {
-    chrono::Utc::now()
-        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }

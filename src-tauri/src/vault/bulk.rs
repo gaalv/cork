@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tauri::{AppHandle, Emitter};
 
-use crate::vault::io::{map_not_found, metadata_mtime_ms, read_note, same_path, save_atomic, trash_note};
+use crate::vault::io::{
+    map_not_found, metadata_mtime_ms, read_note, same_path, save_atomic, trash_note,
+};
 use crate::vault::watcher::{FileChangeKind, FileChangeSource, VaultFileChangedEvent};
 use crate::vault::{SaveInput, VaultFileRenamedEvent, VaultPath, VaultState};
 use crate::IpcError;

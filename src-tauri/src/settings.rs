@@ -210,7 +210,10 @@ pub fn settings_app_save(app: AppHandle, settings: AppSettings) -> Result<AppSet
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    fs::write(&path, serde_json::to_string_pretty(&settings).map_err(|err| IpcError::Parse(err.to_string()))?)?;
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&settings).map_err(|err| IpcError::Parse(err.to_string()))?,
+    )?;
     Ok(settings)
 }
 

@@ -830,7 +830,10 @@ fn seed_templates(vault_root: &Path, created_files: &mut Vec<String>) -> Result<
 fn read_marker_version(marker: &Path) -> Option<u8> {
     let raw = fs::read_to_string(marker).ok()?;
     let parsed: serde_json::Value = serde_json::from_str(&raw).ok()?;
-    parsed.get("version").and_then(|v| v.as_u64()).map(|v| v as u8)
+    parsed
+        .get("version")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u8)
 }
 
 fn marker_path(vault_root: &Path) -> PathBuf {

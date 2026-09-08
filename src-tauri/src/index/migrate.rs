@@ -76,7 +76,6 @@ fn run_migrations(conn: &Connection, _current_version: i64) -> Result<(), rusqli
     Ok(())
 }
 
-
 fn remove_sqlite_files(db_path: &Path) -> Result<(), IpcError> {
     for path in sqlite_paths(db_path) {
         if path.exists() {

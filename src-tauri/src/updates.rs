@@ -43,11 +43,7 @@ fn detect() -> InstallChannel {
     // Homebrew records every cask under its Caskroom, whichever prefix is used.
     let caskroom = ["/opt/homebrew/Caskroom/cork", "/usr/local/Caskroom/cork"];
     if caskroom.iter().any(|p| PathBuf::from(p).is_dir()) {
-        return InstallChannel::new(
-            "homebrewCask",
-            "Homebrew",
-            Some("brew upgrade --cask cork"),
-        );
+        return InstallChannel::new("homebrewCask", "Homebrew", Some("brew upgrade --cask cork"));
     }
     InstallChannel::new("direct", "Direct download", None)
 }
