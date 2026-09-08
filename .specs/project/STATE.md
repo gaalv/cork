@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-09-08T00:00-03:00
-**Current Work:** Publishing v0.2.0. Versions are aligned, release notes are dated, the local quality gates and release-readiness review pass, and release automation now gates builds on frontend/Rust checks and uploads SHA-256 checksums. The release remains intentionally unsigned under AD-050; Windows and Linux packages are new in v0.2.0, while Homebrew continues to publish only the macOS cask and winget remains deferred until its first manual package submission.
+**Last Updated:** 2026-09-08T18:38-03:00
+**Current Work:** v0.2.0 is published from `5c1c7fb` with macOS, Windows, and Linux packages plus verified SHA-256 checksums. The release and quality workflows passed, and the Homebrew cask was updated to 0.2.0 with matching Intel/ARM hashes. The release remains intentionally unsigned under AD-050; winget submission remains deferred until its first manual package submission and `WINGET_TOKEN` provisioning.
 
 ---
 
@@ -495,6 +495,7 @@ _None._
 | 050 | Implement F39 Note Templates T01–T07 (Rust templates module + list/render/createFromTemplate IPC, scaffold v3 seeds 4 defaults create-if-missing, TemplatePicker modal + palette, cursor placement, insert at cursor, Settings → Templates)                      | 2026-07-08 | multiple | ✅ Done    |
 | 051 | Implement F40 Note Status T01–T06 (notes.statuses IPC + statusById map + optimistic setNoteStatus, NotesList badge + status filter, Sidebar Status group, context-menu submenu + Inspector selector, palette Set-status entries)                                 | 2026-07-24 | multiple | ✅ Done    |
 | 052 | M14 batch: F42 full-text search UI, F43 daily notes, F44 editor markdown rendering (highlights/callouts/fences/tables), F45 export (HTML/PDF/copy-md), F46 graph view; plus notes-list virtualization, archive-first deletion, bundle code-splitting (457 kB gz) | 2026-07-24 | multiple | ✅ Done    |
+| 053 | Harden AI provider isolation and Git sync, add release quality/checksum gates, and publish the unsigned v0.2.0 developer preview for macOS, Windows, and Linux                                                                                                   | 2026-09-08 | multiple | ✅ Done    |
 
 ---
 
