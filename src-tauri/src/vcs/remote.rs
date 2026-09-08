@@ -249,11 +249,14 @@ impl RemoteState {
         }
 
         // 1. Erasable `store --file` helper → inline read-only helper.
-        let helpers = run_git(&root, &["config", "--local", "--get-all", "credential.helper"])
-            .ok()
-            .filter(|o| o.status.success())
-            .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
-            .unwrap_or_default();
+        let helpers = run_git(
+            &root,
+            &["config", "--local", "--get-all", "credential.helper"],
+        )
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
         if helpers
             .lines()
             .any(|l| l.trim_start().starts_with("store "))
@@ -435,8 +438,10 @@ fn finish_op(inner: &Arc<Mutex<RemoteInner>>, outcome: Result<(), String>, kind:
                 let err_kind = classify_error(&err);
                 if g.error_kind != Some(err_kind) {
                     if let Some(root) = g.vault_root.clone() {
-                        transition_log =
-                            Some((root, format!("[state] error ({}): {err}", err_kind.as_str())));
+                        transition_log = Some((
+                            root,
+                            format!("[state] error ({}): {err}", err_kind.as_str()),
+                        ));
                     }
                 }
                 g.last_error = Some(err);
@@ -492,7 +497,10 @@ pub fn gh_active_account() -> Option<GhAccount> {
 }
 
 fn gh_active_account_uncached() -> Option<GhAccount> {
-    let out = crate::proc::command("gh").args(["auth", "status"]).output().ok()?;
+    let out = crate::proc::command("gh")
+        .args(["auth", "status"])
+        .output()
+        .ok()?;
     let combined = format!(
         "{}\n{}",
         String::from_utf8_lossy(&out.stdout),
@@ -964,27 +972,6 @@ pub(crate) fn write_https_credential_file(path: &Path, token: &str) -> Result<()
     Ok(())
 }
 
-fn ensure_local_git_identity(vault_root: &Path) -> Result<(), String> {
-    let has_name = run_git(vault_root, &["config", "--local", "user.name"])
-        .map(|o| o.status.success() && !o.stdout.is_empty())
-        .unwrap_or(false);
-    if !has_name {
-        run_git_check(vault_root, &["config", "--local", "user.name", "Cork"])?;
-    }
-
-    let has_email = run_git(vault_root, &["config", "--local", "user.email"])
-        .map(|o| o.status.success() && !o.stdout.is_empty())
-        .unwrap_or(false);
-    if !has_email {
-        run_git_check(
-            vault_root,
-            &["config", "--local", "user.email", "cork@local"],
-        )?;
-    }
-
-    Ok(())
-}
-
 fn redact_secret(message: &str, secret: &str) -> String {
     if secret.is_empty() {
         return message.to_string();
@@ -1049,6 +1036,10 @@ fn git_push(vault_root: &Path) -> Result<(), String> {
     let _ = run_git(
         vault_root,
         &[
+            "-c",
+            "user.name=Cork",
+            "-c",
+            "user.email=cork@local",
             "commit",
             "-m",
             &subject,
@@ -1233,7 +1224,19 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
     let head_before = run_git_check(vault_root, &["rev-parse", "HEAD"])
         .map(|s| s.trim().to_string())
         .ok();
-    let merge = run_git(vault_root, &["merge", "--no-edit", "--no-ff", &upstream])?;
+    let merge = run_git(
+        vault_root,
+        &[
+            "-c",
+            "user.name=Cork",
+            "-c",
+            "user.email=cork@local",
+            "merge",
+            "--no-edit",
+            "--no-ff",
+            &upstream,
+        ],
+    )?;
     if merge.status.success() {
         // "Already up to date" also exits 0 — only log when HEAD actually
         // moved, so routine no-op heartbeats stay silent.
@@ -1288,6 +1291,10 @@ pub fn pull_with_conflict_copy(vault_root: &Path) -> Result<PullOutcome, String>
     run_git_check(
         vault_root,
         &[
+            "-c",
+            "user.name=Cork",
+            "-c",
+            "user.email=cork@local",
             "commit",
             "-m",
             "Merge remote: kept local, saved remote conflicts as copies",
@@ -1496,21 +1503,29 @@ fn clone_remote_blocking(parent_path: &Path, input: CloneRemoteInput) -> Result<
         return Err(IpcError::Other(msg));
     }
 
-    run_git_check(&destination, &["remote", "set-url", "origin", &url]).map_err(IpcError::Other)?;
-    configure_https_auth(&destination, token).map_err(IpcError::Other)?;
-    ensure_local_git_identity(&destination).map_err(IpcError::Other)?;
+    let configured = (|| -> Result<PathBuf, IpcError> {
+        run_git_check(&destination, &["remote", "set-url", "origin", &url])
+            .map_err(IpcError::Other)?;
+        configure_https_auth(&destination, token).map_err(IpcError::Other)?;
+        super::ensure_local_git_identity(&destination).map_err(IpcError::Other)?;
 
-    let mut settings = load_vault_settings(&destination)?;
-    settings.git_remote = Some(GitRemoteSettings {
-        enabled: true,
-        url: Some(url),
-        provider: Some("github".to_string()),
-    });
-    save_vault_settings(&destination, &settings)?;
+        let mut settings = load_vault_settings(&destination)?;
+        settings.git_remote = Some(GitRemoteSettings {
+            enabled: true,
+            url: Some(url),
+            provider: Some("github".to_string()),
+        });
+        save_vault_settings(&destination, &settings)?;
 
-    destination
-        .canonicalize()
-        .map_err(|e| IpcError::Io(format!("could not resolve cloned vault path: {e}")))
+        destination
+            .canonicalize()
+            .map_err(|e| IpcError::Io(format!("could not resolve cloned vault path: {e}")))
+    })();
+
+    if configured.is_err() {
+        let _ = std::fs::remove_dir_all(&destination);
+    }
+    configured
 }
 
 #[tauri::command]
@@ -1595,6 +1610,10 @@ fn ensure_head_exists(vault_root: &Path) {
     let _ = run_git(
         vault_root,
         &[
+            "-c",
+            "user.name=Cork",
+            "-c",
+            "user.email=cork@local",
             "commit",
             "--allow-empty",
             "-m",

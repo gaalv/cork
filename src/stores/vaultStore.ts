@@ -25,6 +25,7 @@ type VaultState = {
   isLoading: boolean;
   error: string | null;
   openVault: (path?: string) => Promise<void>;
+  cloneSyncedVault: (input: { url: string; token: string }) => Promise<void>;
   closeVault: () => Promise<void>;
   loadNotes: () => Promise<void>;
   startWatcherIntegration: () => Promise<void>;
@@ -54,6 +55,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       if (!message.includes("cancelled")) {
         throw err;
       }
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  cloneSyncedVault: async (input) => {
+    set({ isLoading: true, error: null });
+    try {
+      const cloned = await client.vcs.remoteClone(input);
+      await get().openVault(cloned.path);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      set({ error: message });
+      throw err;
     } finally {
       set({ isLoading: false });
     }

@@ -132,7 +132,6 @@ impl VcsState {
             }
         });
     }
-
 }
 
 /// Spawn the background debounce worker. Call this once during app setup.
@@ -152,15 +151,38 @@ pub fn git_available() -> bool {
         .unwrap_or(false)
 }
 
+fn ensure_local_git_identity(vault_root: &Path) -> Result<(), String> {
+    for (key, value) in [("user.name", "Cork"), ("user.email", "cork@local")] {
+        let output = crate::proc::command("git")
+            .current_dir(vault_root)
+            .args(["config", "--local", key, value])
+            .output()
+            .map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            return Err(format!(
+                "git config --local {key} failed: {}",
+                if stderr.is_empty() {
+                    "non-zero exit".to_string()
+                } else {
+                    stderr
+                }
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Initialise a git repo in `vault_root` if one does not already exist.
-/// Writes a sensible `.gitignore` and creates an initial commit.
+/// Always pins the repository-local identity to Cork. For a new repository,
+/// also writes a sensible `.gitignore` and creates an initial commit.
 /// Silently returns `Ok(())` when git is not installed.
 pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     if !git_available() {
         return Ok(());
     }
     if vault_root.join(".git").exists() {
-        return Ok(());
+        return ensure_local_git_identity(vault_root);
     }
 
     // Try modern `git init -b main` first; fall back for older git
@@ -178,6 +200,8 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
             .status();
     }
 
+    ensure_local_git_identity(vault_root)?;
+
     // Write .gitignore
     let gitignore = vault_root.join(".gitignore");
     if !gitignore.exists() {
@@ -186,34 +210,6 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
             ".DS_Store\nnode_modules/\ndist/\n.cork/cache/\n.cork/sync.log\n",
         )
         .map_err(|e| e.to_string())?;
-    }
-
-    // Make sure committer identity is set locally — the global config
-    // may be missing on a fresh machine, in which case `git commit`
-    // fails silently and the first push has nothing to send.
-    let has_name = crate::proc::command("git")
-        .current_dir(vault_root)
-        .args(["config", "user.name"])
-        .output()
-        .map(|o| o.status.success() && !o.stdout.is_empty())
-        .unwrap_or(false);
-    if !has_name {
-        let _ = crate::proc::command("git")
-            .current_dir(vault_root)
-            .args(["config", "--local", "user.name", "Cork"])
-            .status();
-    }
-    let has_email = crate::proc::command("git")
-        .current_dir(vault_root)
-        .args(["config", "user.email"])
-        .output()
-        .map(|o| o.status.success() && !o.stdout.is_empty())
-        .unwrap_or(false);
-    if !has_email {
-        let _ = crate::proc::command("git")
-            .current_dir(vault_root)
-            .args(["config", "--local", "user.email", "cork@local"])
-            .status();
     }
 
     // Stage everything and create the initial commit
@@ -230,6 +226,10 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
     let commit = crate::proc::command("git")
         .current_dir(vault_root)
         .args([
+            "-c",
+            "user.name=Cork",
+            "-c",
+            "user.email=cork@local",
             "commit",
             "--allow-empty",
             "-m",
@@ -244,7 +244,11 @@ pub fn git_init_if_needed(vault_root: &Path) -> Result<(), String> {
         let stderr = String::from_utf8_lossy(&commit.stderr).trim().to_string();
         return Err(format!(
             "git commit failed during init: {}",
-            if stderr.is_empty() { "non-zero exit".to_string() } else { stderr }
+            if stderr.is_empty() {
+                "non-zero exit".to_string()
+            } else {
+                stderr
+            }
         ));
     }
 
@@ -282,6 +286,10 @@ fn do_commit(vault_root: &Path, note_path: &Path, is_new: bool) -> Result<(), St
     let _ = crate::proc::command("git")
         .current_dir(vault_root)
         .args([
+            "-c",
+            "user.name=Cork",
+            "-c",
+            "user.email=cork@local",
             "commit",
             "-m",
             &subject,
@@ -311,7 +319,11 @@ pub fn vcs_status(
 ) -> Result<VcsStatus, IpcError> {
     let has_git = git_available();
     let has_gh = remote::gh_available();
-    let gh_account = if has_gh { remote::gh_active_account() } else { None };
+    let gh_account = if has_gh {
+        remote::gh_active_account()
+    } else {
+        None
+    };
     let current = state.current_path();
     let repo_path = current.as_ref().and_then(|p| {
         if p.join(".git").exists() {
@@ -420,8 +432,7 @@ pub fn vcs_restore(
         return Err(IpcError::Other(format!("git show failed: {stderr}")));
     }
 
-    std::fs::write(&input.note_path, &output.stdout)
-        .map_err(|e| IpcError::Io(e.to_string()))?;
+    std::fs::write(&input.note_path, &output.stdout).map_err(|e| IpcError::Io(e.to_string()))?;
 
     // Create a restore commit immediately (not debounced)
     let short_sha = if input.sha.len() >= 7 {
@@ -445,6 +456,10 @@ pub fn vcs_restore(
     let _ = crate::proc::command("git")
         .current_dir(&vault_root)
         .args([
+            "-c",
+            "user.name=Cork",
+            "-c",
+            "user.email=cork@local",
             "commit",
             "-m",
             &subject,
@@ -456,7 +471,10 @@ pub fn vcs_restore(
 
     // Remove any pending debounced commit for this file to avoid a duplicate
     {
-        let mut map = vcs_state.pending.lock().expect("vcs pending mutex poisoned");
+        let mut map = vcs_state
+            .pending
+            .lock()
+            .expect("vcs pending mutex poisoned");
         map.remove(&input.note_path);
     }
 
@@ -477,4 +495,48 @@ pub fn on_note_saved(
         return;
     };
     vcs_state.schedule(vault_root, note_path.to_path_buf(), is_new);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn opening_existing_repo_overwrites_local_identity_with_cork() {
+        if !git_available() {
+            return;
+        }
+
+        let temp = tempfile::tempdir().expect("temp directory");
+        let init = crate::proc::command("git")
+            .current_dir(temp.path())
+            .arg("init")
+            .output()
+            .expect("git init should run");
+        assert!(init.status.success());
+
+        for (key, value) in [
+            ("user.name", "Work Account"),
+            ("user.email", "work@example.com"),
+        ] {
+            let status = crate::proc::command("git")
+                .current_dir(temp.path())
+                .args(["config", "--local", key, value])
+                .status()
+                .expect("git config should run");
+            assert!(status.success());
+        }
+
+        git_init_if_needed(temp.path()).expect("existing repository should be normalized");
+
+        for (key, expected) in [("user.name", "Cork"), ("user.email", "cork@local")] {
+            let output = crate::proc::command("git")
+                .current_dir(temp.path())
+                .args(["config", "--local", "--get", key])
+                .output()
+                .expect("git config should run");
+            assert!(output.status.success());
+            assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), expected);
+        }
+    }
 }

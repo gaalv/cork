@@ -5,8 +5,9 @@
  */
 
 import { useEffect, useState } from "react";
-import { FolderSimple, FolderOpen, Plus, Clock } from "@phosphor-icons/react";
+import { Clock, DownloadSimple, FolderOpen, FolderSimple, Plus } from "@phosphor-icons/react";
 
+import { CloneSyncedVaultModal } from "@/components/sync/CloneSyncedVaultModal";
 import { CorkLogo } from "@/components/ui/NoxeLogo";
 import { useVaultStore } from "@/stores/vaultStore";
 import { client } from "@/ipc/client";
@@ -16,6 +17,7 @@ export function WelcomeScreen() {
   const openVault = useVaultStore((s) => s.openVault);
   const isLoading = useVaultStore((s) => s.isLoading);
   const [recentVaults, setRecentVaults] = useState<RecentVault[]>([]);
+  const [cloneModalOpen, setCloneModalOpen] = useState(false);
 
   useEffect(() => {
     client.vault
@@ -116,6 +118,15 @@ export function WelcomeScreen() {
               <Plus size={18} />
               Create New Vault
             </button>
+
+            <button
+              onClick={() => setCloneModalOpen(true)}
+              disabled={isLoading}
+              className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--color-cork-border)] bg-[var(--color-cork-panel)] px-4 py-2.5 text-[14px] font-medium text-[var(--color-cork-ink)] transition-colors hover:border-[var(--color-cork-accent)] hover:text-[var(--color-cork-accent)] disabled:opacity-50"
+            >
+              <DownloadSimple size={18} />
+              Clone Synced Vault
+            </button>
           </div>
 
           {availableRecents.length > 0 && (
@@ -150,6 +161,7 @@ export function WelcomeScreen() {
           </p>
         </div>
       </div>
+      <CloneSyncedVaultModal open={cloneModalOpen} onClose={() => setCloneModalOpen(false)} />
     </div>
   );
 }
