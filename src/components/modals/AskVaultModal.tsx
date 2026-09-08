@@ -14,6 +14,7 @@ import { ArrowRight, Sparkle, X } from "@phosphor-icons/react";
 import { client } from "@/ipc/client";
 import { useShellStore } from "@/stores/shellStore";
 import { keyTerms } from "@/services/aiVault";
+import { runAiSkill } from "@/services/aiRunner";
 
 import type { SearchResult } from "@/ipc/IpcContract";
 
@@ -89,7 +90,7 @@ export function AskVaultModal() {
         }),
       );
 
-      const result = (await client.ai.runSkill("ask-vault", {
+      const result = (await runAiSkill("ask-vault", {
         question: value,
         excerpts: bodies.join("\n\n"),
       })) as { output: string };

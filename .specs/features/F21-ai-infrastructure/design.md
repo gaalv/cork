@@ -61,6 +61,7 @@ cache: true
 output_schema: text
 triggers: [insights.summary]
 ---
+
 You are summarising a Markdown note for the user's personal knowledge base.
 
 Note title: {{title}}
@@ -95,15 +96,20 @@ fn smart_truncate(skill: &Skill, vars: &mut HashMap<String, String>) {
 }
 ```
 
-## Model tier mapping (`tiers.rs`)
+## Provider invocation and model selection (`tiers.rs`)
 
-| tier       | claude          | copilot       |
-| ---------- | --------------- | ------------- |
-| `small`    | `--model haiku` | (no flag)     |
-| `standard` | (no flag)       | (no flag)     |
-| `premium`  | `--model opus`  | (no flag)     |
+Automatic is the default for every tier and provider: Cork omits the model flag and lets the CLI use its own current default. Advanced settings may override a model per skill tier, but those values are scoped to one provider and reset when that provider is selected.
 
-If a flag isn't supported by the binary in the user's PATH, the subprocess returns the same output as default — telemetry records the **requested** tier (real tier is opaque without parsing per-CLI version output, deferred).
+Each provider owns its complete non-interactive invocation shape:
+
+| provider  | invocation shape                                                      |
+| --------- | --------------------------------------------------------------------- |
+| `claude`  | `claude --print ...`, prompt through stdin                            |
+| `copilot` | `copilot ...`, prompt through stdin in an isolated temporary CLI home |
+
+The Test action and real skill execution call this same adapter. Cache identity includes the provider and normalized effective model (`auto` for no override). Copilot runs with no tools, MCPs, custom instructions, remote export, or retained session state; only its authentication metadata is copied into the temporary CLI home.
+
+Codex is not exposed as a provider. `codex exec` is an agentic interface whose read-only sandbox still permits local file reads; Cork note bodies are untrusted prompt content, so using it would create a prompt-injection path into the user's filesystem. Revisit only when Codex offers a text-only invocation or equivalent hard tool denial.
 
 ## SQLite migration
 
@@ -116,6 +122,7 @@ Implicit by content hash — there's no explicit invalidation on note edit becau
 ## Test plan
 
 Rust:
+
 - `skills::tests::loads_bundled_defaults`
 - `skills::tests::user_override_takes_precedence`
 - `skills::tests::malformed_frontmatter_is_skipped`
@@ -125,6 +132,7 @@ Rust:
 - `telemetry::tests::stats_aggregates_correctly`
 
 TS:
+
 - `skillsClient.test.ts`: invokes correct IPC commands with correct arg shapes (mock `client.ts`).
 - `aiStatsStore.test.ts`: refresh updates state.
 

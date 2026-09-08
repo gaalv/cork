@@ -63,7 +63,9 @@ fn interpolate(template: &str, vars: &HashMap<String, String>) -> String {
             match vars.get(key) {
                 Some(value) => out.push_str(value),
                 None => {
-                    eprintln!("cork: prompt var '{{{{{key}}}}}' is missing — substituted empty string");
+                    eprintln!(
+                        "cork: prompt var '{{{{{key}}}}}' is missing — substituted empty string"
+                    );
                 }
             }
             rest = &after_open[close + 2..];

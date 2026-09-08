@@ -28,6 +28,7 @@ import type {
   VaultPath,
   VaultSettings,
   AppSettings,
+  AiSettings,
   VcsStatus,
   RemoteInfo,
   DeployKeyInfo,
@@ -414,7 +415,7 @@ export type IpcCommandMap = {
   };
   // === F21 AI Infrastructure ===
   "ai.runSkill": {
-    args: { skillId: string; variables: Record<string, string> };
+    args: { skillId: string; variables: Record<string, string>; ai: AiSettings };
     result: AiSkillResult;
   };
   "ai.cacheClear": {
@@ -523,7 +524,8 @@ export type AiSkillError = {
     | "subprocess_failed"
     | "timeout"
     | "skill_not_found"
-    | "internal";
+    | "internal"
+    | "invalid_model";
   message: string;
 };
 

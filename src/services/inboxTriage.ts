@@ -10,6 +10,7 @@
 import { client } from "@/ipc/client";
 import { useVaultStore } from "@/stores/vaultStore";
 import { vaultFolders } from "@/services/aiVault";
+import { runAiSkill } from "@/services/aiRunner";
 
 import type { NoteEntry } from "@/ipc/types";
 
@@ -97,7 +98,7 @@ export async function proposeFor(note: NoteEntry): Promise<TriageProposal | null
     return Array.isArray(raw) ? raw : [];
   });
 
-  const result = (await client.ai.runSkill("triage-note", {
+  const result = (await runAiSkill("triage-note", {
     title: note.title,
     body: body.slice(0, 4000),
     folders: vaultFolders().join("\n") || "(none yet)",

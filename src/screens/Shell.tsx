@@ -43,7 +43,11 @@ export function Shell() {
   const loadNotes = useVaultStore((state) => state.loadNotes);
   const startWatcherIntegration = useVaultStore((state) => state.startWatcherIntegration);
   const startIndexIntegration = useIndexStore((state) => state.startIndexIntegration);
-  const loadVaultSettings = useAppSettingsStore((state) => state.loadVaultSettings);
+  const loadAppSettings = useAppSettingsStore((state) => state.loadAppSettings);
+
+  useEffect(() => {
+    void loadAppSettings().catch(() => undefined);
+  }, [loadAppSettings]);
 
   useEffect(() => {
     startMenuActionListener();
@@ -84,11 +88,10 @@ export function Shell() {
         }
       }
 
-      await loadVaultSettings();
       await Promise.all([startWatcherIntegration(), startIndexIntegration()]);
     };
     void init().catch(() => undefined);
-  }, [vaultPath, loadNotes, loadVaultSettings, startIndexIntegration, startWatcherIntegration]);
+  }, [vaultPath, loadNotes, startIndexIntegration, startWatcherIntegration]);
 
   if (!vaultPath) {
     return (

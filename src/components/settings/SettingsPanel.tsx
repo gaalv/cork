@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { X } from "@phosphor-icons/react";
 
@@ -43,8 +44,18 @@ export function SettingsPanel() {
   const setActiveSection = useSettingsUiStore((s) => s.setSection);
   const closeSettings = useSettingsUiStore((s) => s.closeSettings);
   const settings = useAppSettingsStore((s) => s.settings);
+  const settingsLoaded = useAppSettingsStore((s) => s.loaded);
+  const loadAppSettings = useAppSettingsStore((s) => s.loadAppSettings);
   const updateSettings = useAppSettingsStore((s) => s.updateSettings);
   const [providers, setProviders] = useState<ProvidersAvailable | null>(null);
+
+  useEffect(() => {
+    if (open && !settingsLoaded) {
+      void loadAppSettings().catch((error) =>
+        toast.error("Could not load settings", { description: String(error) }),
+      );
+    }
+  }, [loadAppSettings, open, settingsLoaded]);
 
   useEffect(() => {
     if (open && activeSection === "ai") {
@@ -58,7 +69,11 @@ export function SettingsPanel() {
 
   if (!open) return null;
 
-  const update = (patch: Partial<AppSettings>) => void updateSettings(patch);
+  const update = (patch: Partial<AppSettings>) => {
+    void updateSettings(patch).catch((error) =>
+      toast.error("Could not save settings", { description: String(error) }),
+    );
+  };
 
   return (
     <div
@@ -99,12 +114,16 @@ export function SettingsPanel() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-4">
-            <SectionContent
-              section={activeSection}
-              settings={settings}
-              update={update}
-              providers={providers}
-            />
+            {settingsLoaded ? (
+              <SectionContent
+                section={activeSection}
+                settings={settings}
+                update={update}
+                providers={providers}
+              />
+            ) : (
+              <p className="text-[12px] text-[var(--color-cork-muted)]">Loading settings...</p>
+            )}
           </div>
         </div>
       </div>

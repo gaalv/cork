@@ -75,16 +75,17 @@ pub fn stats(
                 COALESCE(SUM(tokens_out), 0) \
          FROM ai_calls {where_clause}"
     );
-    let (calls_total, cache_hits, tokens_in, tokens_out): (i64, i64, i64, i64) = if let Some(s) = since {
-        conn.query_row(&totals_sql, [s], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
-        })
-    } else {
-        conn.query_row(&totals_sql, [], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
-        })
-    }
-    .map_err(|e| IpcError::Other(format!("ai_calls totals: {e}")))?;
+    let (calls_total, cache_hits, tokens_in, tokens_out): (i64, i64, i64, i64) =
+        if let Some(s) = since {
+            conn.query_row(&totals_sql, [s], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })
+        } else {
+            conn.query_row(&totals_sql, [], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })
+        }
+        .map_err(|e| IpcError::Other(format!("ai_calls totals: {e}")))?;
 
     let by_skill_sql = format!(
         "SELECT skill_id, count(*), COALESCE(SUM(tokens_in + tokens_out), 0) \

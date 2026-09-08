@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { useEditorStore } from "@/stores/editorStore";
 import { client } from "@/ipc/client";
+import { runAiSkill } from "@/services/aiRunner";
 import type { CommitEntry } from "@/ipc/types";
 import { SectionHeader, formatRelative } from "./helpers";
 
@@ -64,7 +65,7 @@ export function HistorySection() {
       const store = useEditorStore.getState();
       const title = typeof store.frontmatter.title === "string" ? store.frontmatter.title : noteId;
       const history = commits.map((c) => `${c.isoDate.slice(0, 10)} — ${c.message}`).join("\n");
-      const result = (await client.ai.runSkill("summarize-changes", {
+      const result = (await runAiSkill("summarize-changes", {
         title: title ?? "",
         history,
         body: store.body,

@@ -9,9 +9,13 @@ pub struct CacheEntry {
     pub tokens_out: u32,
 }
 
-pub fn key_for(skill_id: &str, prompt: &str) -> String {
+pub fn key_for(skill_id: &str, prompt: &str, provider: &str, model: &str) -> String {
     let mut hasher = blake3::Hasher::new();
     hasher.update(skill_id.as_bytes());
+    hasher.update(b"\x00");
+    hasher.update(provider.as_bytes());
+    hasher.update(b"\x00");
+    hasher.update(model.as_bytes());
     hasher.update(b"\x00");
     hasher.update(prompt.as_bytes());
     hasher.finalize().to_hex().to_string()

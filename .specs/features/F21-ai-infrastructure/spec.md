@@ -17,21 +17,24 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
 ### R1 — Skills system
 
 - **R1.1** A skill is a Markdown file with YAML frontmatter:
+
   ```markdown
   ---
   id: summarize
   name: Summarize
-  model_tier: small        # small | standard | premium (provider-mapped)
+  model_tier: small # small | standard | premium (provider-mapped)
   max_tokens_in: 8000
   max_tokens_out: 400
   cache: true
-  output_schema: text       # text | json (json validates against schema_path if set)
-  schema_path: schemas/summary.json   # optional
-  triggers: [insights.summary]        # logical names features call
+  output_schema: text # text | json (json validates against schema_path if set)
+  schema_path: schemas/summary.json # optional
+  triggers: [insights.summary] # logical names features call
   ---
+
   System prompt body in Markdown. Variables like {{title}}, {{body}}, {{frontmatter}}
   are interpolated at call time.
   ```
+
 - **R1.2** Skills load from two locations, in this order (later overrides earlier by `id`):
   1. **Bundled defaults**, shipped inside the Tauri binary (loaded via `include_dir!` from `src-tauri/skills/`).
   2. **User overrides** in `~/.cork/skills/*.md` (and per-vault overrides in `<vault>/.cork/skills/*.md`).
@@ -51,7 +54,7 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
 - **R3.1** New SQLite table `ai_cache` in the existing index DB:
   ```sql
   CREATE TABLE ai_cache (
-    key         TEXT PRIMARY KEY,    -- BLAKE3(skill_id || prompt_full)
+    key         TEXT PRIMARY KEY,    -- BLAKE3(skill_id || provider || model || prompt_full)
     skill_id    TEXT NOT NULL,
     output      TEXT NOT NULL,
     tokens_in   INTEGER,
@@ -61,7 +64,7 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
   );
   CREATE INDEX ai_cache_skill_idx ON ai_cache(skill_id);
   ```
-- **R3.2** Cache lookup is keyed by `BLAKE3(skill_id || full_prompt)`. Same skill + same input bytes ⇒ instant hit.
+- **R3.2** Cache lookup is keyed by `BLAKE3(skill_id || provider || effective_model || full_prompt)`. Same provider/model + skill + input bytes ⇒ instant hit; changing provider or model can never return an old provider's output.
 - **R3.3** On hit: return cached output, do NOT call the subprocess, still record a row in `ai_calls` with `cache_hit = true` and `tokens_in/out = 0`.
 - **R3.4** Skills with `cache: false` (e.g. slash commands that should always run fresh) skip the cache entirely.
 - **R3.5** A `ai.cacheClear({ skillId? })` IPC command wipes the cache (all rows, or only one skill).
@@ -90,7 +93,7 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
   ```ts
   {
     callsTotal: number;
-    cacheHitRate: number;       // 0..1
+    cacheHitRate: number; // 0..1
     tokensIn: number;
     tokensOut: number;
     bySkill: Array<{ skillId: string; calls: number; tokens: number }>;
@@ -102,17 +105,17 @@ This stays subprocess-only (`claude` / `copilot` CLI) — no HTTP API, no embedd
 
 ### R5 — Skill runner IPC
 
-- **R5.1** New Tauri command `ai_run_skill(skill_id: String, variables: HashMap<String, String>) -> Result<AiSkillResult, AiError>`.
+- **R5.1** New Tauri command `ai_run_skill(input: RunSkillInput) -> Result<AiSkillResult, AiError>`, where the input includes the skill, variables, and one immutable snapshot of the active provider/model settings.
 - **R5.2** `AiSkillResult { output: String, cache_hit: bool, tokens_in: u32, tokens_out: u32, latency_ms: u32 }`.
-- **R5.3** Internally the runner: loads skill → builds prompt → checks cache → on miss spawns subprocess (reusing existing logic in `src-tauri/src/ai/mod.rs`) → on success writes cache + telemetry → returns.
+- **R5.3** Internally the runner: loads skill → resolves one provider-specific non-interactive invocation → builds prompt → checks the provider/model-aware cache → on miss spawns subprocess → on success writes cache + telemetry → returns.
 - **R5.4** Errors reuse the existing `AiError` type from F20. New variants added if needed: `skill_not_found`, `schema_validation_failed`.
 - **R5.5** When `output_schema = json`, the runner trims fenced code blocks and validates against `schema_path` (using `jsonschema` crate). On fail returns `schema_validation_failed`; the response is still cached as raw text under a separate key prefix `invalid:` to avoid re-spending tokens during debugging — **clarification:** invalid responses are NOT cached (so a retry spends tokens; this is intentional).
 
 ### R6 — Provider settings reuse
 
 - **R6.1** The existing `settings.ai.provider` (`disabled | claude | copilot`) keeps its meaning. Skill calls return `AiError::provider_disabled` when the provider is `disabled`.
-- **R6.2** `model_tier` from the skill maps to an arg passed to the CLI binary (e.g. `claude --model haiku` for `small`, no flag for `standard`, `claude --model opus` for `premium`). Mapping table lives in `src-tauri/src/ai/tiers.rs` and is documented in design.md.
-- **R6.3** When the provider doesn't support a tier (e.g. `copilot` may not expose model selection), the runner falls back silently to the provider's default and records the actual tier used in telemetry.
+- **R6.2** The default model choice is automatic: an empty override never emits a model flag, so the selected CLI owns its current default. `model_tier` only selects an optional per-provider override from Advanced settings.
+- **R6.3** Claude and Copilot use separate non-interactive command adapters. Test and real skill execution share the same adapter; switching provider resets that provider's overrides to automatic. Copilot receives prompts through stdin and runs without tools, MCPs, custom instructions, remote export, or retained session state. Codex is excluded until its CLI exposes a text-only mode that cannot read local files through agent tools.
 
 ### R7 — Frontend client
 

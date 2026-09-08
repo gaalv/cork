@@ -15,6 +15,7 @@ import { appendToNoteBody } from "@/services/editorWrite";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { recentNotes } from "@/services/aiVault";
+import { runAiSkill } from "@/services/aiRunner";
 import { openDailyNote } from "@/services/dailyNote";
 
 import type { NoteEntry } from "@/ipc/types";
@@ -103,7 +104,7 @@ export async function insertDailyBrief(): Promise<void> {
     const recent = recentNotes(7, 12);
     const [previous, tasks] = await Promise.all([previousDaily(), openTasks(recent)]);
 
-    const result = (await client.ai.runSkill("daily-brief", {
+    const result = (await runAiSkill("daily-brief", {
       date: new Date().toISOString().slice(0, 10),
       previous,
       recent: recent.map((n) => `- ${n.title}${n.folder ? ` (${n.folder})` : ""}`).join("\n"),

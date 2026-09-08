@@ -16,7 +16,7 @@ pub mod tiers;
 
 use crate::ai::runner::{AiSkillResult, ProcessSpawner, Spawner};
 use crate::ai::skills::SkillStore;
-use crate::settings::{settings_app_load, AppSettings};
+use crate::settings::{AiModelSettings, AiSettings};
 use crate::IpcError;
 
 // ── Error type ────────────────────────────────────────────────────────────────
@@ -32,22 +32,46 @@ pub struct AiError {
 
 impl AiError {
     pub fn provider_disabled(msg: impl Into<String>) -> Self {
-        Self { kind: "provider_disabled", message: msg.into() }
+        Self {
+            kind: "provider_disabled",
+            message: msg.into(),
+        }
     }
     pub fn binary_not_found(msg: impl Into<String>) -> Self {
-        Self { kind: "binary_not_found", message: msg.into() }
+        Self {
+            kind: "binary_not_found",
+            message: msg.into(),
+        }
     }
     pub fn subprocess_failed(msg: impl Into<String>) -> Self {
-        Self { kind: "subprocess_failed", message: msg.into() }
+        Self {
+            kind: "subprocess_failed",
+            message: msg.into(),
+        }
     }
     pub fn timeout(msg: impl Into<String>) -> Self {
-        Self { kind: "timeout", message: msg.into() }
+        Self {
+            kind: "timeout",
+            message: msg.into(),
+        }
     }
     pub fn skill_not_found(msg: impl Into<String>) -> Self {
-        Self { kind: "skill_not_found", message: msg.into() }
+        Self {
+            kind: "skill_not_found",
+            message: msg.into(),
+        }
     }
     pub fn internal(msg: impl Into<String>) -> Self {
-        Self { kind: "internal", message: msg.into() }
+        Self {
+            kind: "internal",
+            message: msg.into(),
+        }
+    }
+    pub fn invalid_model(msg: impl Into<String>) -> Self {
+        Self {
+            kind: "invalid_model",
+            message: msg.into(),
+        }
     }
 }
 
@@ -79,7 +103,10 @@ impl AiState {
     where
         F: FnOnce(&AiRuntime) -> Result<R, AiError>,
     {
-        let guard = self.inner.lock().map_err(|_| AiError::internal("ai state mutex poisoned"))?;
+        let guard = self
+            .inner
+            .lock()
+            .map_err(|_| AiError::internal("ai state mutex poisoned"))?;
         let runtime = guard
             .as_ref()
             .ok_or_else(|| AiError::internal("ai state not initialised"))?;
@@ -104,6 +131,7 @@ pub struct RunSkillInput {
     pub skill_id: String,
     #[serde(default)]
     pub variables: HashMap<String, String>,
+    pub ai: AiSettings,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -127,7 +155,6 @@ pub fn binary_for_provider(provider: &str) -> Option<&'static str> {
     match provider {
         "claude" => Some("claude"),
         "copilot" => Some("copilot"),
-        "codex" => Some("codex"),
         _ => None,
     }
 }
@@ -149,22 +176,16 @@ pub fn binary_available(binary: &str) -> bool {
 
 // ── Helpers (used by runner.rs) ───────────────────────────────────────────────
 
-/// Read the current AI provider slug from app settings.
-fn current_provider(app: &AppHandle) -> String {
-    settings_app_load(app.clone())
-        .map(|s: AppSettings| s.ai.provider)
-        .unwrap_or_else(|_| "disabled".to_string())
-}
-
 /// The user's model choice for `provider` at `tier`, or empty for the default.
-fn model_override(app: &AppHandle, provider: &str, tier: &crate::ai::skills::ModelTier) -> String {
-    let Ok(settings) = settings_app_load(app.clone()) else {
-        return String::new();
-    };
+fn model_override(
+    models: &AiModelSettings,
+    provider: &str,
+    tier: &crate::ai::skills::ModelTier,
+) -> String {
     let per_provider = match provider {
-        "claude" => &settings.ai.models.claude,
-        "copilot" => &settings.ai.models.copilot,
-        "codex" => &settings.ai.models.codex,
+        "claude" => &models.claude,
+        "copilot" => &models.copilot,
+        "codex" => &models.codex,
         _ => return String::new(),
     };
     match crate::ai::tiers::tier_key(tier) {
@@ -181,16 +202,15 @@ fn model_override(app: &AppHandle, provider: &str, tier: &crate::ai::skills::Mod
 pub async fn ai_run_skill(
     input: RunSkillInput,
     state: State<'_, AiState>,
-    app: AppHandle,
 ) -> Result<AiSkillResult, AiError> {
-    let provider = current_provider(&app);
+    let provider = input.ai.provider;
     state.with_runtime(|runtime| {
         let store = runtime
             .skills
             .lock()
             .map_err(|_| AiError::internal("skills mutex poisoned"))?;
         let skill = runner::lookup(&store, &input.skill_id)?;
-        let chosen = model_override(&app, &provider, &skill.model_tier);
+        let chosen = model_override(&input.ai.models, &provider, &skill.model_tier);
         let conn = runtime
             .conn
             .lock()
@@ -208,10 +228,7 @@ pub async fn ai_run_skill(
 
 /// Clear cached responses (all or for a single skill).
 #[tauri::command]
-pub fn ai_cache_clear(
-    input: CacheClearInput,
-    state: State<'_, AiState>,
-) -> Result<usize, AiError> {
+pub fn ai_cache_clear(input: CacheClearInput, state: State<'_, AiState>) -> Result<usize, AiError> {
     state.with_runtime(|runtime| {
         let conn = runtime
             .conn
@@ -274,7 +291,7 @@ pub fn ai_providers_available() -> ProvidersAvailable {
     ProvidersAvailable {
         claude: binary_for_provider("claude").map_or(false, binary_available),
         copilot: binary_for_provider("copilot").map_or(false, binary_available),
-        codex: binary_for_provider("codex").map_or(false, binary_available),
+        codex: false,
     }
 }
 
@@ -308,15 +325,6 @@ pub fn ai_model_catalog() -> Vec<ProviderModels> {
                 tiered("gpt-5", "GPT-5", false, "standard"),
                 tiered("o3", "o3 — deepest reasoning", false, "deep"),
                 model("claude-sonnet-4.5", "Claude Sonnet 4.5", false),
-            ],
-        },
-        ProviderModels {
-            provider: "codex".to_string(),
-            models: vec![
-                tiered("gpt-5-codex-mini", "GPT-5 Codex mini — fastest", false, "fast"),
-                tiered("gpt-5-codex", "GPT-5 Codex", false, "standard"),
-                tiered("o3", "o3 — deepest reasoning", false, "deep"),
-                model("gpt-5", "GPT-5", false),
             ],
         },
     ]
@@ -387,15 +395,17 @@ pub fn ai_test_model(provider: String, model: String) -> ModelTestResult {
         };
     }
 
-    let mut args: Vec<String> = Vec::new();
-    let chosen = model.trim();
-    if !chosen.is_empty() {
-        args.push("--model".to_string());
-        args.push(chosen.to_string());
-    }
-    args.push("-p".to_string());
+    let invocation = match tiers::invocation(&provider, &model, "Reply with the single word: ok") {
+        Ok(invocation) => invocation,
+        Err(error) => {
+            return ModelTestResult {
+                ok: false,
+                message: error.message,
+            }
+        }
+    };
 
-    match ProcessSpawner.spawn(binary, &args, "Reply with the single word: ok", 45) {
+    match ProcessSpawner.spawn(binary, &invocation.args, &invocation.stdin, 45) {
         Ok(out) => ModelTestResult {
             ok: true,
             message: out.trim().chars().take(120).collect(),

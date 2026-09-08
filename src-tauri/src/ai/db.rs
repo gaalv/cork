@@ -45,8 +45,8 @@ pub fn open_ai_db(app_data_dir: &Path) -> Result<Connection, IpcError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let conn = Connection::open(&path)
-        .map_err(|e| IpcError::Other(format!("open ai.sqlite: {e}")))?;
+    let conn =
+        Connection::open(&path).map_err(|e| IpcError::Other(format!("open ai.sqlite: {e}")))?;
     conn.execute_batch(SCHEMA)
         .map_err(|e| IpcError::Other(format!("ai.sqlite schema: {e}")))?;
     Ok(conn)

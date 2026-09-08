@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useShellStore } from "@/stores/shellStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { client } from "@/ipc/client";
+import { runAiSkill } from "@/services/aiRunner";
 
 export function GenerateNoteModal() {
   const open = useShellStore((s) => s.generateModalOpen);
@@ -32,7 +33,7 @@ export function GenerateNoteModal() {
 
     (async () => {
       try {
-        const result = await client.ai.runSkill("generate-note", { topic: value });
+        const result = await runAiSkill("generate-note", { topic: value });
         const output = (result as { output: string }).output;
 
         const created = await client.notes.create({ folder: "", title: value });

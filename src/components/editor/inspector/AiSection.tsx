@@ -13,8 +13,8 @@ import {
 
 import { useEditorStore } from "@/stores/editorStore";
 import { replaceNoteBody } from "@/services/editorWrite";
-import { client } from "@/ipc/client";
 import { existingLinks, findCandidates, formatCandidates, parsePairs } from "@/services/aiVault";
+import { runAiSkill } from "@/services/aiRunner";
 import { structureMeetingNote } from "@/services/meetingNote";
 import { SectionHeader } from "./helpers";
 import { AiSuggestions, type Suggestion } from "./AiSuggestions";
@@ -38,7 +38,7 @@ export function AiSection() {
         const fm = Object.entries(frontmatter)
           .map(([k, v]) => `${k}: ${String(v)}`)
           .join("\n");
-        const result = await client.ai.runSkill(skillId, { title, frontmatter: fm, body });
+        const result = await runAiSkill(skillId, { title, frontmatter: fm, body });
         const typed = result as { output: string };
         if (skillId === "fix-spelling") {
           replaceNoteBody(typed.output);
@@ -77,7 +77,7 @@ export function AiSection() {
           toast.info("No comparable notes found in the vault yet");
           return;
         }
-        const result = (await client.ai.runSkill(skillId, {
+        const result = (await runAiSkill(skillId, {
           title,
           body,
           candidates: formatCandidates(candidates),

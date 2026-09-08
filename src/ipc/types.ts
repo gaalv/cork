@@ -50,10 +50,7 @@ export type AppSettings = {
   assets: {
     offlineMode: boolean;
   };
-  ai: {
-    provider: AiProvider;
-    models: AiModelSettings;
-  };
+  ai: AiSettings;
   layout?: {
     mode: "triage";
     triageNavWidth: number;
@@ -268,7 +265,14 @@ export type ArchivedNoteEntry = {
 export type AiProvider = "disabled" | "claude" | "copilot" | "codex";
 
 export type AiError = {
-  kind: "provider_disabled" | "binary_not_found" | "subprocess_failed" | "timeout";
+  kind:
+    | "provider_disabled"
+    | "binary_not_found"
+    | "subprocess_failed"
+    | "timeout"
+    | "skill_not_found"
+    | "internal"
+    | "invalid_model";
   message: string;
 };
 
@@ -300,6 +304,11 @@ export type AiModelSettings = {
   claude: TierModels;
   copilot: TierModels;
   codex: TierModels;
+};
+
+export type AiSettings = {
+  provider: AiProvider;
+  models: AiModelSettings;
 };
 
 export type ModelChoice = {

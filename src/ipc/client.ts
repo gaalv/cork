@@ -20,6 +20,7 @@ import type {
   RenameNoteInput,
   SaveInput,
   AppSettings,
+  AiSettings,
   VaultSettings,
 } from "./types";
 
@@ -136,6 +137,16 @@ function ipcErrorMessage(err: unknown): string {
   return String(err);
 }
 
+export class CommandError extends Error {
+  constructor(
+    message: string,
+    readonly kind?: string,
+  ) {
+    super(message);
+    this.name = "CommandError";
+  }
+}
+
 export async function invokeCommand<Name extends IpcCommandName>(
   command: Name,
   args: IpcCommandArgs<Name>,
@@ -150,8 +161,8 @@ export async function invokeCommand<Name extends IpcCommandName>(
     if (kind !== "NotFound") {
       emitIpcError({ topic: command, message });
     }
-    if (err instanceof Error) throw err;
-    throw new Error(message);
+    if (err instanceof Error && !kind) throw err;
+    throw new CommandError(message, kind);
   }
 }
 
@@ -256,8 +267,8 @@ export const client = {
     generateDeployKey: () => invokeCommand("vcs.generateDeployKey", undefined),
   },
   ai: {
-    runSkill: (skillId: string, variables: Record<string, string>) =>
-      invokeCommand("ai.runSkill", { skillId, variables }),
+    runSkill: (skillId: string, variables: Record<string, string>, ai: AiSettings) =>
+      invokeCommand("ai.runSkill", { skillId, variables, ai }),
     modelCatalog: () => invokeCommand("ai.modelCatalog", undefined),
     testModel: (provider: string, model: string) =>
       invokeCommand("ai.testModel", { provider, model }),
@@ -357,9 +368,17 @@ function toRustArgs<Name extends IpcCommandName>(
     case "vcs.updateToken":
       return { input: args } as RustArgs;
     case "ai.runSkill": {
-      const input = args as { skillId: string; variables: Record<string, string> };
-      return { input: { skillId: input.skillId, variables: input.variables } };
+      const input = args as {
+        skillId: string;
+        variables: Record<string, string>;
+        ai: AiSettings;
+      };
+      return {
+        input: { skillId: input.skillId, variables: input.variables, ai: input.ai },
+      };
     }
+    case "ai.testModel":
+      return args as RustArgs;
     case "ai.cacheClear": {
       const input = args as { skillId?: string };
       return { input: { skillId: input.skillId } };

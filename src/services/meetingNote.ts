@@ -7,9 +7,9 @@
 
 import { toast } from "sonner";
 
-import { client } from "@/ipc/client";
 import { useEditorStore } from "@/stores/editorStore";
 import { replaceNoteBody } from "@/services/editorWrite";
+import { runAiSkill } from "@/services/aiRunner";
 
 /**
  * Characters of transcript sent to the model.
@@ -61,7 +61,7 @@ export async function structureMeetingNote(): Promise<void> {
   try {
     const { text, droppedChars } = trimTranscript(body);
 
-    const result = (await client.ai.runSkill("meeting-note", {
+    const result = (await runAiSkill("meeting-note", {
       date: new Date().toISOString().slice(0, 10),
       body: text,
     })) as { output: string };

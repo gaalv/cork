@@ -10,7 +10,7 @@
 
 import { create } from "zustand";
 
-import { client } from "@/ipc/client";
+import { client, CommandError } from "@/ipc/client";
 import { setTypography } from "@/services/fontRuntime";
 import type { AppSettings } from "@/ipc/types";
 
@@ -46,9 +46,14 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 type AppSettingsState = {
   settings: AppSettings;
-  loadVaultSettings: () => Promise<void>;
+  loaded: boolean;
+  loadAppSettings: () => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
 };
+
+let loadPromise: Promise<void> | null = null;
+let saveQueue = Promise.resolve();
+let settingsRevision = 0;
 
 /** Push the typography slice of the settings onto the DOM + localStorage. */
 function syncTypography(settings: AppSettings) {
@@ -62,6 +67,12 @@ function syncTypography(settings: AppSettings) {
 }
 
 function mergeSettings(base: AppSettings, partial: Partial<AppSettings>): AppSettings {
+  const provider = partial.ai?.provider;
+  const supportedProvider =
+    provider === "claude" || provider === "copilot" || provider === "disabled"
+      ? provider
+      : base.ai.provider;
+
   return {
     appearance: { ...base.appearance, ...partial.appearance },
     editor: { ...base.editor, ...partial.editor },
@@ -71,6 +82,7 @@ function mergeSettings(base: AppSettings, partial: Partial<AppSettings>): AppSet
     ai: {
       ...base.ai,
       ...partial.ai,
+      provider: supportedProvider,
       // Deep-merge so a settings file written before per-tier models existed
       // still yields a complete shape.
       models: { ...base.ai.models, ...partial.ai?.models },
@@ -88,26 +100,64 @@ function mergeSettings(base: AppSettings, partial: Partial<AppSettings>): AppSet
 
 export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
+  loaded: false,
 
-  loadVaultSettings: async () => {
-    try {
-      const loaded = await client.settings.appLoad();
-      const merged = mergeSettings(DEFAULT_SETTINGS, loaded as Partial<AppSettings>);
-      set({ settings: merged });
-      syncTypography(merged);
-    } catch {
-      // keep defaults on error
-    }
+  loadAppSettings: () => {
+    if (get().loaded) return Promise.resolve();
+    if (loadPromise) return loadPromise;
+
+    loadPromise = client.settings
+      .appLoad()
+      .then((loaded) => {
+        const merged = mergeSettings(DEFAULT_SETTINGS, loaded as Partial<AppSettings>);
+        set({ settings: merged, loaded: true });
+        syncTypography(merged);
+      })
+      .catch((error) => {
+        if (error instanceof CommandError && error.kind === "Parse") {
+          set({ settings: DEFAULT_SETTINGS, loaded: true });
+          syncTypography(DEFAULT_SETTINGS);
+          return;
+        }
+        throw error;
+      })
+      .finally(() => {
+        loadPromise = null;
+      });
+    return loadPromise;
   },
 
   updateSettings: async (patch) => {
+    await get().loadAppSettings();
+    const revision = ++settingsRevision;
+    const previous = get().settings;
     const merged = mergeSettings(get().settings, patch);
     set({ settings: merged });
     syncTypography(merged);
+
+    const save = saveQueue.then(() => client.settings.appSave(merged));
+    saveQueue = save.then(
+      () => undefined,
+      () => undefined,
+    );
     try {
-      await client.settings.appSave(merged);
-    } catch {
-      // persisting failed — UI still reflects the change
+      await save;
+    } catch (error) {
+      await saveQueue;
+      try {
+        const persisted = await client.settings.appLoad();
+        const restored = mergeSettings(DEFAULT_SETTINGS, persisted as Partial<AppSettings>);
+        if (settingsRevision === revision) {
+          set({ settings: restored, loaded: true });
+          syncTypography(restored);
+        }
+      } catch {
+        if (settingsRevision === revision) {
+          set({ settings: previous, loaded: false });
+          syncTypography(previous);
+        }
+      }
+      throw error;
     }
   },
 }));
