@@ -111,35 +111,63 @@ if [ "$OS" = "Darwin" ]; then
 
 else
   BIN_DIR="$HOME/.local/bin"
-  mkdir -p "$BIN_DIR"
+  LIB_DIR="$HOME/.local/share/cork"
+  APPS_DIR="$HOME/.local/share/applications"
+  mkdir -p "$BIN_DIR" "$APPS_DIR"
 
-  # Is a copy already running? A running AppImage is mounted from its file, so
-  # this matters for how we replace it and whether the user must restart.
+  # Is a copy already running? Determines whether the user must restart to pick
+  # up the new version. Best-effort — a miss only skips the reminder below.
   RUNNING=0
-  if pgrep -f "$BIN_DIR/cork" >/dev/null 2>&1 || pgrep -x cork >/dev/null 2>&1; then
+  if pgrep -f "$LIB_DIR/AppRun" >/dev/null 2>&1 || pgrep -x cork >/dev/null 2>&1; then
     RUNNING=1
   fi
 
-  # Atomic replace: overwriting the AppImage in place (what install/cp do, by
-  # truncating it) can crash a running instance mounted from that same file.
-  # Write beside it and rename — rename swaps the directory entry while the
-  # live process keeps the old inode until it exits.
-  NEW="$BIN_DIR/.cork.new.$$"
-  cp "$FILE" "$NEW"
-  chmod +x "$NEW"
-  mv -f "$NEW" "$BIN_DIR/cork"
-  ok "Cork installed to $BIN_DIR/cork"
+  # Extract the AppImage instead of installing it as a single file. Stock
+  # Ubuntu 22.04+ (and others) ship only libfuse3, but classic AppImages need
+  # libfuse2 — so a bare .AppImage fails on first run with a FUSE error, which
+  # is the most common Linux setup there is. Extracting sidesteps FUSE entirely
+  # and launches faster on every run. (--appimage-extract is built into the
+  # runtime and does not itself need FUSE.)
+  info "Unpacking…"
+  chmod +x "$FILE"
+  (cd "$TMP" && "$FILE" --appimage-extract >/dev/null 2>&1) ||
+    die "could not unpack the AppImage."
+  [ -x "$TMP/squashfs-root/AppRun" ] || die "unpacked bundle is missing AppRun."
 
-  # Desktop entry so it shows up in the app launcher.
-  APPS_DIR="$HOME/.local/share/applications"
-  mkdir -p "$APPS_DIR"
+  # Stage on the same filesystem as the destination so the final swap is an
+  # atomic rename. A running instance keeps its now-unlinked files until it
+  # exits; new launches get the new tree.
+  STAGE="$LIB_DIR.new.$$"
+  rm -rf "$STAGE"
+  mv "$TMP/squashfs-root" "$STAGE"
+  rm -rf "$LIB_DIR.old"
+  [ -d "$LIB_DIR" ] && mv "$LIB_DIR" "$LIB_DIR.old"
+  mv "$STAGE" "$LIB_DIR"
+  rm -rf "$LIB_DIR.old"
+
+  # A tiny launcher on PATH keeps the `cork` command stable across updates.
+  cat > "$BIN_DIR/cork" <<EOF
+#!/bin/sh
+exec "$LIB_DIR/AppRun" "\$@"
+EOF
+  chmod +x "$BIN_DIR/cork"
+  ok "Cork installed to $LIB_DIR"
+
+  # Desktop entry (+ the bundle's own icon) so it shows in the app launcher.
+  ICON="cork"
+  for cand in "$LIB_DIR/.DirIcon" "$LIB_DIR/cork.png" "$LIB_DIR/Cork.png"; do
+    if [ -e "$cand" ]; then
+      ICON="$cand"
+      break
+    fi
+  done
   cat > "$APPS_DIR/cork.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Cork
 Comment=Local-first Markdown notes for developers
 Exec=$BIN_DIR/cork %U
-Icon=cork
+Icon=$ICON
 Terminal=false
 Categories=Office;Utility;
 EOF
@@ -156,8 +184,8 @@ EOF
       "$BOLD" "$RESET"
   fi
 
-  printf '\n%sRun it with%s %scork%s%s (or from your app menu). If it fails with a FUSE error, run%s\n  %scork --appimage-extract-and-run%s\n' \
-    "$DIM" "$RESET" "$BOLD" "$RESET" "$DIM" "$RESET" "$BOLD" "$RESET"
+  printf '\n%sRun it with%s %scork%s or from your app menu.\n' \
+    "$DIM" "$RESET" "$BOLD" "$RESET"
 fi
 
 printf '\n%sEnjoy Cork!%s\n' "$GREEN" "$RESET"
