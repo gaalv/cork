@@ -84,6 +84,21 @@ if [ "$OS" = "Darwin" ]; then
     info "No write access to /Applications — installing to $DEST instead."
   fi
 
+  # The update notice lives inside the app, so Cork is usually running when this
+  # script is invoked. macOS won't launch a new build while an instance with the
+  # same bundle id is alive (open just reactivates the old one), and replacing a
+  # live bundle is untidy — so quit it first, then reopen the new build below.
+  if pgrep -x Cork >/dev/null 2>&1; then
+    info "Quitting the running Cork…"
+    osascript -e 'tell application "Cork" to quit' >/dev/null 2>&1 || true
+    n=0
+    while pgrep -x Cork >/dev/null 2>&1 && [ "$n" -lt 20 ]; do
+      sleep 0.5
+      n=$((n + 1))
+    done
+    pkill -x Cork 2>/dev/null || true
+  fi
+
   rm -rf "$DEST/Cork.app"
   mv "$APP" "$DEST/Cork.app"
   # Builds are unsigned; strip the quarantine flag so Gatekeeper won't block.
@@ -97,9 +112,22 @@ if [ "$OS" = "Darwin" ]; then
 else
   BIN_DIR="$HOME/.local/bin"
   mkdir -p "$BIN_DIR"
-  install -m 0755 "$FILE" "$BIN_DIR/cork" 2>/dev/null || {
-    cp "$FILE" "$BIN_DIR/cork"; chmod +x "$BIN_DIR/cork";
-  }
+
+  # Is a copy already running? A running AppImage is mounted from its file, so
+  # this matters for how we replace it and whether the user must restart.
+  RUNNING=0
+  if pgrep -f "$BIN_DIR/cork" >/dev/null 2>&1 || pgrep -x cork >/dev/null 2>&1; then
+    RUNNING=1
+  fi
+
+  # Atomic replace: overwriting the AppImage in place (what install/cp do, by
+  # truncating it) can crash a running instance mounted from that same file.
+  # Write beside it and rename — rename swaps the directory entry while the
+  # live process keeps the old inode until it exits.
+  NEW="$BIN_DIR/.cork.new.$$"
+  cp "$FILE" "$NEW"
+  chmod +x "$NEW"
+  mv -f "$NEW" "$BIN_DIR/cork"
   ok "Cork installed to $BIN_DIR/cork"
 
   # Desktop entry so it shows up in the app launcher.
@@ -122,6 +150,11 @@ EOF
     *) printf '\n%sNote:%s %s is not on your PATH. Add this to your shell rc:\n  %sexport PATH="$HOME/.local/bin:$PATH"%s\n' \
          "$DIM" "$RESET" "$BIN_DIR" "$BOLD" "$RESET" ;;
   esac
+
+  if [ "$RUNNING" -eq 1 ]; then
+    printf '\n%sCork is still running the previous version%s — quit and reopen it to finish updating.\n' \
+      "$BOLD" "$RESET"
+  fi
 
   printf '\n%sRun it with%s %scork%s%s (or from your app menu). If it fails with a FUSE error, run%s\n  %scork --appimage-extract-and-run%s\n' \
     "$DIM" "$RESET" "$BOLD" "$RESET" "$DIM" "$RESET" "$BOLD" "$RESET"
