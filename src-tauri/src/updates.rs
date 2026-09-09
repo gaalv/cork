@@ -11,6 +11,12 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
+/// The universal updater for installs that did not come from a package manager.
+/// Re-running it overwrites the app in place with the latest release, so it is
+/// the right command for anyone outside Homebrew or a distro package.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const SCRIPT_COMMAND: &str = "curl -fsSL https://gaalv.cloud/cork | sh";
+
 /// Where the running binary came from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,14 +51,18 @@ fn detect() -> InstallChannel {
     if caskroom.iter().any(|p| PathBuf::from(p).is_dir()) {
         return InstallChannel::new("homebrewCask", "Homebrew", Some("brew upgrade --cask cork"));
     }
-    InstallChannel::new("direct", "Direct download", None)
+    // The install script (or a hand-dragged .dmg): re-running the script
+    // replaces Cork.app in place. Homebrew is handled above so its record
+    // never goes stale under us.
+    InstallChannel::new("script", "Install script", Some(SCRIPT_COMMAND))
 }
 
 #[cfg(target_os = "linux")]
 fn detect() -> InstallChannel {
-    // An AppImage exports its own path; nothing else sets this.
+    // The install script drops an AppImage and runs it, which exports $APPIMAGE.
+    // Re-running the script overwrites that AppImage, so it is the update path.
     if std::env::var("APPIMAGE").is_ok() {
-        return InstallChannel::new("appImage", "AppImage", None);
+        return InstallChannel::new("script", "Install script", Some(SCRIPT_COMMAND));
     }
 
     let exe = exe_path().unwrap_or_default();
@@ -61,10 +71,12 @@ fn detect() -> InstallChannel {
     if brew_prefixes.iter().any(|p| exe_str.starts_with(p)) {
         return InstallChannel::new("homebrewFormula", "Homebrew", Some("brew upgrade cork"));
     }
+    // .deb / .rpm land in system prefixes and update through the distro's
+    // package manager — never tell those users to curl a script over the top.
     if exe_str.starts_with("/usr/") || exe_str.starts_with("/opt/") {
         return InstallChannel::new("systemPackage", "System package", None);
     }
-    InstallChannel::new("direct", "Direct download", None)
+    InstallChannel::new("script", "Install script", Some(SCRIPT_COMMAND))
 }
 
 #[cfg(target_os = "windows")]
