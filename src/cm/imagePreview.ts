@@ -18,17 +18,22 @@ import { StateField, type EditorState, type Range } from "@codemirror/state";
 import { resolveAssetCandidates, isImagePath } from "@/services/assetResolver";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useEditorStore } from "@/stores/editorStore";
+import { useLightboxStore } from "@/stores/lightboxStore";
 
 const IMG_MD_RE = /!\[([^\]]*)\]\(([^)]+)\)/g;
 const IMG_WIKI_RE = /!\[\[([^[\]|]+?)(?:\|[^[\]]+?)?\]\]/g;
 
 class ImageWidget extends WidgetType {
-  constructor(readonly sources: string[]) {
+  constructor(
+    readonly sources: string[],
+    readonly alt: string,
+  ) {
     super();
   }
 
   eq(other: ImageWidget) {
     return (
+      other.alt === this.alt &&
       other.sources.length === this.sources.length &&
       other.sources.every((s, i) => s === this.sources[i])
     );
@@ -56,6 +61,12 @@ class ImageWidget extends WidgetType {
     img.addEventListener("error", tryNext);
     tryNext();
 
+    // Click to open the full-screen lightbox. `ignoreEvent` keeps this off the
+    // editor, so the caret never jumps here — the click is purely ours.
+    img.addEventListener("click", () => {
+      useLightboxStore.getState().open(img.currentSrc || img.src, this.alt);
+    });
+
     wrapper.appendChild(img);
     return wrapper;
   }
@@ -77,24 +88,28 @@ function getNoteRelDir(): string {
   return parts.join("/");
 }
 
-/** Candidate URLs for the first image on a line, best guess first. */
-function imageSrcOnLine(text: string, vaultRoot: string, noteRelDir: string): string[] {
+/** Candidate URLs (best guess first) and alt text for the first image on a line. */
+function imageSrcOnLine(
+  text: string,
+  vaultRoot: string,
+  noteRelDir: string,
+): { sources: string[]; alt: string } {
   IMG_MD_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = IMG_MD_RE.exec(text)) !== null) {
     if (!isImagePath(match[2])) continue;
     const urls = resolveAssetCandidates(match[2], vaultRoot, noteRelDir);
-    if (urls.length > 0) return urls;
+    if (urls.length > 0) return { sources: urls, alt: match[1] };
   }
 
   IMG_WIKI_RE.lastIndex = 0;
   while ((match = IMG_WIKI_RE.exec(text)) !== null) {
     if (!isImagePath(match[1])) continue;
     const urls = resolveAssetCandidates(match[1], vaultRoot, noteRelDir);
-    if (urls.length > 0) return urls;
+    if (urls.length > 0) return { sources: urls, alt: match[1] };
   }
 
-  return [];
+  return { sources: [], alt: "" };
 }
 
 /** True when the caret sits on this line — then the raw markdown stays put. */
@@ -115,7 +130,7 @@ function buildDecorations(state: EditorState, concealSource: boolean): Decoratio
     const line = state.doc.line(i);
     if (!line.text.includes("![")) continue;
 
-    const sources = imageSrcOnLine(line.text, vaultRoot, noteRelDir);
+    const { sources, alt } = imageSrcOnLine(line.text, vaultRoot, noteRelDir);
     if (sources.length === 0) continue;
 
     // With live preview on, an embed line renders as the image itself; move the
@@ -129,7 +144,9 @@ function buildDecorations(state: EditorState, concealSource: boolean): Decoratio
     }
 
     decorations.push(
-      Decoration.widget({ widget: new ImageWidget(sources), block: true, side: 1 }).range(line.to),
+      Decoration.widget({ widget: new ImageWidget(sources, alt), block: true, side: 1 }).range(
+        line.to,
+      ),
     );
   }
 
@@ -168,6 +185,7 @@ export function imagePreviewExtension(livePreview: boolean) {
         borderRadius: "8px",
         display: "block",
         border: "1px solid var(--color-cork-border)",
+        cursor: "zoom-in",
       },
     }),
   ];

@@ -14,6 +14,7 @@ import { CommandPalette } from "@/components/modals/CommandPalette";
 import { TemplatePicker } from "@/components/modals/TemplatePicker";
 import { WelcomeScreen } from "@/screens/WelcomeScreen";
 import { HelpModal } from "@/components/modals/HelpModal";
+import { ImageLightbox } from "@/components/modals/ImageLightbox";
 import { Toaster } from "@/components/ui/Toaster";
 import { DevBadge } from "@/components/ui/DevBadge";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
@@ -133,6 +134,7 @@ export function Shell() {
       <TemplatePicker />
       <HelpModal />
       <SettingsPanel />
+      <ImageLightbox />
       <Toaster />
       <DevBadge />
       {tour.active && <OnboardingTour onFinish={tour.finish} />}
