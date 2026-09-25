@@ -11,7 +11,7 @@ use crate::vault::settings::load_vault_settings;
 use crate::vault::VaultState;
 use crate::IpcError;
 
-const ARCHIVED_FOLDER: &str = "_archived";
+pub const ARCHIVED_FOLDER: &str = "_archived";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

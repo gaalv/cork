@@ -4,6 +4,7 @@ use std::path::{Component, Path};
 use sha1::{Digest, Sha1};
 use walkdir::WalkDir;
 
+use crate::vault::archive::ARCHIVED_FOLDER;
 use crate::vault::frontmatter;
 use crate::vault::io::{metadata_ctime_ms, metadata_mtime_ms, to_slash_string};
 use crate::vault::settings::load_vault_settings;
@@ -143,14 +144,19 @@ fn is_hidden(path: &Path, root: &Path) -> bool {
 }
 
 /// Returns true if the path is hidden (dot-prefixed) or inside an internal
-/// folder like the attachments folder (default `_attachments`).
+/// folder like the attachments folder (default `_attachments`) or the archive
+/// (`_archived`, which has its own dedicated view and must not surface as a
+/// regular folder in the sidebar).
 pub fn is_excluded(path: &Path, root: &Path, attachments_folder: &str) -> bool {
     if is_hidden(path, root) {
         return true;
     }
     let relative = path.strip_prefix(root).unwrap_or(path);
     relative.components().any(|component| match component {
-        Component::Normal(name) => name.to_str().is_some_and(|n| n == attachments_folder),
+        Component::Normal(name) => {
+            name.to_str()
+                .is_some_and(|n| n == attachments_folder || n == ARCHIVED_FOLDER)
+        }
         _ => false,
     })
 }
