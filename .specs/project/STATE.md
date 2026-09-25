@@ -1,7 +1,7 @@
 # State
 
-**Last Updated:** 2026-09-08T18:38-03:00
-**Current Work:** v0.2.0 is published from `5c1c7fb` with macOS, Windows, and Linux packages plus verified SHA-256 checksums. The release and quality workflows passed, and the Homebrew cask was updated to 0.2.0 with matching Intel/ARM hashes. The release remains intentionally unsigned under AD-050; winget submission remains deferred until its first manual package submission and `WINGET_TOKEN` provisioning.
+**Last Updated:** 2026-09-09
+**Current Work:** F48 (Cork CLI) specified — spec/design/tasks drafted, ROADMAP M15 + AD-061 recorded. Decision locked: automation surface is a CLI (not MCP), dual-mode single binary, enabled by a shared `VaultCtx` extraction. Not yet implemented (T01 is the entry point). Prior: v0.2.0 is published from `5c1c7fb` with macOS, Windows, and Linux packages plus verified SHA-256 checksums; release intentionally unsigned under AD-050; winget submission deferred until its first manual package submission and `WINGET_TOKEN` provisioning.
 
 ---
 
@@ -399,6 +399,13 @@ Scope classification rules: `notes` (only note files), `single` (one file), `mix
 **Reason:** Materializing Balanced/Quality/Economy into static model IDs made configuration age quickly and provider switches unreliable. Provider and model were also read from separate settings snapshots, and cache keys did not distinguish either value.
 **Trade-off:** Automatic results and cost can change when a CLI updates its default. Users requiring reproducibility must pin an explicit model under Advanced and verify it with Test.
 **Impact:** `ai.runSkill` receives one immutable AI-settings snapshot; cache identity includes provider and effective model; provider switches cannot reuse another provider's cached output or model name. F21 R3/R5/R6 and design supersede the original hard-coded Claude tier mapping.
+
+### AD-061: Automation surface is a CLI, not an MCP; dual-mode binary + `VaultCtx` (2026-09-09)
+
+**Decision:** Cork exposes vault automation as a **`cork` CLI**, chosen over an MCP server. It ships as a **dual-mode single binary** — argv with a subcommand runs headless and exits before the Tauri event loop; a bare launch opens the GUI. The enabling refactor is a shared `VaultCtx` (vault_root + app_data_dir + fingerprint_cache + an `Emitter` abstraction) that both the Tauri `State` layer and the CLI construct, so `vault/`+`index/` ops run without `AppHandle`/`tauri::State` and GUI event emission (`vault:fileChanged`, `index:updated`, …) becomes a no-op in CLI mode. Full `cork-core` _crate_ split is deferred until a non-Tauri consumer (e.g. MCP) actually appears. Spec: F48.
+**Reason:** The workflow is AI-heavy; agents drive CLIs natively and a CLI also serves devs/scripts/git-hooks, needs no persistent server, and is debuggable. Raw file writes were rejected — they bypass invariants (frontmatter, wikilink propagation on rename, tag frontmatter, the index) and give no read/query path. One binary matches the existing single-artifact install/update story (AD-050) and guarantees version lock.
+**Trade-off:** The CLI binary links webview deps (mitigated by exiting before any window is built). Windows needs an explicit console attach because of `windows_subsystem = "windows"`. The T03 delegation refactor touches every `vault/`+`index/` command (mechanical but wide).
+**Impact:** CLI reuses the same index the GUI uses (AD-004 path scheme) via a shared app_data_dir resolver; mutations are file-first + one-shot reindex with WAL/`busy_timeout` so a running app coexists (its watcher reconciles). `install.sh` puts `cork` on PATH (Linux shim exists; macOS symlinks into the bundle). ROADMAP M15 added as PLANNED.
 
 ---
 

@@ -358,6 +358,19 @@ _Note: The original spec described a Rail+TopBar "Layout C" shell. The actual im
 
 - Month-grid overlay from the status bar (like Graph); day markers for daily notes + `ctime` activity; click a day opens/creates its daily note and filters the list to that date. Sidebar stays filters-only; no events/scheduling.
 
+## M15 — Automation surface
+
+**Goal:** Give the heavy AI/automation workflow a first-class, invariant-safe way to act on a vault from outside the GUI. Decision: a **CLI**, not an MCP (agents shell out to it); the enabling refactor is extracting a shared `VaultCtx` so the CLI reuses the exact backend logic.
+
+### Features
+
+**[F48 — Cork CLI](../features/F48-cli/spec.md)** — PLANNED
+
+- Dual-mode single binary (`cork <subcommand>` runs headless and exits before the Tauri loop; bare launch = GUI) — matches the single-artifact install/update story (AD-050).
+- Extract `VaultCtx` + `Emitter` so `vault/`+`index/` ops run without `AppHandle`/`State`; GUI behavior stays byte-identical.
+- Commands: notes (new/retitle/mv/rm/ls/show), folders (new/rename/mv/rm/ls), tags (add/rm on note, rename, rm-all, ls), search/links/reindex; `--json` + honest exit codes.
+- Same index as the GUI (AD-004 path scheme), one-shot reindex + WAL for coexistence with a running app; installs on PATH alongside the app via `install.sh`.
+
 ### Quick tasks
 
 - NotesList virtualization (1k-note vaults)
